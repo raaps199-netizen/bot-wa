@@ -1,0 +1,115 @@
+const config = require('../config');
+const stickerCommand = require('../commands/sticker');
+const tiktokCommand = require('../commands/tiktok');
+const bratCommand = require('../commands/brat');
+const bratvidCommand = require('../commands/bratvid');
+const wmCommand = require('../commands/wm');
+const listCommand = require('../commands/list');
+const hidetagCommand = require('../commands/hidetag');
+const toimgCommand = require('../commands/toimg');
+const igCommand = require('../commands/ig');
+const groupCommand = require('../commands/group');
+const quoteCommand = require('../commands/quote');
+const rvoCommand = require('../commands/rvo');
+
+async function handleMessage(sock, msg) {
+  try {
+    const messageContent = msg.message;
+    if (!messageContent) return;
+
+    // Ambil teks dari berbagai kemungkinan lokasi pesan (termasuk saat dikirim dari nomor sendiri)
+    const text = messageContent.conversation ||
+                 messageContent.extendedTextMessage?.text ||
+                 messageContent.imageMessage?.caption ||
+                 messageContent.videoMessage?.caption ||
+                 messageContent.editedMessage?.message?.protocolMessage?.editedMessage?.extendedTextMessage?.text || '';
+
+    if (!text.startsWith(config.prefix)) return;
+
+    const args = text.slice(config.prefix.length).trim().split(/ +/);
+    const command = args.shift().toLowerCase();
+
+    switch (command) {
+      case 's':
+      case 'sticker':
+        await stickerCommand(sock, msg);
+        break;
+
+      case 'tt':
+      case 'tiktok':
+        await tiktokCommand(sock, msg, args);
+        break;
+
+      case 'ig':
+      case 'instagram':
+        await igCommand(sock, msg, args);
+        break;
+
+      case 'brat':
+        await bratCommand(sock, msg, args);
+        break;
+
+      case 'bratvid':
+        await bratvidCommand(sock, msg, args);
+        break;
+
+      case 'wm':
+        await wmCommand(sock, msg, args);
+        break;
+
+      case 'hidetag':
+      case 'h':
+        await hidetagCommand(sock, msg, args);
+        break;
+
+      case 'close':
+      case 'tutup':
+        await groupCommand(sock, msg, args, 'close');
+        break;
+
+      case 'open':
+      case 'buka':
+        await groupCommand(sock, msg, args, 'open');
+        break;
+
+      case 'promote':
+      case 'pm':
+        await groupCommand(sock, msg, args, 'promote');
+        break;
+
+      case 'demote':
+      case 'dm':
+        await groupCommand(sock, msg, args, 'demote');
+        break;
+
+      case 'toimg':
+        await toimgCommand(sock, msg);
+        break;
+
+      case 'quote':
+      case 'q':
+      case 'qc':
+        await quoteCommand(sock, msg, args);
+        break;
+
+      case 'rvo':
+      case 'viewonce':
+      case 'save':
+        await rvoCommand(sock, msg);
+        break;
+
+      case 'list':
+      case 'menu':
+      case 'help':
+        await listCommand(sock, msg);
+        break;
+
+      default:
+        break;
+    }
+  } catch (err) {
+    console.error('Error di messageHandler:', err);
+  }
+}
+
+module.exports = handleMessage;
