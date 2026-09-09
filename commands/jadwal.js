@@ -31,6 +31,7 @@ const daftarPiket = {
   jjt: ["Dhirgam", "Yoga", "Dude", "Daffa", "Irfan", "Ara", "Anissa", "Meli", "Gibran", "Salsabila"]
 };
 
+// Fungsi Acak Array (Fisher-Yates)
 function acakArray(array) {
   let arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -42,6 +43,8 @@ function acakArray(array) {
 
 async function handleJadwalCommand(sock, msg, command) {
   const remoteJid = msg.key.remoteJid;
+  
+  // Bersihkan command dari tanda titik jika ada
   const key = command.toLowerCase().trim().replace('.', '');
   
   const dataMapel = jadwalPelajaran[key];
@@ -49,6 +52,7 @@ async function handleJadwalCommand(sock, msg, command) {
 
   if (!dataMapel) return;
 
+  // Format Pesan Jadwal Pelajaran
   let pesan = `📅 *JADWAL PELAJARAN — HARI ${dataMapel.hari.toUpperCase()}*\n`;
   pesan += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   
@@ -56,11 +60,14 @@ async function handleJadwalCommand(sock, msg, command) {
     pesan += `📖 *Jam ke-${index + 1}:* ${mapel}\n`;
   });
 
+  // Pembagian Tugas Piket
   if (anggotaPiket.length >= 10) {
+    // MBG: 5 Pengambil & 5 Pengembali
     const piketMbg = acakArray(anggotaPiket);
     const pengambilMbg = piketMbg.slice(0, 5);
     const pengembaliMbg = piketMbg.slice(5, 10);
 
+    // HP: 2 orang klon/rangkap dari anggota piket hari itu
     const piketHp = acakArray(anggotaPiket);
     const petugasHp = piketHp.slice(0, 2);
 
