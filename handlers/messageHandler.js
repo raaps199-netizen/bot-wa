@@ -18,7 +18,7 @@ async function handleMessage(sock, msg) {
     const messageContent = msg.message;
     if (!messageContent) return;
 
-    // Ambil teks dari berbagai kemungkinan lokasi pesan
+    // Ambil teks dari berbagai lokasi pesan
     const text = messageContent.conversation ||
                  messageContent.extendedTextMessage?.text ||
                  messageContent.imageMessage?.caption ||

@@ -60,19 +60,22 @@ async function handleJadwalCommand(sock, msg, command) {
     pesan += `📖 *Jam ke-${index + 1}:* ${mapel}\n`;
   });
 
-  // 2. Daftar Anggota Piket Kelas (Di antara Pelajaran & MBG)
-  if (anggotaPiket.length > 0) {
+  // 2. Pembagian Tugas Kebersihan Kelas (10 Orang)
+  if (anggotaPiket.length >= 10) {
+    const piketKelas = acakArray(anggotaPiket);
+
     pesan += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-    pesan += `🧹 *DAFTAR PIKET HARI ${dataMapel.hari.toUpperCase()}*\n`;
+    pesan += `🧹 *PEMBAGIAN PIKET KELAS (${dataMapel.hari.toUpperCase()})*\n`;
     pesan += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
     
-    anggotaPiket.forEach((nama, idx) => {
-      pesan += `  ${idx + 1}. ${nama}\n`;
-    });
-  }
+    pesan += `🧹 *Menyapu (2 Orang):*\n  1. ${piketKelas[0]}\n  2. ${piketKelas[1]}\n\n`;
+    pesan += `🧽 *Mengepel (2 Orang):*\n  1. ${piketKelas[2]}\n  2. ${piketKelas[3]}\n\n`;
+    pesan += `🪟 *Mengelap Kaca (2 Orang):*\n  1. ${piketKelas[4]}\n  2. ${piketKelas[5]}\n\n`;
+    pesan += `🪑 *Mengangkat Bangku (2 Orang):*\n  1. ${piketKelas[6]}\n  2. ${piketKelas[7]}\n\n`;
+    pesan += `🗑️ *Cek Kolong & Buang Sampah (1 Orang):*\n  1. ${piketKelas[8]}\n\n`;
+    pesan += `🖊️ *Isi Spidol & Hapus Papan (1 Orang):*\n  1. ${piketKelas[9]}\n`;
 
-  // 3. Pembagian Tugas Khusus (MBG & HP)
-  if (anggotaPiket.length >= 10) {
+    // 3. Pembagian Tugas Khusus (MBG & HP - Klon/Kocok dari 10 Orang)
     const piketMbg = acakArray(anggotaPiket);
     const pengambilMbg = piketMbg.slice(0, 5);
     const pengembaliMbg = piketMbg.slice(5, 10);
@@ -81,7 +84,7 @@ async function handleJadwalCommand(sock, msg, command) {
     const petugasHp = piketHp.slice(0, 2);
 
     pesan += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-    pesan += `🍱 *PEMBAGIAN TUGAS PIKET (${dataMapel.hari.toUpperCase()})*\n`;
+    pesan += `🍱 *PEMBAGIAN TUGAS KHUSUS (${dataMapel.hari.toUpperCase()})*\n`;
     pesan += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
     pesan += `🚚 *Tim Pengambil MBG (5 Orang):*\n`;
