@@ -44,7 +44,7 @@ function acakArray(array) {
 async function handleJadwalCommand(sock, msg, command) {
   const remoteJid = msg.key.remoteJid;
   
-  // Bersihkan command dari tanda titik jika ada
+  // Clean command dari titik
   const key = command.toLowerCase().trim().replace('.', '');
   
   const dataMapel = jadwalPelajaran[key];
@@ -52,7 +52,7 @@ async function handleJadwalCommand(sock, msg, command) {
 
   if (!dataMapel) return;
 
-  // Format Pesan Jadwal Pelajaran
+  // 1. Jadwal Pelajaran
   let pesan = `📅 *JADWAL PELAJARAN — HARI ${dataMapel.hari.toUpperCase()}*\n`;
   pesan += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
   
@@ -60,19 +60,28 @@ async function handleJadwalCommand(sock, msg, command) {
     pesan += `📖 *Jam ke-${index + 1}:* ${mapel}\n`;
   });
 
-  // Pembagian Tugas Piket
+  // 2. Daftar Anggota Piket Kelas (Di antara Pelajaran & MBG)
+  if (anggotaPiket.length > 0) {
+    pesan += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+    pesan += `🧹 *DAFTAR PIKET HARI ${dataMapel.hari.toUpperCase()}*\n`;
+    pesan += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+    
+    anggotaPiket.forEach((nama, idx) => {
+      pesan += `  ${idx + 1}. ${nama}\n`;
+    });
+  }
+
+  // 3. Pembagian Tugas Khusus (MBG & HP)
   if (anggotaPiket.length >= 10) {
-    // MBG: 5 Pengambil & 5 Pengembali
     const piketMbg = acakArray(anggotaPiket);
     const pengambilMbg = piketMbg.slice(0, 5);
     const pengembaliMbg = piketMbg.slice(5, 10);
 
-    // HP: 2 orang klon/rangkap dari anggota piket hari itu
     const piketHp = acakArray(anggotaPiket);
     const petugasHp = piketHp.slice(0, 2);
 
     pesan += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-    pesan += `🍱 *PETUGAS PIKET & TUGAS (${dataMapel.hari.toUpperCase()})*\n`;
+    pesan += `🍱 *PEMBAGIAN TUGAS PIKET (${dataMapel.hari.toUpperCase()})*\n`;
     pesan += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
     pesan += `🚚 *Tim Pengambil MBG (5 Orang):*\n`;
@@ -93,7 +102,26 @@ async function handleJadwalCommand(sock, msg, command) {
     pesan += `\n✨ *Catatan:* Diharapkan teman-teman yang bertugas bisa menjalankan kewajibannya tepat waktu ya. Semangat belajar! 🤝`;
   }
 
-  await sock.sendMessage(remoteJid, { text: pesan }, { quoted: msg });
+  // Mengambil seluruh peserta grup untuk hidetag
+  let mentions = [];
+  if (remoteJid.endsWith('@g.us')) {
+    try {
+      const groupMetadata = await sock.groupMetadata(remoteJid);
+      mentions = groupMetadata.participants.map(p => p.id);
+    } catch (e) {
+      console.error('Gagal mengambil anggota grup:', e);
+    }
+  }
+
+  // Kirim pesan dengan fitur Diteruskan (Forwarded) + Hidetag All Mentions
+  await sock.sendMessage(remoteJid, {
+    text: pesan,
+    mentions: mentions,
+    contextInfo: {
+      isForwarded: true,
+      forwardingScore: 999
+    }
+  });
 }
 
 module.exports = handleJadwalCommand;
