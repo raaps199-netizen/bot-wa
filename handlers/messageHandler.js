@@ -11,6 +11,7 @@ const igCommand = require('../commands/ig');
 const groupCommand = require('../commands/group');
 const quoteCommand = require('../commands/quote');
 const rvoCommand = require('../commands/rvo');
+const handleJadwalCommand = require('../commands/jadwal');
 
 async function handleMessage(sock, msg) {
   try {
@@ -96,6 +97,14 @@ async function handleMessage(sock, msg) {
       case 'viewonce':
       case 'save':
         await rvoCommand(sock, msg);
+        break;
+
+      case 'jsn':
+      case 'jsl':
+      case 'jrb':
+      case 'jkm':
+      case 'jjt':
+        await handleJadwalCommand(sock, msg, command);
         break;
 
       case 'list':
