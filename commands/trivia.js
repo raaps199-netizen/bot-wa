@@ -1,5 +1,3 @@
-const fetch = require('node-fetch');
-
 if (!global.db) global.db = {};
 if (!global.db.game) global.db.game = {};
 
