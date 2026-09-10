@@ -18,68 +18,52 @@ async function mathCommand(sock, msg, args) {
   let jawaban = '';
 
   if (level === 'easy') {
-    const a = getRandomInt(1, 50);
-    const b = getRandomInt(1, 50);
+    const a = getRandomInt(10, 99);
+    const b = getRandomInt(10, 99);
     const op = Math.random() > 0.5 ? '+' : '-';
     soal = `${a} ${op} ${b}`;
     jawaban = eval(soal).toString();
 
   } else if (level === 'medium') {
-    const a = getRandomInt(2, 15);
-    const b = getRandomInt(2, 15);
+    const a = getRandomInt(12, 50);
+    const b = getRandomInt(12, 30);
     soal = `${a} × ${b}`;
     jawaban = (a * b).toString();
 
   } else if (level === 'hard') {
-    const b = getRandomInt(2, 12);
-    const hasil = getRandomInt(2, 15);
-    const a = b * hasil;
-    const opList = ['+', '-', '*', '/'];
-    const selectedOp = opList[getRandomInt(0, 3)];
-
-    if (selectedOp === '/') {
-      soal = `${a} ÷ ${b}`;
-      jawaban = hasil.toString();
-    } else if (selectedOp === '*') {
-      soal = `${b} × ${getRandomInt(2, 10)}`;
-      jawaban = eval(soal.replace('×', '*')).toString();
-    } else {
-      soal = `${getRandomInt(10, 100)} ${selectedOp} ${getRandomInt(10, 100)}`;
-      jawaban = eval(soal).toString();
-    }
+    // FIX HARD: Perkalian angka besar + penjumlahan/pengurangan bertingkat
+    const a = getRandomInt(25, 85);
+    const b = getRandomInt(15, 45);
+    const c = getRandomInt(50, 200);
+    soal = `(${a} × ${b}) - ${c}`;
+    jawaban = (a * b - c).toString();
 
   } else if (level === 'extreme') {
     const tipe = getRandomInt(1, 2);
     if (tipe === 1) {
-      const base = getRandomInt(2, 10);
-      const exp = getRandomInt(2, 3);
-      soal = `${base}^${exp}`;
-      jawaban = Math.pow(base, exp).toString();
+      const base = getRandomInt(12, 30);
+      soal = `${base}²`;
+      jawaban = (base * base).toString();
     } else {
-      const ans = getRandomInt(2, 15);
+      const ans = getRandomInt(15, 40);
       soal = `√${ans * ans}`;
       jawaban = ans.toString();
     }
 
   } else if (level === 'max') {
-    const tipeMax = getRandomInt(1, 4);
+    const tipeMax = getRandomInt(1, 3);
     if (tipeMax === 1) {
-      const a = getRandomInt(2, 5);
-      soal = `Turunan pertama dari f(x) = ${a}x² pada x = 3`;
-      jawaban = (2 * a * 3).toString();
+      const a = getRandomInt(3, 9);
+      soal = `Turunan pertama f(x) = ${a}x² pada x = 4`;
+      jawaban = (2 * a * 4).toString();
     } else if (tipeMax === 2) {
-      const a = getRandomInt(1, 5), b = getRandomInt(1, 5), c = getRandomInt(1, 5), d = getRandomInt(1, 5);
+      const a = getRandomInt(3, 9), b = getRandomInt(2, 7), c = getRandomInt(2, 6), d = getRandomInt(4, 9);
       soal = `Determinan matriks [[${a}, ${b}], [${c}, ${d}]]`;
       jawaban = (a * d - b * c).toString();
-    } else if (tipeMax === 3) {
-      const n = getRandomInt(4, 7);
+    } else {
+      const n = getRandomInt(6, 10);
       soal = `Nilai Kombinasi C(${n}, 2)`;
       jawaban = ((n * (n - 1)) / 2).toString();
-    } else {
-      const a = getRandomInt(2, 10);
-      const b = getRandomInt(3, 6);
-      soal = `Suku ke-5 dari barisan aritmatika dengan a = ${a} dan beda = ${b}`;
-      jawaban = (a + 4 * b).toString();
     }
   } else {
     await sock.sendMessage(remoteJid, { 
@@ -88,10 +72,11 @@ async function mathCommand(sock, msg, args) {
     return;
   }
 
+  // FIX: Petunjuk pesan dibuat umum tanpa bocoran angka jawaban
   const teks = `🧮 *KUIS MATEMATIKA (${level.toUpperCase()})*\n\n` +
     `Berapa hasil dari: *${soal}* ?\n` +
     `Waktu: *45 Detik*\n\n` +
-    `_Reply pesan ini lalu jawab pakai slash!_\nContoh: */${jawaban}*`;
+    `_Ketik langsung jawabannya di chat (misal: 150 atau /150)_`;
 
   const sentMsg = await sock.sendMessage(remoteJid, { text: teks }, { quoted: msg });
 
