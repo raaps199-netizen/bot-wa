@@ -1,4 +1,5 @@
 const config = require('../config');
+const { handleGameAnswer } = require('./gameHandler');
 
 // Command Media & Utility
 const stickerCommand = require('../commands/sticker');
@@ -7,15 +8,13 @@ const bratCommand = require('../commands/brat');
 const bratvidCommand = require('../commands/bratvid');
 const wmCommand = require('../commands/wm');
 const listCommand = require('../commands/list');
-const hidetagCommand = require('../commands/hidetag');
 const toimgCommand = require('../commands/toimg');
 const igCommand = require('../commands/ig');
 const groupCommand = require('../commands/group');
 const quoteCommand = require('../commands/quote');
 const rvoCommand = require('../commands/rvo');
-const handleJadwalCommand = require('../commands/jadwal');
 
-// Command Fitur Baru
+// Command Fitur Tambahan
 const aiCommand = require('../commands/ai');
 const hdCommand = require('../commands/hd');
 const sswebCommand = require('../commands/ssweb');
@@ -39,15 +38,37 @@ async function handleMessage(sock, msg) {
     const messageContent = msg.message;
     if (!messageContent) return;
 
-    const text = messageContent.conversation ||
-                 messageContent.extendedTextMessage?.text ||
-                 messageContent.imageMessage?.caption ||
-                 messageContent.videoMessage?.caption ||
-                 messageContent.editedMessage?.message?.protocolMessage?.editedMessage?.extendedTextMessage?.text || '';
+    // Deteksi teks biasa, pesan edit, maupun klik tombol interaktif
+    let text = messageContent.conversation ||
+               messageContent.extendedTextMessage?.text ||
+               messageContent.imageMessage?.caption ||
+               messageContent.videoMessage?.caption ||
+               messageContent.buttonsResponseMessage?.selectedButtonId ||
+               messageContent.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ||
+               messageContent.editedMessage?.message?.protocolMessage?.editedMessage?.extendedTextMessage?.text || '';
 
-    if (!text.startsWith(config.prefix)) return;
+    // Tangkap ID jika user mengklik tombol interaktif
+    if (messageContent.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
+      try {
+        const parsed = JSON.parse(messageContent.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
+        if (parsed.id) text = parsed.id;
+      } catch (e) {}
+    }
 
-    const args = text.slice(config.prefix.length).trim().split(/ +/);
+    if (!text) return;
+
+    // 1. CEK JAWABAN GAME (Game Tebak & Math)
+    const isAnswerCorrect = await handleGameAnswer(sock, msg, text);
+    if (isAnswerCorrect) return;
+
+    // 2. CEK PREFIX '.' ATAU '/'
+    let prefixUsed = '';
+    if (text.startsWith(config.prefix)) prefixUsed = config.prefix;
+    else if (text.startsWith('/')) prefixUsed = '/';
+
+    if (!prefixUsed) return;
+
+    const args = text.slice(prefixUsed.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
     switch (command) {
@@ -78,12 +99,6 @@ async function handleMessage(sock, msg) {
         await wmCommand(sock, msg, args);
         break;
 
-      case 'hidetag':
-      case 'h':
-        await hidetagCommand(sock, msg, args);
-        break;
-
-      // Command Admin Group (Tetap berfungsi, tapi tidak ditampilkan di menu list)
       case 'close':
       case 'tutup':
         await groupCommand(sock, msg, args, 'close');
@@ -168,10 +183,16 @@ async function handleMessage(sock, msg) {
         await cekbucinCommand(sock, msg, args);
         break;
 
-      // Games Command
+      // Blackjack Command
       case 'bj':
       case 'blackjack':
-        await blackjackCommand(sock, msg, args);
+      case 'hit':
+      case 'stand':
+        if (command === 'hit' || command === 'stand') {
+          await blackjackCommand(sock, msg, [command]);
+        } else {
+          await blackjackCommand(sock, msg, args);
+        }
         break;
 
       case 'math':
@@ -191,13 +212,42 @@ async function handleMessage(sock, msg) {
         await tebakgambarCommand(sock, msg);
         break;
 
-      case 'jsn':
-      case 'jsl':
-      case 'jrb':
-      case 'jkm':
-      case 'jjt':
-        await handleJadwalCommand(sock, msg, command);
+      // SUB-MENU TOMBOL INTERAKTIF
+      case 'menu_game': {
+        const gameText = `🎮 *GAMES & FUN MENU*\n\n` +
+          `• ${config.prefix}bj / ${config.prefix}blackjack\n` +
+          `• ${config.prefix}math\n` +
+          `• ${config.prefix}tebakbendera\n` +
+          `• ${config.prefix}tebakkata\n` +
+          `• ${config.prefix}tebakgambar\n` +
+          `• ${config.prefix}cekkhodam <nama>\n` +
+          `• ${config.prefix}bucin <nama>\n` +
+          `• ${config.prefix}truth\n` +
+          `• ${config.prefix}dare`;
+        await sock.sendMessage(msg.key.remoteJid, { text: gameText }, { quoted: msg });
         break;
+      }
+
+      case 'menu_tools': {
+        const toolsText = `🛠️ *TOOLS & DOWNLOADER MENU*\n\n` +
+          `• ${config.prefix}s / ${config.prefix}sticker\n` +
+          `• ${config.prefix}wm <pack|author>\n` +
+          `• ${config.prefix}toimg\n` +
+          `• ${config.prefix}tovid\n` +
+          `• ${config.prefix}tt <link>\n` +
+          `• ${config.prefix}ig <link>\n` +
+          `• ${config.prefix}play <judul>\n` +
+          `• ${config.prefix}ytmp3 <link>\n` +
+          `• ${config.prefix}hd\n` +
+          `• ${config.prefix}ssweb <url>\n` +
+          `• ${config.prefix}ai <pertanyaan>\n` +
+          `• ${config.prefix}brat <teks>\n` +
+          `• ${config.prefix}bratvid <teks>\n` +
+          `• ${config.prefix}quote <teks>\n` +
+          `• ${config.prefix}rvo`;
+        await sock.sendMessage(msg.key.remoteJid, { text: toolsText }, { quoted: msg });
+        break;
+      }
 
       case 'list':
       case 'menu':
@@ -205,11 +255,12 @@ async function handleMessage(sock, msg) {
         await listCommand(sock, msg);
         break;
 
-        
       default:
-        await sock.sendMessage(msg.key.remoteJid, {
-          text: `❌ Command *${config.prefix}${command}* tidak ditemukan!\nKetik *${config.prefix}menu* untuk melihat daftar command yang tersedia.`
-        }, { quoted: msg });
+        if (prefixUsed === config.prefix) {
+          await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ Command *${config.prefix}${command}* tidak ditemukan!\nKetik *${config.prefix}menu* untuk melihat daftar menu.`
+          }, { quoted: msg });
+        }
         break;
     }
 
