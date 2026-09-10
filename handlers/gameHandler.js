@@ -9,36 +9,36 @@ async function handleGameAnswer(sock, msg, text) {
 
   let inputJawaban = text.trim();
 
-  // Jika member menjawab pakai prefix slash (misal: /jawaban)
-  if (inputJawaban.startsWith('/')) {
+  // Bersihkan prefix jika ada (.jawab / /jawaban)
+  if (inputJawaban.toLowerCase().startsWith('.jawab')) {
+    inputJawaban = inputJawaban.slice(6).trim();
+  } else if (inputJawaban.startsWith('/')) {
     inputJawaban = inputJawaban.slice(1).trim();
-  } else {
-    // Cek apakah pesan ini MEREPLY pesan dari bot
-    const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-    if (!quotedMsg) return false;
   }
 
   const jawabanUser = inputJawaban.toLowerCase();
   const jawabanBenar = session.jawaban.toLowerCase();
   const jawabanAsli = session.jawabanAsli ? session.jawabanAsli.toLowerCase() : '';
 
-  // Jika jawaban BENAR
+  // Pengecekan Jawaban
   if (jawabanUser === jawabanBenar || (jawabanAsli && jawabanUser === jawabanAsli)) {
     clearTimeout(session.timer);
     delete global.db.game[remoteJid];
 
     await sock.sendMessage(remoteJid, {
-      text: `nice bener\n\n✨ *Jawaban:* ${session.jawaban}`
+      text: `🎉 *SELAMAT!* Jawabannya benar!\n\n✨ *Jawaban:* ${session.jawaban}`
     }, { quoted: msg });
     return true;
-  } 
+  }
 
-  // Jika jawaban SALAH (hanya jika dia mereply/pakai slash)
-  await sock.sendMessage(remoteJid, {
-    text: `salah, gitu aja gabisa`
-  }, { quoted: msg });
+  // Respon jika salah (Hanya jika chat tersebut adalah angka/kata tunggal atau pesan ber-prefix agar tidak spam saat obrolan biasa)
+  const isSingleWord = !inputJawaban.includes(' ');
+  if (isSingleWord) {
+    await sock.sendMessage(remoteJid, { text: `salah, gitu aja gabisa` }, { quoted: msg });
+    return true;
+  }
 
-  return true;
+  return false;
 }
 
 module.exports = { handleGameAnswer };
