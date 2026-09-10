@@ -1,48 +1,67 @@
-const config = require('../config');
+async function menuCommand(sock, msg) {
+  const remoteJid = msg.key.remoteJid;
+  const pushName = msg.pushName || 'User';
 
-async function listCommand(sock, msg) {
-  const from = msg.key.remoteJid;
-  const prefix = config.prefix || '.';
+  // Opsi tanggal format Indonesia real-time
+  const today = new Date();
+  const dateString = today.toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
 
-  const menuText = `
-══════════════════
-🤖 *${config.botName || 'BOT WHATSAPP'}*
-══════════════════
+  const menuText = `╭───［ *BOT MENU* ］───
+│ 👤 User : ${pushName}
+│ 📅 Date : ${dateString}
+├──
+│ 💡 Gunakan prefix [ . ] sebelum command
+╰───────────────────────
 
-📌 *STICKER & MEDIA*
- 🔹 *${prefix}sticker* / *${prefix}s* ── Ubah gambar/gif/video jadi stiker
- 🔹 *${prefix}wm* ── Ubah watermark/packname stiker
- 🔹 *${prefix}toimg* ── Ubah stiker foto jadi gambar biasa
- 🔹 *${prefix}brat* <teks> ── Buat stiker teks gaya Brat
- 🔹 *${prefix}bratvid* <teks> ── Buat stiker video/animasi Brat
- 🔹 *${prefix}quote* / *${prefix}q* ── Buat stiker quote dari chat (reply)
+┌──『 *MAIN & UTILITY* 』
+│ ├ .ai (Tanya AI)
+│ ├ .rvo (Lihat Pesan View Once)
+│ ├ .toimg (Stiker ke Gambar)
+│ ├ .hd (Jernihkan Foto)
+│ └ .ssweb (Screenshot Web)
+└───────────────────────
 
-🔓 *RAHASIA & UTILITY*
- 🔹 *${prefix}rvo* / *${prefix}save* ── Ambil/buka foto & video 1x lihat (View Once)
+┌──『 *MAKER & CONVERT* 』
+│ ├ .sticker (Bikin Stiker)
+│ ├ .brat (Stiker Teks Brat)
+│ ├ .qc (Stiker Chat Bubble)
+│ ├ .wm (Ganti Watermark Stiker)
+│ └ .tovid (Stiker ke Video)
+└───────────────────────
 
-📥 *DOWNLOADER*
- 🔹 *${prefix}tiktok* / *${prefix}tt* <url> ── Download video TikTok no WM
- 🔹 *${prefix}ig* / *${prefix}instagram* <url> ── Download media Instagram
+┌──『 *DOWNLOADER* 』
+│ ├ .tiktok (Video No WM)
+│ ├ .ig (Foto / Reel IG)
+│ ├ .play (Cari & Musik)
+│ └ .ytmp3 (Audio YouTube)
+└───────────────────────
 
-👥 *GROUP MANAGEMENT*
- 🔹 *${prefix}close* / *${prefix}tutup* ── Tutup grup (Hanya Admin yang bisa chat)
- 🔹 *${prefix}open* / *${prefix}buka* ── Buka grup (Semua member bisa chat)
- 🔹 *${prefix}promote* / *${prefix}pm* ── Naikkan jabatan member jadi Admin (tag/reply)
- 🔹 *${prefix}demote* / *${prefix}dm* ── Turunkan jabatan Admin jadi member (tag/reply)
- 🔹 *${prefix}hidetag* / *${prefix}h* <teks> ── Tag seluruh member grup secara tersembunyi
+┌──『 *FUN & GAMES* 』
+│ ├ .cekkhodam (Cek Khodam)
+│ ├ .tebakgambar (Tebak Gambar)
+│ ├ .truth / .dare
+│ └ .cekbucin (Cek Bucin)
+└───────────────────────
 
-ℹ️ *OTHER*
- 🔹 *${prefix}list* / *${prefix}help* ── Menampilkan daftar menu ini
-
-══════════════════
-✨ *Gunakan bot dengan bijak!*
-`;
+┌──『 *GROUP & ADMIN* 』
+│ ├ .hidetag (Tag Semua)
+│ ├ .kick (Keluarkan Member)
+│ ├ .linkgc (Link Grup)
+│ └ .mute / .unmute
+└───────────────────────`;
 
   try {
-    await sock.sendMessage(from, { text: menuText.trim() }, { quoted: msg });
+    await sock.sendMessage(remoteJid, { react: { text: '⏳', key: msg.key } });
+    await sock.sendMessage(remoteJid, { text: menuText }, { quoted: msg });
+    await sock.sendMessage(remoteJid, { react: { text: '✅', key: msg.key } });
   } catch (err) {
-    console.error('Error di listCommand:', err);
+    console.error('Error Menu:', err);
+    await sock.sendMessage(remoteJid, { react: { text: '❌', key: msg.key } });
   }
 }
 
-module.exports = listCommand;
+module.exports = menuCommand;
