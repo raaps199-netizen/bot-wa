@@ -1,21 +1,44 @@
-const axios = require('axios');
+const fetch = require('node-fetch');
+
+if (!global.db) global.db = {};
+if (!global.db.game) global.db.game = {};
 
 async function tebakgambarCommand(sock, msg) {
   const remoteJid = msg.key.remoteJid;
+
+  if (global.db.game[remoteJid]) {
+    await sock.sendMessage(remoteJid, { text: '⚠️ Masih ada game yang belum selesai di chat ini!' }, { quoted: msg });
+    return;
+  }
+
   try {
-    const res = await axios.get('https://raw.githubusercontent.com/BochilTeam/database/master/games/tebakgambar.json');
-    const soal = res.data[Math.floor(Math.random() * res.data.length)];
+    const res = await fetch('https://raw.githubusercontent.com/BochilTeam/database/master/games/tebakgambar.json');
+    const data = await res.json();
+    const json = data[Math.floor(Math.random() * data.length)];
 
     const caption = `🖼️ *TEBAK GAMBAR*\n\n` +
-      `Clue: ${soal.deskripsi}\n\n` +
-      `💡 *Jawaban:* ||${soal.jawaban}|| _(Ketuk spoiler jika menyerah)_`;
+      `Petunjuk: ${json.deskripsi || 'Tebak susunan kata dari gambar di atas'}\n` +
+      `Waktu: *60 Detik*\n\n` +
+      `_Reply gambar ini lalu jawab pakai slash!_\nContoh: */${json.jawaban}*`;
 
-    await sock.sendMessage(remoteJid, {
-      image: { url: soal.img },
+    const sentMsg = await sock.sendMessage(remoteJid, {
+      image: { url: json.img },
       caption: caption
     }, { quoted: msg });
+
+    global.db.game[remoteJid] = {
+      jawaban: json.jawaban.toLowerCase().trim(),
+      timer: setTimeout(async () => {
+        if (global.db.game[remoteJid]) {
+          delete global.db.game[remoteJid];
+          await sock.sendMessage(remoteJid, { text: `⏰ *WAKTU HABIS!*\nJawaban yang benar: *${json.jawaban}*` }, { quoted: sentMsg });
+        }
+      }, 60000)
+    };
+
   } catch (err) {
-    await sock.sendMessage(remoteJid, { text: '❌ Gagal mengambil soal tebak gambar.' }, { quoted: msg });
+    console.error(err);
+    await sock.sendMessage(remoteJid, { text: '❌ Gagal mengambil data Tebak Gambar.' }, { quoted: msg });
   }
 }
 
