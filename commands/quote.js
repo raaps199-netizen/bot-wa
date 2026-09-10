@@ -15,7 +15,8 @@ async function quoteCommand(sock, msg, args) {
   }
 
   try {
-    await sock.sendMessage(from, { text: '⏳ Sedang membuat Quote Meme...' });
+    // Indikator loading simpel dengan emoji
+    await sock.sendMessage(from, { text: '⏳' }, { quoted: msg });
 
     // 1. Ambil Teks
     const textToQuote = quoted.conversation || 
@@ -28,11 +29,20 @@ async function quoteCommand(sock, msg, args) {
     try {
       avatarUrl = await sock.profilePictureUrl(quotedParticipant, 'image');
     } catch (e) {
-      // Menggunakan foto profil default jika di-private
+      // Menggunakan foto profil default jika di-private/gagal ambil
     }
 
-    // 3. Ambil Nama Pengirim
-    const name = quotedParticipant.split('@')[0];
+    // 3. Ambil Nama Pengirim (Gunakan pushName jika pesan sendiri/terdeteksi, atau sock.getName)
+    let senderName = 'Pengguna WhatsApp';
+    try {
+      if (sock.getName) {
+        senderName = await sock.getName(quotedParticipant);
+      } else {
+        senderName = msg.pushName || quotedParticipant.split('@')[0];
+      }
+    } catch (e) {
+      senderName = quotedParticipant.split('@')[0];
+    }
 
     // 4. Kirim Permintaan ke API Quotly
     const payload = {
@@ -48,7 +58,7 @@ async function quoteCommand(sock, msg, args) {
           avatar: true,
           from: {
             id: 1,
-            name: name,
+            name: senderName, // Nama pengirim yang sudah didapatkan
             photo: {
               url: avatarUrl
             }
@@ -64,12 +74,16 @@ async function quoteCommand(sock, msg, args) {
       timeout: 10000
     });
 
+    if (!response.data?.result?.image) {
+      throw new Error('Respon dari server Quotly tidak valid');
+    }
+
     const imageBuffer = Buffer.from(response.data.result.image, 'base64');
 
     // 5. Ubah menjadi Stiker WhatsApp
     const sticker = new Sticker(imageBuffer, {
       pack: 'Quote Meme',
-      author: 'Bot WA',
+      author: senderName, // Author stiker otomatis memakai nama pengirim
       type: StickerTypes.FULL,
       quality: 80
     });
