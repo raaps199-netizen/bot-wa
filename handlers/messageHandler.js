@@ -48,9 +48,9 @@ async function handleMessage(sock, msg) {
     const cleanText = text.trim();
     if (!cleanText) return;
 
-    // 1. CEK DULU JAWABAN GAME (Supaya bisa jawab tanpa prefix & tanpa reply)
+    // 1. CEK DULU JAWABAN GAME
     const isGameAnswered = await handleGameAnswer(sock, msg, cleanText);
-    if (isGameAnswered) return; // Jika pesan terproses sebagai jawaban game, stop di sini!
+    if (isGameAnswered) return;
 
     // 2. CEK PREFIX '.' ATAU '/'
     let prefixUsed = '';
@@ -68,7 +68,7 @@ async function handleMessage(sock, msg) {
         const userAnswer = args.join(' ');
         if (!userAnswer) {
           await sock.sendMessage(msg.key.remoteJid, { 
-            text: '⚠️ Masukkan jawaban kamu!\nContoh: *.jawab italia* atau langsung ketik jawabannya di chat.' 
+            text: '⚠️ Masukkan jawaban kamu!\nContoh: *.jawab a* atau reply soal lalu ketik /a.' 
           }, { quoted: msg });
           break;
         }
@@ -217,56 +217,109 @@ async function handleMessage(sock, msg) {
 
       case 'trivia':
       case 'kuis':
-        // Diberi parameter args agar trivia tahu kategori & levelnya
         await triviaCommand(sock, msg, args);
         break;
 
-      // SUB-MENU
-      case 'menu_game': {
-        const gameText = `*MENU GAME*\n\n` +
-          `• ${config.prefix}bj\n` +
-          `• ${config.prefix}math [mudah|sedang|sulit]\n` +
-          `• ${config.prefix}tebakbendera\n` +
-          `• ${config.prefix}tebakkata\n` +
-          `• ${config.prefix}tebakgambar\n` +
-          `• ${config.prefix}trivia <kategori> <level>\n` +
-          `• Langsung jawab di chat tanpa prefix!\n` +
-          `• ${config.prefix}cekkhodam <nama>\n` +
-          `• ${config.prefix}bucin <nama>\n` +
-          `• ${config.prefix}truth\n` +
-          `• ${config.prefix}dare`;
+      // SUB-MENU DENGAN STYLE BARU
+      case 'menu_game':
+      case 'games': {
+        const gameText = 
+`┏━『 *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* 』
+┃
+┣⌬ ${config.prefix}bj
+┣⌬ ${config.prefix}math [mudah|sedang|sulit]
+┣⌬ ${config.prefix}tebakbendera
+┣⌬ ${config.prefix}tebakkata
+┣⌬ ${config.prefix}tebakgambar
+┣⌬ ${config.prefix}trivia <kategori> <level>
+┣⌬ ${config.prefix}cekkhodam <nama>
+┣⌬ ${config.prefix}bucin <nama>
+┣⌬ ${config.prefix}truth
+┣⌬ ${config.prefix}dare
+┗━━━━━━━◧`;
         await sock.sendMessage(msg.key.remoteJid, { text: gameText }, { quoted: msg });
         break;
       }
 
-      case 'menu_tools': {
-        const toolsText = `*MENU TOOLS*\n\n` +
-          `• ${config.prefix}s\n` +
-          `• ${config.prefix}wm <pack|author>\n` +
-          `• ${config.prefix}toimg\n` +
-          `• ${config.prefix}tovid\n` +
-          `• ${config.prefix}tt <link>\n` +
-          `• ${config.prefix}ig <link>\n` +
-          `• ${config.prefix}play <judul>\n` +
-          `• ${config.prefix}ytmp3 <link>\n` +
-          `• ${config.prefix}hd\n` +
-          `• ${config.prefix}ssweb <url>\n` +
-          `• ${config.prefix}ai <teks>\n` +
-          `• ${config.prefix}brat <teks>\n` +
-          `• ${config.prefix}bratvid <teks>\n` +
-          `• ${config.prefix}quote <teks>\n` +
-          `• ${config.prefix}rvo`;
+      case 'menu_tools':
+      case 'tools': {
+        const toolsText = 
+`┏━『 *ᴍᴇɴᴜ ᴛᴏᴏʟꜱ* 』
+┃
+┣⌬ ${config.prefix}s
+┣⌬ ${config.prefix}wm <pack|author>
+┣⌬ ${config.prefix}toimg
+┣⌬ ${config.prefix}tovid
+┣⌬ ${config.prefix}tt <link>
+┣⌬ ${config.prefix}ig <link>
+┣⌬ ${config.prefix}play <judul>
+┣⌬ ${config.prefix}ytmp3 <link>
+┣⌬ ${config.prefix}hd
+┣⌬ ${config.prefix}ssweb <url>
+┣⌬ ${config.prefix}ai <teks>
+┣⌬ ${config.prefix}brat <teks>
+┣⌬ ${config.prefix}bratvid <teks>
+┣⌬ ${config.prefix}quote <teks>
+┣⌬ ${config.prefix}rvo
+┗━━━━━━━◧`;
         await sock.sendMessage(msg.key.remoteJid, { text: toolsText }, { quoted: msg });
         break;
       }
 
-      case 'menu_group': {
-        const groupText = `*MENU GROUP*\n\n` +
-          `• ${config.prefix}open\n` +
-          `• ${config.prefix}close\n` +
-          `• ${config.prefix}promote @user\n` +
-          `• ${config.prefix}demote @user`;
+      case 'menu_group':
+      case 'group': {
+        const groupText = 
+`┏━『 *ᴍᴇɴᴜ ɢʀᴏᴜᴘ* 』
+┃
+┣⌬ ${config.prefix}open
+┣⌬ ${config.prefix}close
+┣⌬ ${config.prefix}promote @user
+┣⌬ ${config.prefix}demote @user
+┗━━━━━━━◧`;
         await sock.sendMessage(msg.key.remoteJid, { text: groupText }, { quoted: msg });
+        break;
+      }
+
+      case 'allmenu': {
+        const allText = 
+`┏━『 *ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ* 』
+┃
+┣⌬ *ɢᴀᴍᴇꜱ*
+┃  • ${config.prefix}bj
+┃  • ${config.prefix}math [mudah|sedang|sulit]
+┃  • ${config.prefix}tebakbendera
+┃  • ${config.prefix}tebakkata
+┃  • ${config.prefix}tebakgambar
+┃  • ${config.prefix}trivia <kategori> <level>
+┃  • ${config.prefix}cekkhodam <nama>
+┃  • ${config.prefix}bucin <nama>
+┃  • ${config.prefix}truth
+┃  • ${config.prefix}dare
+┃
+┣⌬ *ᴛᴏᴏʟꜱ*
+┃  • ${config.prefix}s
+┃  • ${config.prefix}wm <pack|author>
+┃  • ${config.prefix}toimg
+┃  • ${config.prefix}tovid
+┃  • ${config.prefix}tt <link>
+┃  • ${config.prefix}ig <link>
+┃  • ${config.prefix}play <judul>
+┃  • ${config.prefix}ytmp3 <link>
+┃  • ${config.prefix}hd
+┃  • ${config.prefix}ssweb <url>
+┃  • ${config.prefix}ai <teks>
+┃  • ${config.prefix}brat <teks>
+┃  • ${config.prefix}bratvid <teks>
+┃  • ${config.prefix}quote <teks>
+┃  • ${config.prefix}rvo
+┃
+┣⌬ *ɢʀᴏᴜᴘ*
+┃  • ${config.prefix}open
+┃  • ${config.prefix}close
+┃  • ${config.prefix}promote @user
+┃  • ${config.prefix}demote @user
+┗━━━━━━━◧`;
+        await sock.sendMessage(msg.key.remoteJid, { text: allText }, { quoted: msg });
         break;
       }
 
@@ -291,4 +344,3 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-        
