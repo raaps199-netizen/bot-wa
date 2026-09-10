@@ -48,16 +48,15 @@ async function handleMessage(sock, msg) {
     const cleanText = text.trim();
     if (!cleanText) return;
 
-    // 1. CEK DULU JAWABAN GAME (Guna menangkap chat biasa/tanpa prefix)
+    // 1. CEK DULU JAWABAN GAME (Supaya bisa jawab tanpa prefix & tanpa reply)
     const isGameAnswered = await handleGameAnswer(sock, msg, cleanText);
-    if (isGameAnswered) return; // Jika terdeteksi sebagai jawaban game, stop di sini!
+    if (isGameAnswered) return; // Jika pesan terproses sebagai jawaban game, stop di sini!
 
-    // 2. CEK PREFIX PERINTAH ('.' ATAU '/')
+    // 2. CEK PREFIX '.' ATAU '/'
     let prefixUsed = '';
     if (cleanText.startsWith(config.prefix)) prefixUsed = config.prefix;
     else if (cleanText.startsWith('/')) prefixUsed = '/';
 
-    // Jika pesan biasa dan BUKAN jawaban game, abaikan
     if (!prefixUsed) return;
 
     const args = cleanText.slice(prefixUsed.length).trim().split(/ +/);
@@ -218,7 +217,7 @@ async function handleMessage(sock, msg) {
 
       case 'trivia':
       case 'kuis':
-        // FIX: Menambahkan parameter `args` agar trivia merespon kategori & level
+        // Diberi parameter args agar trivia tahu kategori & levelnya
         await triviaCommand(sock, msg, args);
         break;
 
@@ -292,3 +291,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
+        
