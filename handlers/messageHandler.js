@@ -185,7 +185,7 @@ async function handleMessage(sock, msg) {
 
       case 'math':
       case 'matematika':
-        await mathCommand(sock, msg);
+        await mathCommand(sock, msg, args);
         break;
 
       case 'tebakbendera':
