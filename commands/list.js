@@ -1,17 +1,21 @@
 const config = require('../config');
 
 async function listCommand(sock, msg) {
-  const remoteJid = msg.key.remoteJid;
+  const from = msg.key.remoteJid;
 
-  const menuText = `
-*DAFTAR MENU*
+  const menuText = 
+`┏━『 *ᴍᴇɴᴜ ᴜᴛᴀᴍᴀ* 』
+┃
+┣⌬ ɢᴀᴍᴇꜱ
+┣⌬ ᴛᴏᴏʟꜱ
+┣⌬ ɢʀᴏᴜᴘ
+┣⌬ ᴀʟʟᴍᴇɴᴜ
+┗━━━━━━━◧
 
-• *${config.prefix}menu_game* — Games & Fun
-• *${config.prefix}menu_tools* — Tools & Downloader
-• *${config.prefix}menu_group* — Pengelola Group
-`.trim();
+_ᴋᴇᴛɪᴋ ɴᴀᴍᴀ ᴋᴀᴛᴇɢᴏʀɪ ᴜɴᴛᴜᴋ ᴍᴇʟɪʜᴀᴛ ɪꜱɪɴʏᴀ._
+_ᴄᴏɴᴛᴏʜ: *${config.prefix}menu_game* ᴀᴛᴀᴜ *${config.prefix}allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍᴘɪʟᴋᴀɴ ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ_`;
 
-  await sock.sendMessage(remoteJid, { text: menuText }, { quoted: msg });
+  await sock.sendMessage(from, { text: menuText }, { quoted: msg });
 }
 
 module.exports = listCommand;
