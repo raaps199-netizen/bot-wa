@@ -7,7 +7,7 @@ async function tebakgambarCommand(sock, msg) {
   const remoteJid = msg.key.remoteJid;
 
   if (global.db.game[remoteJid]) {
-    await sock.sendMessage(remoteJid, { text: '⚠️ Masih ada game yang belum selesai di chat ini!' }, { quoted: msg });
+    await sock.sendMessage(remoteJid, { text: 'itu jawab dulu njir' }, { quoted: msg });
     return;
   }
 
@@ -19,7 +19,7 @@ async function tebakgambarCommand(sock, msg) {
     const caption = `🖼️ *TEBAK GAMBAR*\n\n` +
       `Petunjuk: ${json.deskripsi || 'Tebak susunan kata dari gambar di atas'}\n` +
       `Waktu: *60 Detik*\n\n` +
-      `_Reply gambar ini lalu jawab pakai slash!_\nContoh: */${json.jawaban}*`;
+      `_Reply gambar ini lalu jawab pakai slash!_`;
 
     const sentMsg = await sock.sendMessage(remoteJid, {
       image: { url: json.img },
@@ -31,7 +31,7 @@ async function tebakgambarCommand(sock, msg) {
       timer: setTimeout(async () => {
         if (global.db.game[remoteJid]) {
           delete global.db.game[remoteJid];
-          await sock.sendMessage(remoteJid, { text: `⏰ *WAKTU HABIS!*\nJawaban yang benar: *${json.jawaban}*` }, { quoted: sentMsg });
+          await sock.sendMessage(remoteJid, { text: `lama ah kalian, yang bener: *${json.jawaban}*` }, { quoted: sentMsg });
         }
       }, 60000)
     };
