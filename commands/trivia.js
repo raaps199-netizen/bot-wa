@@ -1,87 +1,110 @@
-const axios = require('axios');
-const { activeGames } = require('../handlers/gameHandler');
+const fetch = require('node-fetch');
 
-async function triviaCommand(sock, msg) {
+if (!global.db) global.db = {};
+if (!global.db.game) global.db.game = {};
+
+const categoryMap = {
+  biologi: 17,
+  fisika: 17,
+  kimia: 17,
+  sejarah: 23,
+  geografi: 22,
+  inggris: 10,
+  indonesia: 9
+};
+
+const difficultyMap = {
+  mudah: 'easy',
+  sedang: 'medium',
+  sulit: 'hard'
+};
+
+async function translateToId(text) {
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=id&dt=t&q=${encodeURIComponent(text)}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    return json[0].map(item => item[0]).join('');
+  } catch (e) {
+    return text;
+  }
+}
+
+function decodeHTML(str) {
+  return str
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
+async function triviaCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
 
-  if (activeGames.trivia?.has(remoteJid)) {
+  if (global.db.game[remoteJid]) {
+    await sock.sendMessage(remoteJid, { text: 'itu jawab dulu njir' }, { quoted: msg });
+    return;
+  }
+
+  const kategoriInput = args[0]?.toLowerCase();
+  const levelInput = args[1]?.toLowerCase() || 'mudah';
+
+  if (!kategoriInput || !categoryMap[kategoriInput]) {
     await sock.sendMessage(remoteJid, {
-      text: '⚠️ Masih ada sesi Trivia yang berlangsung! Jawab dengan *.jawab <opsi/jawaban>*</opsi>'
+      text: `📚 *TRIVIA SMA*\n\n` +
+        `Ketik format: *.trivia <kategori> <level>*\n\n` +
+        `*Kategori:* biologi, fisika, kimia, sejarah, geografi, inggris, indonesia\n` +
+        `*Level:* mudah, sedang, sulit`
     }, { quoted: msg });
     return;
   }
 
-  try {
-    // Mengambil soal acak dari API Trivia
-    const res = await axios.get('https://opentdb.com/api.php?amount=1&type=multiple');
-    const qData = res.data.results[0];
+  const categoryId = categoryMap[kategoriInput];
+  const difficulty = difficultyMap[levelInput] || 'easy';
 
-    // Decode HTML entities
-    const decodeHTMLEntities = (text) => {
-      return text
-        .replace(/&quot;/g, '"')
-        .replace(/&#039;/g, "'")
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&deg;/g, '°');
+  await sock.sendMessage(remoteJid, { text: '🔄 *Mengambil soal dari internet...*' }, { quoted: msg });
+
+  try {
+    const apiUrl = `https://opentdb.com/api.php?amount=1&category=${categoryId}&difficulty=${difficulty}&type=multiple`;
+    const res = await fetch(apiUrl);
+    const data = await res.json();
+
+    if (!data.results || data.results.length === 0) {
+      await sock.sendMessage(remoteJid, { text: '❌ Gagal mengambil soal. Coba lagi!' }, { quoted: msg });
+      return;
+    }
+
+    const item = data.results[0];
+    const rawQuestion = decodeHTML(item.question);
+    const rawAnswer = decodeHTML(item.correct_answer);
+
+    const questionId = await translateToId(rawQuestion);
+    const answerId = await translateToId(rawAnswer);
+
+    const teks = `🧠 *TRIVIA ${kategoriInput.toUpperCase()} (${levelInput.toUpperCase()})*\n\n` +
+      `*Soal:* ${questionId}\n` +
+      `Waktu: *60 Detik*\n\n` +
+      `_Reply pesan ini lalu jawab pakai slash!_`;
+
+    const sentMsg = await sock.sendMessage(remoteJid, { text: teks }, { quoted: msg });
+
+    global.db.game[remoteJid] = {
+      jawaban: answerId.toLowerCase().trim(),
+      jawabanAsli: rawAnswer.toLowerCase().trim(),
+      timer: setTimeout(async () => {
+        if (global.db.game[remoteJid]) {
+          delete global.db.game[remoteJid];
+          await sock.sendMessage(remoteJid, { 
+            text: `lama ah kalian, yang bener: *${answerId}*` 
+          }, { quoted: sentMsg });
+        }
+      }, 60000)
     };
 
-    const question = decodeHTMLEntities(qData.question);
-    const correctAnswer = decodeHTMLEntities(qData.correct_answer);
-    const incorrectAnswers = qData.incorrect_answers.map(decodeHTMLEntities);
-
-    // Acak pilihan jawaban
-    const options = [...incorrectAnswers, correctAnswer].sort(() => Math.random() - 0.5);
-    const labels = ['A', 'B', 'C', 'D'];
-    
-    let optionsText = '';
-    let correctLabel = '';
-
-    options.forEach((opt, idx) => {
-      optionsText += `\n*${labels[idx]}.* ${opt}`;
-      if (opt === correctAnswer) {
-        correctLabel = labels[idx];
-      }
-    });
-
-    // Inisialisasi map jika belum ada
-    if (!activeGames.trivia) activeGames.trivia = new Map();
-
-    const timeout = setTimeout(async () => {
-      if (activeGames.trivia.has(remoteJid)) {
-        activeGames.trivia.delete(remoteJid);
-        await sock.sendMessage(remoteJid, {
-          text: `⏱️ *Waktu Habis!*\nJawaban yang benar adalah: *${correctLabel}. ${correctAnswer}*`
-        });
-      }
-    }, 60000);
-
-    // Simpan kunci jawaban (bisa huruf A/B/C/D atau teks jawabannya)
-    activeGames.trivia.set(remoteJid, {
-      answer: correctLabel,
-      fullAnswer: correctAnswer,
-      timeout: timeout
-    });
-
-    const caption = `
-🧠 *TRIVIA GAME*
-Kategori: *${qData.category}* | Tingkat: *${qData.difficulty}*
-
-*Pertanyaan:*
-${question}
-
-*Pilihan Jawaban:*${optionsText}
-
-⏱️ Waktu: *60 detik*
-Ketik *.jawab <A/B/C/D>* untuk menjawab!
-`.trim();
-
-    await sock.sendMessage(remoteJid, { text: caption }, { quoted: msg });
-
   } catch (err) {
-    console.error('Error Trivia API:', err);
-    await sock.sendMessage(remoteJid, { text: '❌ Gagal mengambil soal trivia dari server, coba lagi nanti.' }, { quoted: msg });
+    console.error(err);
+    await sock.sendMessage(remoteJid, { text: '❌ Terjadi kesalahan server.' }, { quoted: msg });
   }
 }
 
