@@ -20,7 +20,9 @@ const difficultyMap = {
 async function translateToId(text) {
   try {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=id&dt=t&q=${encodeURIComponent(text)}`;
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
     const json = await res.json();
     return json[0].map(item => item[0]).join('');
   } catch (e) {
@@ -37,11 +39,11 @@ function decodeHTML(str) {
     .replace(/&gt;/g, ">");
 }
 
-async function triviaCommand(sock, msg, args) {
+async function triviaCommand(sock, msg, args = []) {
   const remoteJid = msg.key.remoteJid;
 
   if (global.db.game[remoteJid]) {
-    await sock.sendMessage(remoteJid, { text: 'itu jawab dulu njir' }, { quoted: msg });
+    await sock.sendMessage(remoteJid, { text: '⚠️ Masih ada game yang belum selesai di chat ini!' }, { quoted: msg });
     return;
   }
 
@@ -53,7 +55,8 @@ async function triviaCommand(sock, msg, args) {
       text: `📚 *TRIVIA SMA*\n\n` +
         `Ketik format: *.trivia <kategori> <level>*\n\n` +
         `*Kategori:* biologi, fisika, kimia, sejarah, geografi, inggris, indonesia\n` +
-        `*Level:* mudah, sedang, sulit`
+        `*Level:* mudah, sedang, sulit\n\n` +
+        `*Contoh:* .trivia biologi mudah`
     }, { quoted: msg });
     return;
   }
@@ -61,15 +64,17 @@ async function triviaCommand(sock, msg, args) {
   const categoryId = categoryMap[kategoriInput];
   const difficulty = difficultyMap[levelInput] || 'easy';
 
-  await sock.sendMessage(remoteJid, { text: '🔄 *Mengambil soal dari internet...*' }, { quoted: msg });
+  await sock.sendMessage(remoteJid, { text: '🔄 *Mengambil soal trivia...*' }, { quoted: msg });
 
   try {
     const apiUrl = `https://opentdb.com/api.php?amount=1&category=${categoryId}&difficulty=${difficulty}&type=multiple`;
-    const res = await fetch(apiUrl);
+    const res = await fetch(apiUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
     const data = await res.json();
 
     if (!data.results || data.results.length === 0) {
-      await sock.sendMessage(remoteJid, { text: '❌ Gagal mengambil soal. Coba lagi!' }, { quoted: msg });
+      await sock.sendMessage(remoteJid, { text: '❌ Gagal mengambil soal dari server. Coba lagi beberapa saat lagi!' }, { quoted: msg });
       return;
     }
 
@@ -81,9 +86,9 @@ async function triviaCommand(sock, msg, args) {
     const answerId = await translateToId(rawAnswer);
 
     const teks = `🧠 *TRIVIA ${kategoriInput.toUpperCase()} (${levelInput.toUpperCase()})*\n\n` +
-      `*Soal:* ${questionId}\n` +
-      `Waktu: *60 Detik*\n\n` +
-      `_Reply pesan ini lalu jawab pakai slash!_`;
+      `*Soal:* ${questionId}\n\n` +
+      `⏱️ Waktu: *60 Detik*\n` +
+      `💡 _Ketik langsung jawabannya di chat!_`;
 
     const sentMsg = await sock.sendMessage(remoteJid, { text: teks }, { quoted: msg });
 
@@ -94,15 +99,15 @@ async function triviaCommand(sock, msg, args) {
         if (global.db.game[remoteJid]) {
           delete global.db.game[remoteJid];
           await sock.sendMessage(remoteJid, { 
-            text: `lama ah kalian, yang bener: *${answerId}*` 
+            text: `⌛ *Waktu habis!*\nJawaban yang benar adalah: *${answerId}*` 
           }, { quoted: sentMsg });
         }
       }, 60000)
     };
 
   } catch (err) {
-    console.error(err);
-    await sock.sendMessage(remoteJid, { text: '❌ Terjadi kesalahan server.' }, { quoted: msg });
+    console.error('Error Trivia:', err);
+    await sock.sendMessage(remoteJid, { text: '❌ Terjadi kesalahan saat mengambil soal.' }, { quoted: msg });
   }
 }
 
