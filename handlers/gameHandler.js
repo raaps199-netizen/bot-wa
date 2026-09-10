@@ -5,37 +5,46 @@ async function handleGameAnswer(sock, msg, text) {
   const remoteJid = msg.key.remoteJid;
   const session = global.db.game[remoteJid];
 
+  // Jika tidak ada game yang aktif di chat ini, lewati
   if (!session) return false;
 
   let inputJawaban = text.trim();
 
-  // Bersihkan prefix jika ada (.jawab / /jawaban)
+  // Bersihkan prefix jika user mengetik .jawab, .150, atau /150
   if (inputJawaban.toLowerCase().startsWith('.jawab')) {
     inputJawaban = inputJawaban.slice(6).trim();
-  } else if (inputJawaban.startsWith('/')) {
+  } else if (inputJawaban.startsWith('.') || inputJawaban.startsWith('/')) {
     inputJawaban = inputJawaban.slice(1).trim();
   }
 
-  const jawabanUser = inputJawaban.toLowerCase();
-  const jawabanBenar = session.jawaban.toLowerCase();
-  const jawabanAsli = session.jawabanAsli ? session.jawabanAsli.toLowerCase() : '';
+  // Jika input kosong setelah dipotong prefix
+  if (!inputJawaban) return false;
 
-  // Pengecekan Jawaban
+  const jawabanUser = inputJawaban.toLowerCase().trim();
+  const jawabanBenar = String(session.jawaban).toLowerCase().trim();
+  const jawabanAsli = session.jawabanAsli ? String(session.jawabanAsli).toLowerCase().trim() : '';
+
+  // 1. JIKA JAWABAN BENAR
   if (jawabanUser === jawabanBenar || (jawabanAsli && jawabanUser === jawabanAsli)) {
     clearTimeout(session.timer);
     delete global.db.game[remoteJid];
 
     await sock.sendMessage(remoteJid, {
-      text: `🎉 *SELAMAT!* Jawabannya benar!\n\n✨ *Jawaban:* ${session.jawaban}`
+      text: `🎉 *SELAMAT!* Jawaban kamu benar!\n\n✨ *Jawaban:* ${session.jawaban}`
     }, { quoted: msg });
-    return true;
+    
+    return true; // Tandai bahwa pesan ini adalah jawaban game!
   }
 
-  // Respon jika salah (Hanya jika chat tersebut adalah angka/kata tunggal atau pesan ber-prefix agar tidak spam saat obrolan biasa)
+  // 2. JIKA JAWABAN SALAH (Grup/Private Chat)
+  // Cek jika input berupa kata/angka tunggal (bukan obrolan kalimat panjang)
   const isSingleWord = !inputJawaban.includes(' ');
   if (isSingleWord) {
-    await sock.sendMessage(remoteJid, { text: `salah, gitu aja gabisa` }, { quoted: msg });
-    return true;
+    await sock.sendMessage(remoteJid, { 
+      text: `❌ Salah! Coba lagi.` 
+    }, { quoted: msg });
+    
+    return true; // Tetap kembalikan true agar tidak dianggap command tidak ditemukan!
   }
 
   return false;
