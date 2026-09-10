@@ -9,7 +9,7 @@ async function mathCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
 
   if (global.db.game[remoteJid]) {
-    await sock.sendMessage(remoteJid, { text: '⚠️ Masih ada game yang berlangsung di chat ini!' }, { quoted: msg });
+    await sock.sendMessage(remoteJid, { text: 'itu jawab dulu njir' }, { quoted: msg });
     return;
   }
 
@@ -50,32 +50,32 @@ async function mathCommand(sock, msg, args) {
 
   } else if (level === 'extreme') {
     const tipe = getRandomInt(1, 2);
-    if (tipe === 1) { // Pangkat
+    if (tipe === 1) {
       const base = getRandomInt(2, 10);
       const exp = getRandomInt(2, 3);
       soal = `${base}^${exp}`;
       jawaban = Math.pow(base, exp).toString();
-    } else { // Akar
+    } else {
       const ans = getRandomInt(2, 15);
       soal = `√${ans * ans}`;
       jawaban = ans.toString();
     }
 
-  } else if (level === 'max') { // Kelas 11 Kurikulum Merdeka
+  } else if (level === 'max') {
     const tipeMax = getRandomInt(1, 4);
-    if (tipeMax === 1) { // Turunan f(x) = ax^n
+    if (tipeMax === 1) {
       const a = getRandomInt(2, 5);
       soal = `Turunan pertama dari f(x) = ${a}x² pada x = 3`;
-      jawaban = (2 * a * 3).toString(); // f'(x) = 2ax -> 2*a*3
-    } else if (tipeMax === 2) { // Matriks Determinan 2x2
+      jawaban = (2 * a * 3).toString();
+    } else if (tipeMax === 2) {
       const a = getRandomInt(1, 5), b = getRandomInt(1, 5), c = getRandomInt(1, 5), d = getRandomInt(1, 5);
       soal = `Determinan matriks [[${a}, ${b}], [${c}, ${d}]]`;
       jawaban = (a * d - b * c).toString();
-    } else if (tipeMax === 3) { // Kombinasi C(n, 2)
+    } else if (tipeMax === 3) {
       const n = getRandomInt(4, 7);
       soal = `Nilai Kombinasi C(${n}, 2)`;
       jawaban = ((n * (n - 1)) / 2).toString();
-    } else { // Barisan Aritmatika Un
+    } else {
       const a = getRandomInt(2, 10);
       const b = getRandomInt(3, 6);
       soal = `Suku ke-5 dari barisan aritmatika dengan a = ${a} dan beda = ${b}`;
@@ -83,7 +83,7 @@ async function mathCommand(sock, msg, args) {
     }
   } else {
     await sock.sendMessage(remoteJid, { 
-      text: `❌ Level tidak valid!\n\n*Pilihan Level:*\n• .math easy\n• .math medium\n• .math hard\n• .math extreme\n• .math max` 
+      text: `❌ Level tidak valid!\nPilihan: easy, medium, hard, extreme, max` 
     }, { quoted: msg });
     return;
   }
@@ -100,7 +100,7 @@ async function mathCommand(sock, msg, args) {
     timer: setTimeout(async () => {
       if (global.db.game[remoteJid]) {
         delete global.db.game[remoteJid];
-        await sock.sendMessage(remoteJid, { text: `⏰ *WAKTU HABIS!*\nJawaban yang benar: *${jawaban}*` }, { quoted: sentMsg });
+        await sock.sendMessage(remoteJid, { text: `lama ah kalian, yang bener: *${jawaban}*` }, { quoted: sentMsg });
       }
     }, 45000)
   };
