@@ -20,7 +20,6 @@ const sswebCommand = require('../commands/ssweb');
 const playCommand = require('../commands/play');
 const ytmp3Command = require('../commands/ytmp3');
 const cekkhodamCommand = require('../commands/cekkhodam');
-const tebakgambarCommand = require('../commands/tebakgambar');
 const truthCommand = require('../commands/truth');
 const dareCommand = require('../commands/dare');
 const cekbucinCommand = require('../commands/cekbucin');
@@ -146,10 +145,6 @@ async function handleMessage(sock, msg) {
         await cekkhodamCommand(sock, msg, args);
         break;
 
-      case 'tebakgambar':
-        await tebakgambarCommand(sock, msg);
-        break;
-
       case 'truth':
         await truthCommand(sock, msg);
         break;
@@ -179,10 +174,10 @@ async function handleMessage(sock, msg) {
 
       default:
         break;
-    } // Pastikan penutup switch ada DI SINI (sebelum catch)
+    }
 
   } catch (err) {
-    console.error('Error di messageHandler:', err);
+    console.error('Error di messageHandler:', err?.stack || err?.message || err);
   }
 }
 
