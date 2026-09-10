@@ -1,102 +1,44 @@
-// Sesi game aktif
-const activeGames = {
-  math: new Map(),
-  tebakbendera: new Map(),
-  tebakkata: new Map(),
-  tebakgambar: new Map(),
-  trivia: new Map()
-};
+if (!global.db) global.db = {};
+if (!global.db.game) global.db.game = {};
 
-/**
- * Pengecekan jawaban game via command (.jawab / /jawab)
- */
-async function handleGameAnswer(sock, msg, userAnswer) {
+async function handleGameAnswer(sock, msg, text) {
   const remoteJid = msg.key.remoteJid;
-  const input = userAnswer.trim().toLowerCase();
+  const session = global.db.game[remoteJid];
 
-  // Cek Math
-  if (activeGames.math.has(remoteJid)) {
-    const game = activeGames.math.get(remoteJid);
-    if (input === String(game.answer).toLowerCase()) {
-      clearTimeout(game.timeout);
-      activeGames.math.delete(remoteJid);
-      await sock.sendMessage(remoteJid, {
-        text: `🎉 *Selamat!* Jawaban kamu benar: *${game.answer}*`
-      }, { quoted: msg });
-      return true;
-    }
+  if (!session) return false;
+
+  let inputJawaban = text.trim();
+
+  // Jika member menjawab pakai prefix slash (misal: /jawaban)
+  if (inputJawaban.startsWith('/')) {
+    inputJawaban = inputJawaban.slice(1).trim();
+  } else {
+    // Cek apakah pesan ini MEREPLY pesan dari bot
+    const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    if (!quotedMsg) return false;
   }
 
-  // Cek Tebak Bendera
-  if (activeGames.tebakbendera.has(remoteJid)) {
-    const game = activeGames.tebakbendera.get(remoteJid);
-    if (input === game.answer.toLowerCase()) {
-      clearTimeout(game.timeout);
-      activeGames.tebakbendera.delete(remoteJid);
-      await sock.sendMessage(remoteJid, {
-        text: `🎉 *Selamat!* Jawaban kamu benar: *${game.answer}*`
-      }, { quoted: msg });
-      return true;
-    }
-  }
+  const jawabanUser = inputJawaban.toLowerCase();
+  const jawabanBenar = session.jawaban.toLowerCase();
+  const jawabanAsli = session.jawabanAsli ? session.jawabanAsli.toLowerCase() : '';
 
-  // Cek Tebak Kata
-  if (activeGames.tebakkata.has(remoteJid)) {
-    const game = activeGames.tebakkata.get(remoteJid);
-    if (input === game.answer.toLowerCase()) {
-      clearTimeout(game.timeout);
-      activeGames.tebakkata.delete(remoteJid);
-      await sock.sendMessage(remoteJid, {
-        text: `🎉 *Selamat!* Jawaban kamu benar: *${game.answer}*`
-      }, { quoted: msg });
-      return true;
-    }
-  }
+  // Jika jawaban BENAR
+  if (jawabanUser === jawabanBenar || (jawabanAsli && jawabanUser === jawabanAsli)) {
+    clearTimeout(session.timer);
+    delete global.db.game[remoteJid];
 
-  // Cek Tebak Gambar
-  if (activeGames.tebakgambar.has(remoteJid)) {
-    const game = activeGames.tebakgambar.get(remoteJid);
-    if (input === game.answer.toLowerCase()) {
-      clearTimeout(game.timeout);
-      activeGames.tebakgambar.delete(remoteJid);
-      await sock.sendMessage(remoteJid, {
-        text: `🎉 *Selamat!* Jawaban kamu benar: *${game.answer}*`
-      }, { quoted: msg });
-      return true;
-    }
-  }
-
-  // Cek Trivia
-  if (activeGames.trivia.has(remoteJid)) {
-    const game = activeGames.trivia.get(remoteJid);
-    if (input === game.answer.toLowerCase() || input === game.fullAnswer.toLowerCase()) {
-      clearTimeout(game.timeout);
-      activeGames.trivia.delete(remoteJid);
-      await sock.sendMessage(remoteJid, {
-        text: `🎉 *Selamat!* Jawaban kamu benar: *${game.answer}. ${game.fullAnswer}*`
-      }, { quoted: msg });
-      return true;
-    }
-  }
-
-  // Jika ada game aktif tapi jawaban salah
-  const isAnyGameActive = activeGames.math.has(remoteJid) ||
-                          activeGames.tebakbendera.has(remoteJid) ||
-                          activeGames.tebakkata.has(remoteJid) ||
-                          activeGames.tebakgambar.has(remoteJid) ||
-                          activeGames.trivia.has(remoteJid);
-
-  if (isAnyGameActive) {
     await sock.sendMessage(remoteJid, {
-      text: `❌ Jawaban *${userAnswer}* salah! Coba lagi.`
+      text: `nice bener\n\n✨ *Jawaban:* ${session.jawaban}`
     }, { quoted: msg });
     return true;
-  }
+  } 
 
-  return false;
+  // Jika jawaban SALAH (hanya jika dia mereply/pakai slash)
+  await sock.sendMessage(remoteJid, {
+    text: `salah, gitu aja gabisa`
+  }, { quoted: msg });
+
+  return true;
 }
 
-module.exports = {
-  activeGames,
-  handleGameAnswer
-};
+module.exports = { handleGameAnswer };
