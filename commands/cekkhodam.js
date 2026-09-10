@@ -3,41 +3,32 @@ async function cekkhodamCommand(sock, msg, args) {
   const nama = args.join(' ');
 
   if (!nama) {
-    return await sock.sendMessage(remoteJid, { text: '❌ Masukkan nama kamu! Contoh: *.cekkhodam Budi*' }, { quoted: msg });
+    await sock.sendMessage(remoteJid, { text: '⚠️ *Harap sertakan nama!*\nContoh: `.cekkhodam Asep`' }, { quoted: msg });
+    return;
   }
 
-  // Daftar nama khodam yang lucu dan seru
   const listKhodam = [
-    'Macan Ternak', 'Naga Sumbing', 'Kucing Garong', 'Rawa Rontek', 'Kecoa Terbang',
-    'Amba Hitam', 'Bebek Pemarah', 'Poci Bakar', 'Genderuwo Pendiam', 'Singa Depresi',
-    'Tikus Got', 'Lontong Lumer', 'Tuyul Berambut', 'Cacing Sakti', 'Kaki Seribu',
-    'Sepeda Ontel', 'Sendal Capit', 'Kasur Lipat', 'Remote TV', 'Kipas Angin Kosmos',
-    'Bakso Beranak', 'Ular Keket', 'Kunti Bergincu', 'Ocong Gowes', 'Tuyul Online'
+    'Macan Tutul Keriting', 'Kura-Kura Ninja', 'Ayam Kampus', 'Bebek Nyasar',
+    'Naga Hitam Indosiar', 'Kucing Garong', 'Pocong Mini', 'Kuntilanak Merah',
+    'Genderuwo Slebew', 'Tuyul Racing', 'Singa Depresi', 'Gajah Terbang',
+    'Buaya Darat', 'Katak Bhizer', 'Semut Merah Patah Hati', 'Lalat Hijau',
+    'Cacing Besar Alaska', 'Kancil Cerdik', 'Laba-Laba Sunda', 'Kecoa Terbang',
+    'Babi Ngepet 2.0', 'Kambing Hitam', 'Musang King', 'Kijang Satu',
+    'Kera Sakti', 'Garuda Pancasila', 'Raja Jin', 'Ratu Pantai Selatan',
+    'Pangeran Kodok', 'Putri Duyung Nyangkut', 'Kuda Lumping', 'Banteng Merah',
+    'Gorila Santuy', 'Ikan Lele Terbang', 'Cenderawasih Emas', 'Elang Jawa',
+    'Srigala Terakhir', 'Beruang Madu', 'Tapir Kayang', 'Panda Begadang',
+    'Sapi Peras', 'Anjing Galak', 'Kuda Nil Sariawan', 'Kadal Bintit',
+    'Tokek Pemasok Wafer', 'Kadal Gurun', 'Kura-Kura Turbo', 'Kura-Kura Ninja'
   ];
 
-  try {
-    // Reaksi loading
-    await sock.sendMessage(remoteJid, { react: { text: '⏳', key: msg.key } });
+  const randomKhodam = listKhodam[Math.floor(Math.random() * listKhodam.length)];
 
-    // Pilih khodam secara acak
-    const khodam = listKhodam[Math.floor(Math.random() * listKhodam.length)];
-    
-    // Siapkan teks jawaban
-    const teks = `🔮 *CEK KHODAM ONLINE*\n\n` +
-      `👤 *Nama:* ${nama}\n` +
-      `👻 *Khodam:* *${khodam}*\n\n` +
-      `_Khodam ini selalu mengawasimu setiap saat!_`;
+  const teks = `🔮 *CEK KHODAM*\n\n` +
+    `👤 *Nama:* ${nama}\n` +
+    `✨ *Khodam Kamu:* *${randomKhodam}*`;
 
-    // Kirim jawaban
-    await sock.sendMessage(remoteJid, { text: teks }, { quoted: msg });
-
-    // Reaksi sukses
-    await sock.sendMessage(remoteJid, { react: { text: '✅', key: msg.key } });
-
-  } catch (err) {
-    console.error('Error Khodam:', err);
-    await sock.sendMessage(remoteJid, { react: { text: '❌', key: msg.key } });
-  }
+  await sock.sendMessage(remoteJid, { text: teks }, { quoted: msg });
 }
 
 module.exports = cekkhodamCommand;
