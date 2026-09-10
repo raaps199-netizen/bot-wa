@@ -1,6 +1,6 @@
 const config = require('../config');
 
-// Command Bawaan
+// Command Media & Utility
 const stickerCommand = require('../commands/sticker');
 const tiktokCommand = require('../commands/tiktok');
 const bratCommand = require('../commands/brat');
@@ -15,7 +15,7 @@ const quoteCommand = require('../commands/quote');
 const rvoCommand = require('../commands/rvo');
 const handleJadwalCommand = require('../commands/jadwal');
 
-// Command Baru Sesuai Folder Github
+// Command Fitur Baru
 const aiCommand = require('../commands/ai');
 const hdCommand = require('../commands/hd');
 const sswebCommand = require('../commands/ssweb');
@@ -24,14 +24,21 @@ const ytmp3Command = require('../commands/ytmp3');
 const cekkhodamCommand = require('../commands/cekkhodam');
 const truthCommand = require('../commands/truth');
 const dareCommand = require('../commands/dare');
+const cekbucinCommand = require('../commands/cekbucin');
 const tovidCommand = require('../commands/tovid');
+
+// Command Games
+const blackjackCommand = require('../commands/blackjack');
+const mathCommand = require('../commands/math');
+const tebakbenderaCommand = require('../commands/tebakbendera');
+const tebakkataCommand = require('../commands/tebakkata');
+const tebakgambarCommand = require('../commands/tebakgambar');
 
 async function handleMessage(sock, msg) {
   try {
     const messageContent = msg.message;
     if (!messageContent) return;
 
-    // Ambil teks dari berbagai jenis pesan WhatsApp
     const text = messageContent.conversation ||
                  messageContent.extendedTextMessage?.text ||
                  messageContent.imageMessage?.caption ||
@@ -76,6 +83,7 @@ async function handleMessage(sock, msg) {
         await hidetagCommand(sock, msg, args);
         break;
 
+      // Command Admin Group (Tetap berfungsi, tapi tidak ditampilkan di menu list)
       case 'close':
       case 'tutup':
         await groupCommand(sock, msg, args, 'close');
@@ -155,6 +163,34 @@ async function handleMessage(sock, msg) {
         await dareCommand(sock, msg);
         break;
 
+      case 'cekbucin':
+      case 'bucin':
+        await cekbucinCommand(sock, msg, args);
+        break;
+
+      // Games Command
+      case 'bj':
+      case 'blackjack':
+        await blackjackCommand(sock, msg, args);
+        break;
+
+      case 'math':
+      case 'matematika':
+        await mathCommand(sock, msg);
+        break;
+
+      case 'tebakbendera':
+        await tebakbenderaCommand(sock, msg);
+        break;
+
+      case 'tebakkata':
+        await tebakkataCommand(sock, msg);
+        break;
+
+      case 'tebakgambar':
+        await tebakgambarCommand(sock, msg);
+        break;
+
       case 'jsn':
       case 'jsl':
       case 'jrb':
@@ -169,7 +205,11 @@ async function handleMessage(sock, msg) {
         await listCommand(sock, msg);
         break;
 
+        
       default:
+        await sock.sendMessage(msg.key.remoteJid, {
+          text: `❌ Command *${config.prefix}${command}* tidak ditemukan!\nKetik *${config.prefix}menu* untuk melihat daftar command yang tersedia.`
+        }, { quoted: msg });
         break;
     }
 
