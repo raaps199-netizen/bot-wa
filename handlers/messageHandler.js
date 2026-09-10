@@ -32,6 +32,7 @@ const mathCommand = require('../commands/math');
 const tebakbenderaCommand = require('../commands/tebakbendera');
 const tebakkataCommand = require('../commands/tebakkata');
 const tebakgambarCommand = require('../commands/tebakgambar');
+const triviaCommand = require('../commands/trivia');
 
 async function handleMessage(sock, msg) {
   try {
@@ -46,11 +47,7 @@ async function handleMessage(sock, msg) {
 
     if (!text) return;
 
-    // 1. CEK JAWABAN GAME
-    const isAnswerCorrect = await handleGameAnswer(sock, msg, text);
-    if (isAnswerCorrect) return;
-
-    // 2. CEK PREFIX '.' ATAU '/'
+    // CEK PREFIX '.' ATAU '/'
     let prefixUsed = '';
     if (text.startsWith(config.prefix)) prefixUsed = config.prefix;
     else if (text.startsWith('/')) prefixUsed = '/';
@@ -61,6 +58,19 @@ async function handleMessage(sock, msg) {
     const command = args.shift().toLowerCase();
 
     switch (command) {
+      case 'jawab':
+      case 'j': {
+        const userAnswer = args.join(' ');
+        if (!userAnswer) {
+          await sock.sendMessage(msg.key.remoteJid, { 
+            text: '⚠️ Masukkan jawaban kamu!\nContoh: *.jawab italia* atau */jawab A*' 
+          }, { quoted: msg });
+          break;
+        }
+        await handleGameAnswer(sock, msg, userAnswer);
+        break;
+      }
+
       case 's':
       case 'sticker':
         await stickerCommand(sock, msg);
@@ -200,14 +210,21 @@ async function handleMessage(sock, msg) {
         await tebakgambarCommand(sock, msg);
         break;
 
+      case 'trivia':
+      case 'kuis':
+        await triviaCommand(sock, msg);
+        break;
+
       // SUB-MENU
       case 'menu_game': {
         const gameText = `*MENU GAME*\n\n` +
           `• ${config.prefix}bj\n` +
-          `• ${config.prefix}math\n` +
+          `• ${config.prefix}math [mudah|sedang|sulit]\n` +
           `• ${config.prefix}tebakbendera\n` +
           `• ${config.prefix}tebakkata\n` +
           `• ${config.prefix}tebakgambar\n` +
+          `• ${config.prefix}trivia\n` +
+          `• ${config.prefix}jawab <jawaban>\n` +
           `• ${config.prefix}cekkhodam <nama>\n` +
           `• ${config.prefix}bucin <nama>\n` +
           `• ${config.prefix}truth\n` +
