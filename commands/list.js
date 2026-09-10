@@ -1,67 +1,41 @@
-async function menuCommand(sock, msg) {
+const config = require('../config');
+
+async function listCommand(sock, msg) {
   const remoteJid = msg.key.remoteJid;
-  const pushName = msg.pushName || 'User';
 
-  // Opsi tanggal format Indonesia real-time
-  const today = new Date();
-  const dateString = today.toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
+  const menuText = `🤖 *BOT MENU LIST* 🤖\n\n` +
+    `PREFIX: [ *${config.prefix}* ]\n\n` +
+    `🛠️ *TOOLS & DOWNLOADER*\n` +
+    `• ${config.prefix}s / ${config.prefix}sticker\n` +
+    `• ${config.prefix}wm <pack|author>\n` +
+    `• ${config.prefix}toimg\n` +
+    `• ${config.prefix}tovid\n` +
+    `• ${config.prefix}tt <link>\n` +
+    `• ${config.prefix}ig <link>\n` +
+    `• ${config.prefix}play <judul>\n` +
+    `• ${config.prefix}ytmp3 <link>\n` +
+    `• ${config.prefix}hd\n` +
+    `• ${config.prefix}ssweb <url>\n` +
+    `• ${config.prefix}ai <pertanyaan>\n` +
+    `• ${config.prefix}brat <teks>\n` +
+    `• ${config.prefix}bratvid <teks>\n` +
+    `• ${config.prefix}quote <teks>\n` +
+    `• ${config.prefix}rvo\n` +
+    `• ${config.prefix}hidetag <teks>\n\n` +
+    `🎮 *GAMES & FUN*\n` +
+    `• ${config.prefix}bj / ${config.prefix}blackjack\n` +
+    `• ${config.prefix}math\n` +
+    `• ${config.prefix}tebakbendera\n` +
+    `• ${config.prefix}tebakkata\n` +
+    `• ${config.prefix}tebakgambar\n` +
+    `• ${config.prefix}cekkhodam <nama>\n` +
+    `• ${config.prefix}bucin <nama>\n` +
+    `• ${config.prefix}truth\n` +
+    `• ${config.prefix}dare\n\n` +
+    `📅 *JADWAL*\n` +
+    `• ${config.prefix}jsn / ${config.prefix}jsl / ${config.prefix}jrb / ${config.prefix}jkm / ${config.prefix}jjt`;
 
-  const menuText = `╭───［ *BOT MENU* ］───
-│ 👤 User : ${pushName}
-│ 📅 Date : ${dateString}
-├──
-│ 💡 Gunakan prefix [ . ] sebelum command
-╰───────────────────────
-
-┌──『 *MAIN & UTILITY* 』
-│ ├ .ai (Tanya AI)
-│ ├ .rvo (Lihat Pesan View Once)
-│ ├ .toimg (Stiker ke Gambar)
-│ ├ .hd (Jernihkan Foto)
-│ └ .ssweb (Screenshot Web)
-└───────────────────────
-
-┌──『 *MAKER & CONVERT* 』
-│ ├ .sticker (Bikin Stiker)
-│ ├ .brat (Stiker Teks Brat)
-│ ├ .qc (Stiker Chat Bubble)
-│ ├ .wm (Ganti Watermark Stiker)
-│ └ .tovid (Stiker ke Video)
-└───────────────────────
-
-┌──『 *DOWNLOADER* 』
-│ ├ .tiktok (Video No WM)
-│ ├ .ig (Foto / Reel IG)
-│ ├ .play (Cari & Musik)
-│ └ .ytmp3 (Audio YouTube)
-└───────────────────────
-
-┌──『 *FUN & GAMES* 』
-│ ├ .cekkhodam (Cek Khodam)
-│ ├ .tebakgambar (Tebak Gambar)
-│ ├ .truth / .dare
-│ └ .cekbucin (Cek Bucin)
-└───────────────────────
-
-┌──『 *GROUP & ADMIN* 』
-│ ├ .hidetag (Tag Semua)
-│ ├ .kick (Keluarkan Member)
-│ ├ .linkgc (Link Grup)
-│ └ .mute / .unmute
-└───────────────────────`;
-
-  try {
-    await sock.sendMessage(remoteJid, { react: { text: '⏳', key: msg.key } });
-    await sock.sendMessage(remoteJid, { text: menuText }, { quoted: msg });
-    await sock.sendMessage(remoteJid, { react: { text: '✅', key: msg.key } });
-  } catch (err) {
-    console.error('Error Menu:', err);
-    await sock.sendMessage(remoteJid, { react: { text: '❌', key: msg.key } });
-  }
+  await sock.sendMessage(remoteJid, { text: menuText }, { quoted: msg });
 }
 
-module.exports = menuCommand;
+module.exports = listCommand;
