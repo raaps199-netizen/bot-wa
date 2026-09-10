@@ -1,4 +1,6 @@
 const config = require('../config');
+
+// Command Bawaan
 const stickerCommand = require('../commands/sticker');
 const tiktokCommand = require('../commands/tiktok');
 const bratCommand = require('../commands/brat');
@@ -13,7 +15,7 @@ const quoteCommand = require('../commands/quote');
 const rvoCommand = require('../commands/rvo');
 const handleJadwalCommand = require('../commands/jadwal');
 
-// Fitur Baru
+// Command Baru Sesuai Folder Github
 const aiCommand = require('../commands/ai');
 const hdCommand = require('../commands/hd');
 const sswebCommand = require('../commands/ssweb');
@@ -22,7 +24,6 @@ const ytmp3Command = require('../commands/ytmp3');
 const cekkhodamCommand = require('../commands/cekkhodam');
 const truthCommand = require('../commands/truth');
 const dareCommand = require('../commands/dare');
-const cekbucinCommand = require('../commands/cekbucin');
 const tovidCommand = require('../commands/tovid');
 
 async function handleMessage(sock, msg) {
@@ -30,6 +31,7 @@ async function handleMessage(sock, msg) {
     const messageContent = msg.message;
     if (!messageContent) return;
 
+    // Ambil teks dari berbagai jenis pesan WhatsApp
     const text = messageContent.conversation ||
                  messageContent.extendedTextMessage?.text ||
                  messageContent.imageMessage?.caption ||
@@ -151,11 +153,6 @@ async function handleMessage(sock, msg) {
 
       case 'dare':
         await dareCommand(sock, msg);
-        break;
-
-      case 'cekbucin':
-      case 'bucin':
-        await cekbucinCommand(sock, msg, args);
         break;
 
       case 'jsn':
