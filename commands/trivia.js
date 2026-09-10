@@ -17,6 +17,15 @@ const difficultyMap = {
   sulit: 'hard'
 };
 
+// Fungsi acak array (Shuffle)
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
 async function translateToId(text) {
   try {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=id&dt=t&q=${encodeURIComponent(text)}`;
@@ -64,7 +73,7 @@ async function triviaCommand(sock, msg, args = []) {
   const categoryId = categoryMap[kategoriInput];
   const difficulty = difficultyMap[levelInput] || 'easy';
 
-  await sock.sendMessage(remoteJid, { text: '🔄 *Mengambil soal trivia...*' }, { quoted: msg });
+  await sock.sendMessage(remoteJid, { text: '⏳' }, { quoted: msg });
 
   try {
     const apiUrl = `https://opentdb.com/api.php?amount=1&category=${categoryId}&difficulty=${difficulty}&type=multiple`;
@@ -74,32 +83,59 @@ async function triviaCommand(sock, msg, args = []) {
     const data = await res.json();
 
     if (!data.results || data.results.length === 0) {
-      await sock.sendMessage(remoteJid, { text: '❌ Gagal mengambil soal dari server. Coba lagi beberapa saat lagi!' }, { quoted: msg });
+      await sock.sendMessage(remoteJid, { text: '❌ Gagal mengambil soal. Coba lagi!' }, { quoted: msg });
       return;
     }
 
     const item = data.results[0];
     const rawQuestion = decodeHTML(item.question);
-    const rawAnswer = decodeHTML(item.correct_answer);
+    const rawCorrectAnswer = decodeHTML(item.correct_answer);
+    const rawIncorrectAnswers = item.incorrect_answers.map(ans => decodeHTML(ans));
 
+    // Terjemahkan soal dan opsi
     const questionId = await translateToId(rawQuestion);
-    const answerId = await translateToId(rawAnswer);
+    const correctId = await translateToId(rawCorrectAnswer);
+    
+    // Siapkan daftar opsi (1 Benar + 3-4 Salah)
+    const optionsRaw = [rawCorrectAnswer, ...rawIncorrectAnswers];
+    const optionsTranslated = await Promise.all(optionsRaw.map(opt => translateToId(opt)));
+
+    // Gabungkan teks terjemahan & asli, lalu acak
+    const combinedOptions = optionsTranslated.map((indo, idx) => ({
+      indo: indo,
+      asli: optionsRaw[idx],
+      isCorrect: idx === 0
+    }));
+
+    const shuffledOptions = shuffleArray(combinedOptions);
+
+    const labels = ['A', 'B', 'C', 'D', 'E'];
+    let correctOptionLabel = '';
+    let opsiText = '';
+
+    shuffledOptions.forEach((opt, index) => {
+      const label = labels[index];
+      if (opt.isCorrect) correctOptionLabel = label;
+      opsiText += `*${label}.* ${opt.indo}\n`;
+    });
 
     const teks = `🧠 *TRIVIA ${kategoriInput.toUpperCase()} (${levelInput.toUpperCase()})*\n\n` +
       `*Soal:* ${questionId}\n\n` +
+      `*Pilihan Jawaban:*\n${opsiText}\n` +
       `⏱️ Waktu: *60 Detik*\n` +
-      `💡 _Ketik langsung jawabannya di chat!_`;
+      `💡 _Reply/balas pesan soal ini lalu jawab pakai slash, misal: /a atau /b_`;
 
     const sentMsg = await sock.sendMessage(remoteJid, { text: teks }, { quoted: msg });
 
     global.db.game[remoteJid] = {
-      jawaban: answerId.toLowerCase().trim(),
-      jawabanAsli: rawAnswer.toLowerCase().trim(),
+      msgId: sentMsg.key.id, // Menyimpan ID pesan soal untuk pengecekan reply
+      jawabanOpsi: correctOptionLabel.toLowerCase(), // Misal: 'a'
+      jawabanTeks: `${correctOptionLabel}. ${correctId} (${rawCorrectAnswer})`,
       timer: setTimeout(async () => {
         if (global.db.game[remoteJid]) {
           delete global.db.game[remoteJid];
           await sock.sendMessage(remoteJid, { 
-            text: `⌛ *Waktu habis!*\nJawaban yang benar adalah: *${answerId}*` 
+            text: `⌛ *Waktu habis!*\nJawaban benar: *${correctOptionLabel}. ${correctId}*` 
           }, { quoted: sentMsg });
         }
       }, 60000)
@@ -107,7 +143,7 @@ async function triviaCommand(sock, msg, args = []) {
 
   } catch (err) {
     console.error('Error Trivia:', err);
-    await sock.sendMessage(remoteJid, { text: '❌ Terjadi kesalahan saat mengambil soal.' }, { quoted: msg });
+    await sock.sendMessage(remoteJid, { text: '❌ Terjadi kesalahan server.' }, { quoted: msg });
   }
 }
 
