@@ -1,35 +1,40 @@
-const { Sticker, StickerTypes } = require('wa-sticker-formatter');
+const axios = require('axios');
 
 async function bratvidCommand(sock, msg, args) {
-  const from = msg.key.remoteJid;
+  const remoteJid = msg.key.remoteJid;
   const text = args.join(' ');
 
   if (!text) {
-    return await sock.sendMessage(from, { 
-      text: '⚠️ Masukkan teksnya!\nContoh: `.bratvid aku sayang kamu`' 
-    });
+    await sock.sendMessage(remoteJid, { 
+      text: '⚠️ *Harap masukkan teks!*\nContoh: `.bratvid Bot WA Keren` ' 
+    }, { quoted: msg });
+    return;
   }
 
+  await sock.sendMessage(remoteJid, { react: { text: '⏳', key: msg.key } });
+
   try {
-    await sock.sendMessage(from, { text: '⏳ Sedang membuat stiker Brat Video...' });
+    // Menggunakan API Brat Video
+    const apiUrl = `https://api.everfree.my.id/api/bratvid?text=${encodeURIComponent(text)}`;
+    
+    // Ambil MP4 / GIF dari API
+    const response = await axios.get(apiUrl, { responseType: 'arraybuffer' });
+    const videoBuffer = Buffer.from(response.data);
 
-    // Endpoint API khusus GIF/Video Brat
-    const bratVidUrl = `https://aqul-brat.hf.space/api/brat/animate?text=${encodeURIComponent(text)}`;
+    await sock.sendMessage(remoteJid, {
+      video: videoBuffer,
+      gifPlayback: true,
+      caption: '✅ *Berhasil membuat Brat Video!*'
+    }, { quoted: msg });
 
-    const sticker = new Sticker(bratVidUrl, {
-      pack: '',
-      author: 'Bot WA',
-      type: StickerTypes.FULL,
-      quality: 50,
-      animated: true // Paksa format stiker bergerak
-    });
-
-    const stickerBuffer = await sticker.toBuffer();
-    await sock.sendMessage(from, { sticker: stickerBuffer }, { quoted: msg });
+    await sock.sendMessage(remoteJid, { react: { text: '✅', key: msg.key } });
 
   } catch (err) {
-    console.error('Error bratvid:', err);
-    await sock.sendMessage(from, { text: '❌ Gagal membuat stiker Brat Video. Coba teks yang lebih pendek!' });
+    console.error('Error bratvid:', err?.message || err);
+    await sock.sendMessage(remoteJid, { react: { text: '❌', key: msg.key } });
+    await sock.sendMessage(remoteJid, { 
+      text: '❌ *Gagal membuat Brat Video!* Server API sedang sibuk/down, silakan coba beberapa saat lagi.' 
+    }, { quoted: msg });
   }
 }
 
