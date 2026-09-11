@@ -42,6 +42,7 @@ async function handleMessage(sock, msg) {
     const messageContent = msg.message;
     if (!messageContent || msg.key.remoteJid === 'status@broadcast') return;
 
+    // Ambil teks dari berbagai tipe pesan
     let text = messageContent.conversation ||
                messageContent.extendedTextMessage?.text ||
                messageContent.imageMessage?.caption ||
@@ -51,11 +52,17 @@ async function handleMessage(sock, msg) {
     const cleanText = text.trim();
     if (!cleanText) return;
 
-    // 1. CEK DULU JAWABAN GAME (Untuk Trivia, Math, dll)
-    const isGameAnswered = await handleGameAnswer(sock, msg, cleanText);
-    if (isGameAnswered) return;
+    const remoteJid = msg.key.remoteJid;
 
-    // 2. CEK PREFIX '.' ATAU '/'
+    // 1. CEK DULU JAWABAN GAME (Gunakan try-catch terpisah agar tidak memblokir perintah lain)
+    try {
+      const isGameAnswered = await handleGameAnswer(sock, msg, cleanText);
+      if (isGameAnswered) return;
+    } catch (gameErr) {
+      console.error('Error saat handleGameAnswer:', gameErr);
+    }
+
+    // 2. CEK PREFIX (Bisa '.' atau '/')
     let prefixUsed = '';
     if (cleanText.startsWith(config.prefix)) prefixUsed = config.prefix;
     else if (cleanText.startsWith('/')) prefixUsed = '/';
@@ -65,13 +72,14 @@ async function handleMessage(sock, msg) {
     const args = cleanText.slice(prefixUsed.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
+    // 3. SWITCH CASE COMMAND
     switch (command) {
       case 'jawab':
       case 'j': {
         const userAnswer = args.join(' ');
         if (!userAnswer) {
-          await sock.sendMessage(msg.key.remoteJid, { 
-            text: '⚠️ Masukkan jawaban kamu!\nContoh: *.jawab a* atau reply soal lalu ketik /a.' 
+          await sock.sendMessage(remoteJid, { 
+            text: `⚠️ Masukkan jawaban kamu!\nContoh: *${prefixUsed}jawab a*` 
           }, { quoted: msg });
           break;
         }
@@ -247,26 +255,26 @@ async function handleMessage(sock, msg) {
         await claimTetrisCommand(sock, msg, args);
         break;
 
-      // SUB-MENU DENGAN STYLE BARU (SMALL CAPS & BOX BORDER)
+      // SUB-MENU DENGAN STYLE SMALL CAPS & BOX BORDER
       case 'menu_game':
       case 'games': {
         const gameText = 
 `┏━『 *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* 』
 ┃
-┣⌬ ${config.prefix}bj
-┣⌬ ${config.prefix}math [mudah|sedang|hard|max]
-┣⌬ ${config.prefix}tebakbendera
-┣⌬ ${config.prefix}tebakkata
-┣⌬ ${config.prefix}tebakgambar
-┣⌬ ${config.prefix}trivia <kategori> <level>
-┣⌬ ${config.prefix}tetris
-┣⌬ ${config.prefix}claimtetris <kode>
-┣⌬ ${config.prefix}cekkhodam <nama>
-┣⌬ ${config.prefix}bucin <nama>
-┣⌬ ${config.prefix}truth
-┣⌬ ${config.prefix}dare
+┣⌬ ${prefixUsed}bj
+┣⌬ ${prefixUsed}math [mudah|sedang|hard|max]
+┣⌬ ${prefixUsed}tebakbendera
+┣⌬ ${prefixUsed}tebakkata
+┣⌬ ${prefixUsed}tebakgambar
+┣⌬ ${prefixUsed}trivia <kategori> <level>
+┣⌬ ${prefixUsed}tetris
+┣⌬ ${prefixUsed}claimtetris <kode>
+┣⌬ ${prefixUsed}cekkhodam <nama>
+┣⌬ ${prefixUsed}bucin <nama>
+┣⌬ ${prefixUsed}truth
+┣⌬ ${prefixUsed}dare
 ┗━━━━━━━◧`;
-        await sock.sendMessage(msg.key.remoteJid, { text: gameText }, { quoted: msg });
+        await sock.sendMessage(remoteJid, { text: gameText }, { quoted: msg });
         break;
       }
 
@@ -275,24 +283,24 @@ async function handleMessage(sock, msg) {
         const toolsText = 
 `┏━『 *ᴍᴇɴᴜ ᴛᴏᴏʟꜱ* 』
 ┃
-┣⌬ ${config.prefix}s
-┣⌬ ${config.prefix}wm <pack|author>
-┣⌬ ${config.prefix}toimg
-┣⌬ ${config.prefix}tovid
-┣⌬ ${config.prefix}tt <link>
-┣⌬ ${config.prefix}ig <link>
-┣⌬ ${config.prefix}play <judul>
-┣⌬ ${config.prefix}ytmp3 <link>
-┣⌬ ${config.prefix}hd
-┣⌬ ${config.prefix}ssweb <url>
-┣⌬ ${config.prefix}ai <teks>
-┣⌬ ${config.prefix}brat <teks>
-┣⌬ ${config.prefix}bratvid <teks>
-┣⌬ ${config.prefix}quote <teks>
-┣⌬ ${config.prefix}rvo
-┣⌬ ${config.prefix}ncode
+┣⌬ ${prefixUsed}s
+┣⌬ ${prefixUsed}wm <pack|author>
+┣⌬ ${prefixUsed}toimg
+┣⌬ ${prefixUsed}tovid
+┣⌬ ${prefixUsed}tt <link>
+┣⌬ ${prefixUsed}ig <link>
+┣⌬ ${prefixUsed}play <judul>
+┣⌬ ${prefixUsed}ytmp3 <link>
+┣⌬ ${prefixUsed}hd
+┣⌬ ${prefixUsed}ssweb <url>
+┣⌬ ${prefixUsed}ai <teks>
+┣⌬ ${prefixUsed}brat <teks>
+┣⌬ ${prefixUsed}bratvid <teks>
+┣⌬ ${prefixUsed}quote <teks>
+┣⌬ ${prefixUsed}rvo
+┣⌬ ${prefixUsed}ncode
 ┗━━━━━━━◧`;
-        await sock.sendMessage(msg.key.remoteJid, { text: toolsText }, { quoted: msg });
+        await sock.sendMessage(remoteJid, { text: toolsText }, { quoted: msg });
         break;
       }
 
@@ -301,13 +309,13 @@ async function handleMessage(sock, msg) {
         const groupText = 
 `┏━『 *ᴍᴇɴᴜ ɢʀᴏᴜᴘ* 』
 ┃
-┣⌬ ${config.prefix}open
-┣⌬ ${config.prefix}close
-┣⌬ ${config.prefix}online
-┣⌬ ${config.prefix}promote @user
-┣⌬ ${config.prefix}demote @user
+┣⌬ ${prefixUsed}open
+┣⌬ ${prefixUsed}close
+┣⌬ ${prefixUsed}online
+┣⌬ ${prefixUsed}promote @user
+┣⌬ ${prefixUsed}demote @user
 ┗━━━━━━━◧`;
-        await sock.sendMessage(msg.key.remoteJid, { text: groupText }, { quoted: msg });
+        await sock.sendMessage(remoteJid, { text: groupText }, { quoted: msg });
         break;
       }
 
@@ -316,45 +324,45 @@ async function handleMessage(sock, msg) {
 `┏━『 *ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ* 』
 ┃
 ┣⌬ *ɢᴀᴍᴇꜱ*
-┃  • ${config.prefix}bj
-┃  • ${config.prefix}math [mudah|sedang|hard|max]
-┃  • ${config.prefix}tebakbendera
-┃  • ${config.prefix}tebakkata
-┃  • ${config.prefix}tebakgambar
-┃  • ${config.prefix}trivia <kategori> <level>
-┃  • ${config.prefix}tetris
-┃  • ${config.prefix}claimtetris <kode>
-┃  • ${config.prefix}cekkhodam <nama>
-┃  • ${config.prefix}bucin <nama>
-┃  • ${config.prefix}truth
-┃  • ${config.prefix}dare
+┃  • ${prefixUsed}bj
+┃  • ${prefixUsed}math [mudah|sedang|hard|max]
+┃  • ${prefixUsed}tebakbendera
+┃  • ${prefixUsed}tebakkata
+┃  • ${prefixUsed}tebakgambar
+┃  • ${prefixUsed}trivia <kategori> <level>
+┃  • ${prefixUsed}tetris
+┃  • ${prefixUsed}claimtetris <kode>
+┃  • ${prefixUsed}cekkhodam <nama>
+┃  • ${prefixUsed}bucin <nama>
+┃  • ${prefixUsed}truth
+┃  • ${prefixUsed}dare
 ┃
 ┣⌬ *ᴛᴏᴏʟꜱ*
-┃  • ${config.prefix}s
-┃  • ${config.prefix}wm <pack|author>
-┃  • ${config.prefix}toimg
-┃  • ${config.prefix}tovid
-┃  • ${config.prefix}tt <link>
-┃  • ${config.prefix}ig <link>
-┃  • ${config.prefix}play <judul>
-┃  • ${config.prefix}ytmp3 <link>
-┃  • ${config.prefix}hd
-┃  • ${config.prefix}ssweb <url>
-┃  • ${config.prefix}ai <teks>
-┃  • ${config.prefix}brat <teks>
-┃  • ${config.prefix}bratvid <teks>
-┃  • ${config.prefix}quote <teks>
-┃  • ${config.prefix}rvo
-┃  • ${config.prefix}ncode
+┃  • ${prefixUsed}s
+┃  • ${prefixUsed}wm <pack|author>
+┃  • ${prefixUsed}toimg
+┃  • ${prefixUsed}tovid
+┃  • ${prefixUsed}tt <link>
+┃  • ${prefixUsed}ig <link>
+┃  • ${prefixUsed}play <judul>
+┃  • ${prefixUsed}ytmp3 <link>
+┃  • ${prefixUsed}hd
+┃  • ${prefixUsed}ssweb <url>
+┃  • ${prefixUsed}ai <teks>
+┃  • ${prefixUsed}brat <teks>
+┃  • ${prefixUsed}bratvid <teks>
+┃  • ${prefixUsed}quote <teks>
+┃  • ${prefixUsed}rvo
+┃  • ${prefixUsed}ncode
 ┃
 ┣⌬ *ɢʀᴏᴜᴘ*
-┃  • ${config.prefix}open
-┃  • ${config.prefix}close
-┃  • ${config.prefix}online
-┃  • ${config.prefix}promote @user
-┃  • ${config.prefix}demote @user
+┃  • ${prefixUsed}open
+┃  • ${prefixUsed}close
+┃  • ${prefixUsed}online
+┃  • ${prefixUsed}promote @user
+┃  • ${prefixUsed}demote @user
 ┗━━━━━━━◧`;
-        await sock.sendMessage(msg.key.remoteJid, { text: allText }, { quoted: msg });
+        await sock.sendMessage(remoteJid, { text: allText }, { quoted: msg });
         break;
       }
 
@@ -365,11 +373,10 @@ async function handleMessage(sock, msg) {
         break;
 
       default:
-        if (prefixUsed === config.prefix) {
-          await sock.sendMessage(msg.key.remoteJid, {
-            text: `❌ Command *${config.prefix}${command}* tidak ditemukan!\nKetik *${config.prefix}menu* untuk melihat daftar menu.`
-          }, { quoted: msg });
-        }
+        // Memberi notifikasi jika command tidak dikenal (baik untuk prefix . maupun /)
+        await sock.sendMessage(remoteJid, {
+          text: `❌ Command *${prefixUsed}${command}* tidak ditemukan!\nKetik *${prefixUsed}menu* untuk melihat daftar menu.`
+        }, { quoted: msg });
         break;
     }
 
@@ -379,4 +386,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-    
+                                 
