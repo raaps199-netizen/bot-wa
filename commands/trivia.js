@@ -78,7 +78,7 @@ Respons WAJIB dalam format JSON murni tanpa markdown/backticks, contoh format:
     const resultText = response.data.candidates[0].content.parts[0].text;
     const quizData = JSON.parse(resultText);
 
-    if (!quizData || !quizData.soal || !quizData.jawabanBenar) {
+    if (!quizData || !quizData.soal || !quizData.jawabanBenar || !quizData.jawabanSalah) {
       throw new Error('Format JSON dari AI tidak valid');
     }
 
