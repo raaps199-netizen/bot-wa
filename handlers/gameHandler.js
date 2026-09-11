@@ -1,80 +1,42 @@
-if (!global.db) global.db = {};
-if (!global.db.game) global.db.game = {};
-
-async function handleGameAnswer(sock, msg, text) {
+async function handleGameAnswer(sock, msg, userText) {
   const remoteJid = msg.key.remoteJid;
-  const rawText = text.trim();
-  const lowerText = rawText.toLowerCase();
+  const gameSession = global.db?.game?.[remoteJid];
 
-  // Ambil sesi game aktif dari database global
-  const session = global.db.game[remoteJid];
+  if (!gameSession) return false;
 
-  // ==========================================
-  // OPSI MENYERAH (.nyerah / .menyerah)
-  // ==========================================
-  if (['.nyerah', 'nyerah', '.menyerah', 'menyerah'].includes(lowerText)) {
-    if (session) {
-      clearTimeout(session.timer);
-      delete global.db.game[remoteJid];
+  const textLower = userText.trim().toLowerCase();
 
-      const teksJawaban = session.jawabanTeks || session.jawabanBenar || session.jawaban;
-      await sock.sendMessage(remoteJid, {
-        text: `🏳️ *Kamu menyerah!*\nJawaban yang benar adalah: *${teksJawaban}*`
-      }, { quoted: msg });
-      return true;
+  // Handle Menyerah
+  if (textLower === '.nyerah' || textLower === 'nyerah') {
+    if (gameSession.timer) clearTimeout(gameSession.timer);
+    delete global.db.game[remoteJid];
+    await sock.sendMessage(remoteJid, {
+      text: `🏳️ Kamu menyerah!\nJawaban yang benar: *${gameSession.jawabanTeks || gameSession.jawabanBenar}*`
+    }, { quoted: msg });
+    return true;
+  }
+
+  // Handle Trivia (Pilihan a, b, c, atau d)
+  if (gameSession.type === 'trivia') {
+    // Jika input bukan salah satu dari a, b, c, d, biarkan pesan diabaikan (bukan jawaban kuis)
+    if (!['a', 'b', 'c', 'd'].includes(textLower)) {
+      return false;
     }
 
-    await sock.sendMessage(remoteJid, {
-      text: '⚠️ Tidak ada game yang sedang berlangsung di chat ini.'
-    }, { quoted: msg });
-    return true;
-  }
+    // Batalkan timer waktu habis
+    if (gameSession.timer) clearTimeout(gameSession.timer);
 
-  // Jika tidak ada game aktif di room ini, lewati
-  if (!session) return false;
-
-  // ==========================================
-  // PENANGANAN JAWABAN (Trivia, Math, dll)
-  // ==========================================
-  let inputJawaban = lowerText;
-
-  // Bersihkan prefix jika pengguna mengetik .jawab / /jawab / .
-  if (inputJawaban.startsWith('.jawab')) {
-    inputJawaban = inputJawaban.slice(6).trim();
-  } else if (inputJawaban.startsWith('/') || inputJawaban.startsWith('.')) {
-    inputJawaban = inputJawaban.slice(1).trim();
-  }
-
-  if (!inputJawaban) return false;
-
-  // Ambil opsi target dari sesi
-  const targetJawabanOpsi = session.jawabanOpsi ? String(session.jawabanOpsi).toLowerCase() : '';
-  const targetJawabanBenar = session.jawabanBenar ? String(session.jawabanBenar).toLowerCase() : '';
-  const targetJawabanTeks = session.jawaban ? String(session.jawaban).toLowerCase() : '';
-
-  // Validasi Jawaban (Match Opsi A/B/C/D atau Angka/Teks Murni)
-  const isCorrect = (targetJawabanOpsi && inputJawaban === targetJawabanOpsi) ||
-                    (targetJawabanBenar && inputJawaban === targetJawabanBenar) ||
-                    (targetJawabanTeks && inputJawaban === targetJawabanTeks);
-
-  if (isCorrect) {
-    clearTimeout(session.timer);
-    delete global.db.game[remoteJid];
-
-    const teksJawaban = session.jawabanTeks || session.jawabanBenar || session.jawaban;
-
-    await sock.sendMessage(remoteJid, {
-      text: `🎉 *SELAMAT! Jawaban kamu benar!*\n\n✨ *Jawaban:* ${teksJawaban}`
-    }, { quoted: msg });
-
-    return true;
-  }
-
-  // Jika jawaban salah (batasi panjang karakter agar pesan biasa tidak memicu notif salah)
-  if (inputJawaban.length <= 30) {
-    await sock.sendMessage(remoteJid, { 
-      text: `❌ *Jawaban Kamu Salah!* Coba tebak/hitung lagi atau ketik *.nyerah* jika ingin menyerah.` 
-    }, { quoted: msg });
+    if (textLower === gameSession.jawabanOpsi) {
+      delete global.db.game[remoteJid];
+      await sock.sendMessage(remoteJid, {
+        text: `🎉 *Selamat, jawaban kamu BENAR!*\n\nJawaban: *${gameSession.jawabanTeks}*`
+      }, { quoted: msg });
+    } else {
+      delete global.db.game[remoteJid];
+      await sock.sendMessage(remoteJid, {
+        text: `❌ *Jawaban kamu SALAH!*\n\nJawaban yang benar: *${gameSession.jawabanTeks}*`
+      }, { quoted: msg });
+    }
     return true;
   }
 
@@ -82,4 +44,3 @@ async function handleGameAnswer(sock, msg, text) {
 }
 
 module.exports = { handleGameAnswer };
-    
