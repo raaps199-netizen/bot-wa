@@ -42,7 +42,6 @@ async function handleMessage(sock, msg) {
     const messageContent = msg.message;
     if (!messageContent || msg.key.remoteJid === 'status@broadcast') return;
 
-    // Ambil teks dari berbagai tipe pesan
     let text = messageContent.conversation ||
                messageContent.extendedTextMessage?.text ||
                messageContent.imageMessage?.caption ||
@@ -54,7 +53,7 @@ async function handleMessage(sock, msg) {
 
     const remoteJid = msg.key.remoteJid;
 
-    // 1. CEK DULU JAWABAN GAME (Gunakan try-catch terpisah agar tidak memblokir perintah lain)
+    // 1. CEK JAWABAN GAME (Langsung ditangkap tanpa prefix/perintah apa pun)
     try {
       const isGameAnswered = await handleGameAnswer(sock, msg, cleanText);
       if (isGameAnswered) return;
@@ -62,7 +61,7 @@ async function handleMessage(sock, msg) {
       console.error('Error saat handleGameAnswer:', gameErr);
     }
 
-    // 2. CEK PREFIX (Bisa '.' atau '/')
+    // 2. CEK PREFIX
     let prefixUsed = '';
     if (cleanText.startsWith(config.prefix)) prefixUsed = config.prefix;
     else if (cleanText.startsWith('/')) prefixUsed = '/';
@@ -255,7 +254,6 @@ async function handleMessage(sock, msg) {
         await claimTetrisCommand(sock, msg, args);
         break;
 
-      // SUB-MENU DENGAN STYLE SMALL CAPS & BOX BORDER
       case 'menu_game':
       case 'games': {
         const gameText = 
@@ -373,7 +371,6 @@ async function handleMessage(sock, msg) {
         break;
 
       default:
-        // Memberi notifikasi jika command tidak dikenal (baik untuk prefix . maupun /)
         await sock.sendMessage(remoteJid, {
           text: `❌ Command *${prefixUsed}${command}* tidak ditemukan!\nKetik *${prefixUsed}menu* untuk melihat daftar menu.`
         }, { quoted: msg });
@@ -386,4 +383,3 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-                                 
