@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const {
   default: makeWASocket,
   useMultiFileAuthState,
@@ -6,6 +8,35 @@ const {
 const pino = require('pino');
 const qrcode = require('qrcode-terminal'); // Tambahan library QR
 const handleMessage = require('./handlers/messageHandler');
+
+// --- INISIALISASI DATABASE JSON ---
+const dbFilePath = path.join(__dirname, 'database.json');
+
+if (fs.existsSync(dbFilePath)) {
+  try {
+    const fileData = fs.readFileSync(dbFilePath, 'utf-8');
+    global.db = JSON.parse(fileData);
+  } catch (err) {
+    console.error('Gagal membaca database.json, membuat database kosong...', err);
+    global.db = {};
+  }
+} else {
+  global.db = {};
+}
+
+// Pastikan struktur dasar database aman dari error undefined
+if (!global.db.users) global.db.users = {};
+if (!global.db.game) global.db.game = {};
+
+// Fungsi global untuk menyimpan database secara otomatis ke file
+global.saveDatabase = () => {
+  try {
+    fs.writeFileSync(dbFilePath, JSON.stringify(global.db, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Gagal menyimpan database ke file:', err);
+  }
+};
+// ---------------------------------
 
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
