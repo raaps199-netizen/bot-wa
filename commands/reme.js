@@ -32,9 +32,10 @@ async function remeCommand(sock, msg, args) {
   const isTargetBot = targetId.includes(sock.user.id.split(':')[0]);
 
   if (!global.db.users[senderId]) {
-    global.db.users[senderId] = { mathScore: 0, triviaScore: 0 };
+    global.db.users[senderId] = { mathScore: 0, triviaScore: 0, score: 0 };
   }
 
+  // 1. KHUSUS LAWAN BOT: Langsung gas tanpa cek poin
   if (isTargetBot) {
     global.db.game[remoteJid] = {
       type: 'reme',
@@ -55,19 +56,23 @@ async function remeCommand(sock, msg, args) {
     return;
   }
 
+  // 2. LAWAN MANUSIA: Cek total akumulasi poin dari semua game
   if (!global.db.users[targetId]) {
-    global.db.users[targetId] = { mathScore: 0, triviaScore: 0 };
+    global.db.users[targetId] = { mathScore: 0, triviaScore: 0, score: 0 };
   }
 
-  const senderScore = global.db.users[senderId].triviaScore || 0;
-  const targetScore = global.db.users[targetId].triviaScore || 0;
+  const senderStats = global.db.users[senderId];
+  const senderScore = (senderStats.triviaScore || 0) + (senderStats.mathScore || 0) + (senderStats.score || 0);
+
+  const targetStats = global.db.users[targetId];
+  const targetScore = (targetStats.triviaScore || 0) + (targetStats.mathScore || 0) + (targetStats.score || 0);
 
   if (senderScore < betAmount) {
-    return await sock.sendMessage(remoteJid, { text: `⚠️ Poin lo kurang, bre! Poin lo saat ini: *${senderScore}*, tapi taruhannya *${betAmount}*.` }, { quoted: msg });
+    return await sock.sendMessage(remoteJid, { text: `⚠️ Total poin lo kurang, bre! Poin lo saat ini: *${senderScore}*, tapi taruhannya *${betAmount}*.` }, { quoted: msg });
   }
 
   if (targetScore < betAmount) {
-    return await sock.sendMessage(remoteJid, { text: `⚠️ Lawan lu poinnya gak cukup buat taruhan *${betAmount}* poin!` }, { quoted: msg });
+    return await sock.sendMessage(remoteJid, { text: `⚠️ Lawan lu total poinnya gak cukup buat taruhan *${betAmount}* poin!` }, { quoted: msg });
   }
 
   global.db.remeChallenges[remoteJid] = {
@@ -77,7 +82,7 @@ async function remeCommand(sock, msg, args) {
     timestamp: Date.now()
   };
 
-  const text = `🎰 *REME DUEL TARUHAN POIN* 🎰\n\n@${senderId.split('@')[0]} menantang @${targetId.split('@')[0]} taruhan sebesar *${betAmount}* poin!\n\nKetik *.terima* buat gas main, atau *.tolak* buat kabur (penakut).`;
+  const text = `🎰 *REME DUEL TARUHAN POIN* 🎰\n\n@${senderId.split('@')[0]} menantang @${targetId.split('@')[0]} taruhan sebesar *${betAmount}* poin!\n\nKetik *.terima* buat gas main, atau *.tolak* buat kabur.`;
 
   await sock.sendMessage(remoteJid, {
     text: text,
