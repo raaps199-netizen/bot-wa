@@ -55,7 +55,8 @@ async function triviaCommand(sock, msg, args) {
       }, { quoted: msg });
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // URL Bersih tanpa parameter ?key= (Wajib untuk key tipe AQ...)
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
 
     const promptText = `Buatkan 1 soal trivia unik dan acak dalam Bahasa Indonesia.
 Kategori: ${targetTopic}
@@ -68,7 +69,7 @@ Respons WAJIB dalam format JSON murni tanpa markdown/backticks, contoh format:
   "jawabanSalah": ["Salah 1", "Salah 2", "Salah 3"]
 }`;
 
-    // Payload Axios diperbaiki (generationConfig ada di dalam body object)
+    // Menggunakan Header x-goog-api-key untuk mendukung API Key format AQ...
     const response = await axios.post(url, {
       contents: [{
         parts: [{ text: promptText }]
@@ -77,7 +78,10 @@ Respons WAJIB dalam format JSON murni tanpa markdown/backticks, contoh format:
         responseMimeType: "application/json"
       }
     }, { 
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey 
+      },
       timeout: 20000 
     });
 
