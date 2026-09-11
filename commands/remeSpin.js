@@ -50,7 +50,6 @@ async function processRoundEndOrNext(sock, remoteJid, game) {
 
   await sock.sendMessage(remoteJid, { text: summaryText, mentions: [p1, p2] });
 
-  // Cek apakah sudah 3 ronde
   if (game.round >= game.maxRound) {
     const scoreP1 = game.scores[p1];
     const scoreP2 = game.scores[p2];
@@ -74,7 +73,6 @@ async function processRoundEndOrNext(sock, remoteJid, game) {
     } else {
       finalMsg += `🤝 Pertandingan berakhir *SERI*!`;
       if (!isPlayingWithBot && game.bet > 0) {
-        // Balikin poin taruhan utuh kalau seri
         global.db.users[p1].triviaScore += game.bet;
         global.db.users[p2].triviaScore += game.bet;
         finalMsg += `\n🔄 Taruhan masing-masing ${game.bet} poin dikembalikan utuh.`;
@@ -86,7 +84,6 @@ async function processRoundEndOrNext(sock, remoteJid, game) {
     return;
   }
 
-  // Lanjut ronde berikutnya
   game.round++;
   game.currentTurnIndex = 0;
   game.roundData = {};
