@@ -39,6 +39,11 @@ const { tetrisCommand, claimTetrisCommand } = require('../commands/tetris');
 const scoreCommand = require('../commands/score');
 const leaderboardCommand = require('../commands/leaderboard');
 
+// Command Reme Kasino
+const remeCommand = require('../commands/reme');
+const { terimaCommand, tolakCommand } = require('../commands/remeAcceptReject');
+const spinCommand = require('../commands/remeSpin');
+
 async function handleMessage(sock, msg) {
   try {
     const messageContent = msg.message;
@@ -54,6 +59,13 @@ async function handleMessage(sock, msg) {
     if (!cleanText) return;
 
     const remoteJid = msg.key.remoteJid;
+
+    // Khusus command .spin waktu game Reme aktif (bisa tanpa prefix tambahan kalau diketik .spin)
+    if (cleanText.toLowerCase() === '.spin' || cleanText.toLowerCase() === 'spin') {
+      await spinCommand(sock, msg);
+      // Kalau lagi sesi reme, kita return biar ga lanjut ke cek prefix command biasa
+      if (global.db?.game?.[remoteJid]?.type === 'reme') return;
+    }
 
     // 1. CEK JAWABAN GAME (Langsung ditangkap tanpa prefix/perintah apa pun)
     try {
@@ -87,6 +99,22 @@ async function handleMessage(sock, msg) {
         await handleGameAnswer(sock, msg, userAnswer);
         break;
       }
+
+      case 'reme':
+        await remeCommand(sock, msg, args);
+        break;
+
+      case 'terima':
+        await terimaCommand(sock, msg);
+        break;
+
+      case 'tolak':
+        await tolakCommand(sock, msg);
+        break;
+
+      case 'spin':
+        await spinCommand(sock, msg);
+        break;
 
       case 's':
       case 'sticker':
@@ -280,6 +308,7 @@ async function handleMessage(sock, msg) {
 ┣⌬ ${prefixUsed}trivia <kategori> <level>
 ┣⌬ ${prefixUsed}tetris
 ┣⌬ ${prefixUsed}claimtetris <kode>
+┣⌬ ${prefixUsed}reme @user
 ┣⌬ ${prefixUsed}score
 ┣⌬ ${prefixUsed}leaderboard
 ┣⌬ ${prefixUsed}cekkhodam <nama>
@@ -345,6 +374,7 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}trivia <kategori> <level>
 ┃  • ${prefixUsed}tetris
 ┃  • ${prefixUsed}claimtetris <kode>
+┃  • ${prefixUsed}reme @user
 ┃  • ${prefixUsed}score
 ┃  • ${prefixUsed}leaderboard
 ┃  • ${prefixUsed}cekkhodam <nama>
@@ -400,4 +430,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-    
+                           
