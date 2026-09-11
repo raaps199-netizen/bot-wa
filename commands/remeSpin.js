@@ -13,7 +13,6 @@ function hitungReme(angka) {
   return { finalNum: sum, isSpecial: null };
 }
 
-// Fungsi bantu buat nembak ronde dan ngecek kelanjutan game
 async function processRoundEndOrNext(sock, remoteJid, game) {
   const [p1, p2] = game.players;
   const d1 = game.roundData[p1];
@@ -35,9 +34,12 @@ async function processRoundEndOrNext(sock, remoteJid, game) {
     else roundWinner = 'tie';
   }
 
+  const botNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+  const isPlayingWithBot = p2 === botNumber;
+
   let summaryText = `📊 *HASIL RONDE ${game.round}*\n\n`;
   summaryText += `• @${p1.split('@')[0]} : ${d1.raw} (Reme: ${d1.finalNum})\n`;
-  summaryText += `• @${p2.split('@')[0]} (Bot) : ${d2.raw} (Reme: ${d2.finalNum})\n\n`;
+  summaryText += `• @${p2.split('@')[0]} ${isPlayingWithBot ? '(Bot)' : ''} : ${d2.raw} (Reme: ${d2.finalNum})\n\n`;
 
   if (roundWinner === 'tie') {
     summaryText += `⚖️ Ronde ${game.round} *SERI*! Poin tidak bertambah.`;
@@ -53,14 +55,30 @@ async function processRoundEndOrNext(sock, remoteJid, game) {
     const scoreP1 = game.scores[p1];
     const scoreP2 = game.scores[p2];
 
-    let finalMsg = `🏁 *PERMAINAN REME SELESAI!*\n\nSkor Akhir:\n• @${p1.split('@')[0]} : ${scoreP1} Win\n• @${p2.split('@')[0]} (Bot) : ${scoreP2} Win\n\n`;
+    let finalMsg = `🏁 *PERMAINAN REME SELESAI!*\n\nSkor Akhir:\n• @${p1.split('@')[0]} : ${scoreP1} Win\n• @${p2.split('@')[0]} ${isPlayingWithBot ? '(Bot)' : ''} : ${scoreP2} Win\n\n`;
 
     if (scoreP1 > scoreP2) {
-      finalMsg += `👑 Hoki parah, lu menang, @${p1.split('@')[0]}!`;
+      finalMsg += `👑 Pemenang Utama: @${p1.split('@')[0]}!`;
+      if (!isPlayingWithBot && game.bet > 0) {
+        const totalPrize = game.bet * 2;
+        global.db.users[p1].triviaScore += totalPrize;
+        finalMsg += `\n💰 Berhasil ngeruk total taruhan sebesar *+${totalPrize} Poin*!`;
+      }
     } else if (scoreP2 > scoreP1) {
-      finalMsg += `🤖 Hahaha bot menang! Lu kalah sama bot sendiri wkwk.`;
+      finalMsg += `👑 Pemenang Utama: @${p2.split('@')[0]}!`;
+      if (!isPlayingWithBot && game.bet > 0) {
+        const totalPrize = game.bet * 2;
+        global.db.users[p2].triviaScore += totalPrize;
+        finalMsg += `\n💰 Berhasil ngeruk total taruhan sebesar *+${totalPrize} Poin*!`;
+      }
     } else {
-      finalMsg += `🤝 Skor imbang, seru juga!`;
+      finalMsg += `🤝 Pertandingan berakhir *SERI*!`;
+      if (!isPlayingWithBot && game.bet > 0) {
+        // Balikin poin taruhan utuh kalau seri
+        global.db.users[p1].triviaScore += game.bet;
+        global.db.users[p2].triviaScore += game.bet;
+        finalMsg += `\n🔄 Taruhan masing-masing ${game.bet} poin dikembalikan utuh.`;
+      }
     }
 
     delete global.db.game[remoteJid];
@@ -91,7 +109,6 @@ async function spinCommand(sock, msg) {
     return await sock.sendMessage(remoteJid, { text: `⚠️ Sabar bre, bukan giliran lo!` }, { quoted: msg });
   }
 
-  // 1. Eksekusi Spin untuk Player yang lagi giliran
   const rawSpin = Math.floor(Math.random() * 37);
   const result = hitungReme(rawSpin);
 
@@ -106,9 +123,7 @@ async function spinCommand(sock, msg) {
   const botNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
   const isPlayingWithBot = game.players.includes(botNumber);
 
-  // 2. Jika musuhnya adalah BOT dan sekarang giliran BOT
   if (isPlayingWithBot && game.currentTurnIndex < game.players.length && game.players[game.currentTurnIndex] === botNumber) {
-    // Jeda dikit biar berasa kayak bot mikir (1.5 detik)
     setTimeout(async () => {
       const botRawSpin = Math.floor(Math.random() * 37);
       const botResult = hitungReme(botRawSpin);
@@ -121,14 +136,12 @@ async function spinCommand(sock, msg) {
       game.roundData[botNumber] = { raw: botRawSpin, ...botResult };
       game.currentTurnIndex++;
 
-      // Evaluasi hasil ronde karena bot sudah spin terakhir di ronde ini
       await processRoundEndOrNext(sock, remoteJid, game);
     }, 1500);
 
     return;
   }
 
-  // Jika bermain antar manusia biasa dan giliran sudah habis
   if (game.currentTurnIndex >= game.players.length) {
     await processRoundEndOrNext(sock, remoteJid, game);
   } else {
