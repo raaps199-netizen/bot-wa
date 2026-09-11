@@ -60,10 +60,9 @@ async function handleMessage(sock, msg) {
 
     const remoteJid = msg.key.remoteJid;
 
-    // Khusus command .spin waktu game Reme aktif (bisa tanpa prefix tambahan kalau diketik .spin)
+    // Khusus command .spin waktu game Reme aktif
     if (cleanText.toLowerCase() === '.spin' || cleanText.toLowerCase() === 'spin') {
       await spinCommand(sock, msg);
-      // Kalau lagi sesi reme, kita return biar ga lanjut ke cek prefix command biasa
       if (global.db?.game?.[remoteJid]?.type === 'reme') return;
     }
 
@@ -308,7 +307,7 @@ async function handleMessage(sock, msg) {
 ┣⌬ ${prefixUsed}trivia <kategori> <level>
 ┣⌬ ${prefixUsed}tetris
 ┣⌬ ${prefixUsed}claimtetris <kode>
-┣⌬ ${prefixUsed}reme @user
+┣⌬ ${prefixUsed}reme @user <taruhan>
 ┣⌬ ${prefixUsed}score
 ┣⌬ ${prefixUsed}leaderboard
 ┣⌬ ${prefixUsed}cekkhodam <nama>
@@ -374,7 +373,7 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}trivia <kategori> <level>
 ┃  • ${prefixUsed}tetris
 ┃  • ${prefixUsed}claimtetris <kode>
-┃  • ${prefixUsed}reme @user
+┃  • ${prefixUsed}reme @user <taruhan>
 ┃  • ${prefixUsed}score
 ┃  • ${prefixUsed}leaderboard
 ┃  • ${prefixUsed}cekkhodam <nama>
@@ -430,4 +429,3 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-                           
