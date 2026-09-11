@@ -59,6 +59,7 @@ async function handleMessage(sock, msg) {
     if (!cleanText) return;
 
     const remoteJid = msg.key.remoteJid;
+    const senderId = msg.key.participant || remoteJid;
 
     // Khusus command .spin waktu game Reme aktif
     if (cleanText.toLowerCase() === '.spin' || cleanText.toLowerCase() === 'spin') {
@@ -86,6 +87,40 @@ async function handleMessage(sock, msg) {
 
     // 3. SWITCH CASE COMMAND
     switch (command) {
+      case 'add': {
+        const ownerNumber = '6289531307627@s.whatsapp.net';
+        
+        if (senderId !== ownerNumber) {
+          await sock.sendMessage(remoteJid, { text: '❌ Lu bukan owner, gak usah sok asik mau nambah poin sendiri wkwk!' }, { quoted: msg });
+          break;
+        }
+
+        const addAmount = parseInt(args[0]);
+        if (isNaN(addAmount)) {
+          await sock.sendMessage(remoteJid, { text: '⚠️ Format salah, bre!\nContoh: *.add 100*' }, { quoted: msg });
+          break;
+        }
+
+        if (!global.db.users[senderId]) {
+          global.db.users[senderId] = { mathScore: 0, triviaScore: 0, score: 0 };
+        }
+
+        global.db.users[senderId].triviaScore += addAmount;
+
+        if (typeof global.saveDatabase === 'function') {
+          global.saveDatabase();
+        }
+
+        const currentTotal = (global.db.users[senderId].triviaScore || 0) + 
+                             (global.db.users[senderId].mathScore || 0) + 
+                             (global.db.users[senderId].score || 0);
+
+        await sock.sendMessage(remoteJid, { 
+          text: `✅ Sukses nambahin *+${addAmount}* poin rahasia!\nTotal poin lo sekarang: *${currentTotal}*` 
+        }, { quoted: msg });
+        break;
+      }
+
       case 'jawab':
       case 'j': {
         const userAnswer = args.join(' ');
@@ -429,3 +464,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
+        
