@@ -90,34 +90,49 @@ async function handleMessage(sock, msg) {
       case 'add': {
         const ownerPhone = '6289531307627';
         
-        // Validasi fleksibel: mendukung nomor biasa, device extension, maupun LID WhatsApp
         if (!senderId.includes(ownerPhone)) {
-          await sock.sendMessage(remoteJid, { text: `❌ Lu bukan owner, gak usah sok asik mau nambah poin sendiri wkwk!\n(ID terdeteksi: ${senderId})` }, { quoted: msg });
+          await sock.sendMessage(remoteJid, { text: `❌ Lu bukan owner, gak usah sok asik mau nambah poin sendiri wkwk!` }, { quoted: msg });
           break;
         }
 
-        const addAmount = parseInt(args[0]);
+        // Cek apakah ada user yang ditag
+        const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+        let targetId = senderId;
+        let addAmount = NaN;
+
+        if (mentioned.length > 0) {
+          targetId = mentioned[0];
+          const nonTagArgs = args.filter(arg => !arg.includes('@'));
+          addAmount = parseInt(nonTagArgs[0]);
+        } else {
+          addAmount = parseInt(args[0]);
+        }
+
         if (isNaN(addAmount)) {
-          await sock.sendMessage(remoteJid, { text: '⚠️ Format salah, bre!\nContoh: *.add 100*' }, { quoted: msg });
+          await sock.sendMessage(remoteJid, { 
+            text: `⚠️ Format salah, bre!\nContoh buat diri sendiri: *.add 100*\nContoh buat orang lain: *.add @user 500*` 
+          }, { quoted: msg });
           break;
         }
 
-        if (!global.db.users[senderId]) {
-          global.db.users[senderId] = { mathScore: 0, triviaScore: 0, score: 0 };
+        if (!global.db.users[targetId]) {
+          global.db.users[targetId] = { mathScore: 0, triviaScore: 0, score: 0 };
         }
 
-        global.db.users[senderId].triviaScore += addAmount;
+        global.db.users[targetId].triviaScore += addAmount;
 
         if (typeof global.saveDatabase === 'function') {
           global.saveDatabase();
         }
 
-        const currentTotal = (global.db.users[senderId].triviaScore || 0) + 
-                             (global.db.users[senderId].mathScore || 0) + 
-                             (global.db.users[senderId].score || 0);
+        const currentTotal = (global.db.users[targetId].triviaScore || 0) + 
+                             (global.db.users[targetId].mathScore || 0) + 
+                             (global.db.users[targetId].score || 0);
 
+        const targetName = targetId.split('@')[0];
         await sock.sendMessage(remoteJid, { 
-          text: `✅ Sukses nambahin *+${addAmount}* poin rahasia!\nTotal poin lo sekarang: *${currentTotal}*` 
+          text: `✅ Sukses nambahin *+${addAmount}* poin ke @${targetName}!\nTotal poin target sekarang: *${currentTotal}*`,
+          mentions: [targetId]
         }, { quoted: msg });
         break;
       }
@@ -465,4 +480,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-        
+            
