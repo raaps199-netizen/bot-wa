@@ -4,7 +4,7 @@ if (!global.db) global.db = {};
 if (!global.db.game) global.db.game = {};
 
 /**
- * Helper Translate menggunakan Google Translate API (Gratis)
+ * Helper Translate ke Bahasa Indonesia (Google Translate API)
  */
 async function translateToId(text) {
   try {
@@ -12,12 +12,12 @@ async function translateToId(text) {
     const res = await axios.get(url);
     return res.data[0].map(item => item[0]).join('');
   } catch (err) {
-    return text; // Jika gagal translate, kirim teks asli
+    return text;
   }
 }
 
 /**
- * Helper untuk mengacak urutan pilihan jawaban
+ * Helper acak pilihan
  */
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -27,53 +27,99 @@ function shuffleArray(array) {
   return array;
 }
 
+/**
+ * Decode Karakter HTML Spesial
+ */
+function decodeHTML(text) {
+  return text
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
 async function triviaCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
 
-  // Cek jika sedang ada game berjalan
   if (global.db.game[remoteJid]) {
     return await sock.sendMessage(remoteJid, {
       text: '⚠️ Masih ada kuis yang belum selesai di chat ini!'
     }, { quoted: msg });
   }
 
+  const inputKategori = (args[0] || '').toLowerCase().trim();
   const inputLevel = (args[1] || 'mudah').toLowerCase().trim();
+
+  // Pemetaan Kategori ke Category ID OpenTDB
+  let categoryId = 17; // Default: Science & Nature
+  let targetTopic = inputKategori || 'SAINS';
+
+  if (['sejarah', 'history', 'sej'].includes(inputKategori)) {
+    categoryId = 23; // OpenTDB Category ID 23 = History
+    targetTopic = 'SEJARAH';
+  } else if (['geografi', 'geo', 'geography'].includes(inputKategori)) {
+    categoryId = 22; // OpenTDB Category ID 22 = Geography
+    targetTopic = 'GEOGRAFI';
+  } else if (['matematika', 'math'].includes(inputKategori)) {
+    categoryId = 19;
+    targetTopic = 'MATEMATIKA';
+  } else if (['komputer', 'tech'].includes(inputKategori)) {
+    categoryId = 18;
+    targetTopic = 'KOMPUTER';
+  }
+
   let difficulty = 'easy';
   if (['sedang', 'medium'].includes(inputLevel)) difficulty = 'medium';
   else if (['hard', 'sulit', 'susah'].includes(inputLevel)) difficulty = 'hard';
 
-  // Kirim notifikasi loading
   await sock.sendMessage(remoteJid, { 
-    text: '🔄 *Mengambil soal terbaru dari internet...*' 
+    text: `... ${targetTopic.toUpperCase()} (${difficulty.toUpperCase()}) dari internet...*` 
   }, { quoted: msg });
 
   try {
-    // Ambil soal dari OpenTDB (Category 17 = Science & Nature)
-    const apiUrl = `https://opentdb.com/api.php?amount=1&category=17&difficulty=${difficulty}&type=multiple`;
-    const response = await axios.get(apiUrl);
+    let quizData = null;
+    let attempts = 0;
 
-    if (!response.data.results || response.data.results.length === 0) {
+    // Filter/retry hingga 5 kali jika memilih sub-sains (kimia/fisika/biologi)
+    while (attempts < 5) {
+      attempts++;
+      const apiUrl = `https://opentdb.com/api.php?amount=10&category=${categoryId}&difficulty=${difficulty}&type=multiple`;
+      const response = await axios.get(apiUrl);
+
+      if (response.data.results && response.data.results.length > 0) {
+        const results = response.data.results;
+
+        if (['kimia', 'chemistry'].includes(inputKategori)) {
+          quizData = results.find(q => /element|chemical|acid|atom|compound|gas|reaction|molecule|periodic/i.test(q.question));
+        } else if (['fisika', 'physics'].includes(inputKategori)) {
+          quizData = results.find(q => /force|energy|speed|gravity|light|wave|mass|motion|joule|newton|celsius/i.test(q.question));
+        } else if (['biologi', 'biology', 'bio'].includes(inputKategori)) {
+          quizData = results.find(q => /cell|organ|body|plant|animal|species|dna|blood|heart/i.test(q.question));
+        } else {
+          quizData = results[0]; // Untuk Sejarah, Geografi, Matematika, dll.
+        }
+
+        if (quizData) break;
+      }
+    }
+
+    if (!quizData) {
       return await sock.sendMessage(remoteJid, {
-        text: '❌ Gagal mengambil soal dari internet. Coba beberapa saat lagi!'
+        text: `❌ Soal untuk kategori *${targetTopic.toUpperCase()}* tidak ditemukan. Coba ketik \`.trivia sejarah mudah\` atau \`.trivia geografi mudah\`.`
       }, { quoted: msg });
     }
 
-    const quizData = response.data.results[0];
+    const cleanQuestion = decodeHTML(quizData.question);
 
-    // Bersihkan entitas HTML
-    const cleanQuestion = quizData.question
-      .replace(/&quot;/g, '"')
-      .replace(/&#039;/g, "'")
-      .replace(/&amp;/g, '&');
-
-    // Translate ke Bahasa Indonesia
+    // Menerjemahkan soal dan pilihan jawaban ke Bahasa Indonesia
     const translatedQuestion = await translateToId(cleanQuestion);
-    const translatedCorrect = await translateToId(quizData.correct_answer);
+    const translatedCorrect = await translateToId(decodeHTML(quizData.correct_answer));
     const translatedIncorrect = await Promise.all(
-      quizData.incorrect_answers.map(async (ans) => await translateToId(ans))
+      quizData.incorrect_answers.map(async (ans) => await translateToId(decodeHTML(ans)))
     );
 
-    // Acak Opsi Jawaban
+    // Acak Opsi Pilihan (A, B, C, D)
     const optionsRaw = [
       { isCorrect: true, text: translatedCorrect },
       ...translatedIncorrect.map(ans => ({ isCorrect: false, text: ans }))
@@ -98,7 +144,7 @@ async function triviaCommand(sock, msg, args) {
     const timeoutSec = 60;
 
     const caption = 
-`❓ *TRIVIA SAINS ONLINE (${difficulty.toUpperCase()})*
+`❓ *TRIVIA (${targetTopic.toUpperCase()} - ${difficulty.toUpperCase()})*
 
 ${translatedQuestion}
 
@@ -124,7 +170,7 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
       }
     }, timeoutSec * 1000);
 
-    // Simpan Sesi
+    // Simpan Sesi Game
     global.db.game[remoteJid] = {
       msgId: sentMsg.key.id,
       jawabanOpsi: correctOptionLabel,
@@ -141,3 +187,4 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
 }
 
 module.exports = triviaCommand;
+  
