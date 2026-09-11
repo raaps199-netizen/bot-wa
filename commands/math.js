@@ -3,75 +3,96 @@ const axios = require('axios');
 if (!global.db) global.db = {};
 if (!global.db.game) global.db.game = {};
 
-/**
- * Helper untuk membuat angka acak dalam rentang [min, max]
- */
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-/**
- * Generator Soal Dinamis untuk Level Easy, Medium, Hard & Extreme/Max
- */
 function generateMathProblem(level) {
   let problemStr = '';
   let answer = 0;
+  let attempts = 0;
 
-  if (level === 'mudah') {
-    const a = getRandomInt(10, 99);
-    const b = getRandomInt(10, 99);
-    const isAdd = Math.random() > 0.5;
-    problemStr = isAdd ? `${a} + ${b}` : `${Math.max(a, b)} - ${Math.min(a, b)}`;
-    answer = eval(problemStr);
-  } else if (level === 'sedang') {
-    const a = getRandomInt(12, 50);
-    const b = getRandomInt(3, 15);
-    const c = getRandomInt(10, 40);
-    const op = Math.random() > 0.5 ? '*' : '+';
-    problemStr = `${a} ${op === '*' ? '×' : '+'} ${b} - ${c}`;
-    const evalExpr = `${a} ${op} ${b} - ${c}`;
-    answer = eval(evalExpr);
-  } else if (level === 'hard') {
-    const base1 = getRandomInt(2, 6);
-    const pow1 = getRandomInt(2, 3);
-    const num1 = getRandomInt(-9, -2);
-    const num2 = getRandomInt(3, 8);
-    const pow2 = getRandomInt(2, 3);
-
-    const pattern = getRandomInt(1, 2);
-    if (pattern === 1) {
-      problemStr = `${base1}² + (${num1} × ${num2}³)`;
-      const evalExpr = `Math.pow(${base1}, ${pow1}) + (${num1} * Math.pow(${num2}, ${pow2}))`;
-      answer = eval(evalExpr);
+  do {
+    attempts++;
+    if (level === 'mudah') {
+      const a = getRandomInt(5, 50);
+      const b = getRandomInt(5, 50);
+      const isAdd = Math.random() > 0.5;
+      if (isAdd) {
+        problemStr = `${a} + ${b}`;
+        answer = a + b;
+      } else {
+        const maxVal = Math.max(a, b);
+        const minVal = Math.min(a, b);
+        problemStr = `${maxVal} - ${minVal}`;
+        answer = maxVal - minVal;
+      }
+    } else if (level === 'sedang') {
+      const type = getRandomInt(1, 2);
+      if (type === 1) {
+        const a = getRandomInt(2, 12);
+        const b = getRandomInt(2, 12);
+        const c = getRandomInt(1, 20);
+        problemStr = `${a} × ${b} + ${c}`;
+        answer = (a * b) + c;
+      } else {
+        const a = getRandomInt(10, 50);
+        const b = getRandomInt(2, 10);
+        const c = getRandomInt(1, 15);
+        problemStr = `${a} + ${b} × ${b} - ${c}`;
+        answer = a + (b * b) - c;
+      }
+    } else if (level === 'hard') {
+      const pattern = getRandomInt(1, 3);
+      if (pattern === 1) {
+        const base = getRandomInt(2, 5);
+        const addNum = getRandomInt(10, 40);
+        const mult = getRandomInt(2, 6);
+        problemStr = `${base}² + (${addNum} - ${mult})`;
+        answer = Math.pow(base, 2) + (addNum - mult);
+      } else if (pattern === 2) {
+        const a = getRandomInt(2, 6);
+        const b = getRandomInt(2, 4);
+        const c = getRandomInt(5, 20);
+        problemStr = `(${a} + ${b})³ - ${c}`;
+        answer = Math.pow(a + b, 3) - c;
+      } else {
+        const a = getRandomInt(16, 81); // Angka yang bisa diakar kuadrat pas
+        // Cari akar kuadrat bulat
+        const sqrtVal = Math.sqrt(a);
+        const b = getRandomInt(2, 8);
+        const c = getRandomInt(3, 10);
+        problemStr = `√${a} × ${b} + ${c}`;
+        answer = sqrtVal * b + c;
+      }
     } else {
-      problemStr = `(${num1} × ${num2}²) - (${base1}³ + ${getRandomInt(10, 50)})`;
-      const evalExpr = `(${num1} * Math.pow(${num2}, ${pow2})) - (Math.pow(${base1}, 3) + ${getRandomInt(10, 50)})`;
-      answer = eval(evalExpr);
+      // LEVEL MAX / EXTREME
+      const pattern = getRandomInt(1, 3);
+      if (pattern === 1) {
+        const a = getRandomInt(2, 5);
+        const b = getRandomInt(2, 4);
+        const c = getRandomInt(10, 30);
+        problemStr = `(${a}³ + ${b}²) × (${c} - 5)`;
+        answer = (Math.pow(a, 3) + Math.pow(b, 2)) * (c - 5);
+      } else if (pattern === 2) {
+        const a = getRandomInt(36, 144);
+        const sqrtVal = Math.round(Math.sqrt(a));
+        const b = getRandomInt(2, 5);
+        const c = getRandomInt(10, 50);
+        problemStr = `(√${a} × ${b}³) - ${c}`;
+        answer = (sqrtVal * Math.pow(b, 3)) - c;
+      } else {
+        const a = getRandomInt(2, 4);
+        const b = getRandomInt(3, 7);
+        const c = getRandomInt(10, 25);
+        const d = getRandomInt(2, 5);
+        problemStr = `(${a}⁴ + ${b}³) ÷ ${d} + ${c}`;
+        answer = (Math.pow(a, 4) + Math.pow(b, 3)) / d + c;
+      }
     }
-  } else {
-    // LEVEL MAX / EXTREME
-    const n1 = getRandomInt(2, 7);
-    const n2 = getRandomInt(-15, -3);
-    const n3 = getRandomInt(4, 12);
-    const p2 = getRandomInt(2, 3);
-    const n4 = getRandomInt(15, 80);
-    const n5 = getRandomInt(-20, -5);
-
-    const type = getRandomInt(1, 3);
-    if (type === 1) {
-      problemStr = `${n1}³ + (${n2} × ${n3}³) - (${n5} + ${n4})`;
-      const expr = `Math.pow(${n1}, 3) + (${n2} * Math.pow(${n3}, ${p2})) - (${n5} + ${n4})`;
-      answer = eval(expr);
-    } else if (type === 2) {
-      problemStr = `(${n1}⁴ - ${n4}) × (${n2} + ${n3}²)`;
-      const expr = `(Math.pow(${n1}, 4) - ${n4}) * (${n2} + Math.pow(${n3}, 2))`;
-      answer = eval(expr);
-    } else {
-      problemStr = `(${n2} × ${n1}³) + (${n4} - ${n3}³) × ${n5}`;
-      const expr = `(${n2} * Math.pow(${n1}, 3)) + (${n4} - Math.pow(${n3}, 3)) * ${n5}`;
-      answer = eval(expr);
-    }
-  }
+    // Pastikan hasil akhirnya bulat dan tidak infinite/NaN
+    if (!isNaN(answer) && Number.isInteger(answer)) break;
+  } while (attempts < 10);
 
   return { problemStr, answer: Math.round(answer) };
 }
@@ -79,7 +100,6 @@ function generateMathProblem(level) {
 async function mathCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
 
-  // Samakan database dengan game trivia/lainnya
   if (global.db.game[remoteJid]) {
     return await sock.sendMessage(remoteJid, {
       text: '⚠️ Masih ada kuis yang belum selesai di chat ini!'
@@ -113,11 +133,10 @@ Berapa hasil dari:
 
 ⏱️ Waktu: *${timeoutSec} Detik*
 
-_Ketik langsung jawabannya di chat (contoh: ${answer})_`;
+_Ketik jawaban langsung atau gunakan garis miring (contoh: /${answer})_`;
 
   const sentMsg = await sock.sendMessage(remoteJid, { text: caption }, { quoted: msg });
 
-  // Set Timer Penjawab
   const timer = setTimeout(async () => {
     if (global.db.game[remoteJid]) {
       delete global.db.game[remoteJid];
@@ -127,11 +146,11 @@ _Ketik langsung jawabannya di chat (contoh: ${answer})_`;
     }
   }, timeoutSec * 1000);
 
-  // Simpan Sesi Game ke global.db.game (Format sama dengan Trivia & AI context)
   global.db.game[remoteJid] = {
+    type: 'math',
     msgId: sentMsg.key.id,
     soal: problemStr,
-    jawabanOpsi: answer.toString(), // Untuk pengecekan jawaban angka murni
+    jawabanOpsi: answer.toString(),
     jawabanTeks: answer.toString(),
     jawabanBenar: answer.toString(),
     timer: timer
@@ -139,4 +158,3 @@ _Ketik langsung jawabannya di chat (contoh: ${answer})_`;
 }
 
 module.exports = mathCommand;
-      
