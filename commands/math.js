@@ -15,8 +15,8 @@ function generateMathProblem(level) {
   do {
     attempts++;
     if (level === 'mudah') {
-      const a = getRandomInt(5, 50);
-      const b = getRandomInt(5, 50);
+      const a = getRandomInt(5, 30);
+      const b = getRandomInt(5, 30);
       const isAdd = Math.random() > 0.5;
       if (isAdd) {
         problemStr = `${a} + ${b}`;
@@ -28,65 +28,49 @@ function generateMathProblem(level) {
         answer = maxVal - minVal;
       }
     } else if (level === 'sedang') {
-      const type = getRandomInt(1, 2);
+      // Medium: Perkalian/Pembagian sederhana atau penjumlahan kombinasi biasa tanpa pangkat rumit
+      const type = getRandomInt(1, 3);
       if (type === 1) {
-        const a = getRandomInt(2, 12);
-        const b = getRandomInt(2, 12);
-        const c = getRandomInt(1, 20);
+        const a = getRandomInt(3, 10);
+        const b = getRandomInt(3, 10);
+        const c = getRandomInt(5, 20);
         problemStr = `${a} × ${b} + ${c}`;
         answer = (a * b) + c;
+      } else if (type === 2) {
+        const a = getRandomInt(20, 60);
+        const b = getRandomInt(2, 6);
+        const c = getRandomInt(5, 15);
+        problemStr = `${a} - ${b} × ${b} + ${c}`;
+        answer = a - (b * b) + c;
       } else {
-        const a = getRandomInt(10, 50);
-        const b = getRandomInt(2, 10);
-        const c = getRandomInt(1, 15);
-        problemStr = `${a} + ${b} × ${b} - ${c}`;
-        answer = a + (b * b) - c;
+        const a = getRandomInt(12, 40);
+        const b = getRandomInt(5, 25);
+        const c = getRandomInt(2, 8);
+        problemStr = `${a} + ${b} - ${c}`;
+        answer = a + b - c;
       }
     } else if (level === 'hard') {
-      const pattern = getRandomInt(1, 3);
+      // Hard: Mulai ada kuadrat atau kurung tingkat lanjut yang wajar
+      const pattern = getRandomInt(1, 2);
       if (pattern === 1) {
-        const base = getRandomInt(2, 5);
-        const addNum = getRandomInt(10, 40);
-        const mult = getRandomInt(2, 6);
-        problemStr = `${base}² + (${addNum} - ${mult})`;
-        answer = Math.pow(base, 2) + (addNum - mult);
-      } else if (pattern === 2) {
-        const a = getRandomInt(2, 6);
-        const b = getRandomInt(2, 4);
-        const c = getRandomInt(5, 20);
-        problemStr = `(${a} + ${b})³ - ${c}`;
-        answer = Math.pow(a + b, 3) - c;
+        const base = getRandomInt(2, 6);
+        const addNum = getRandomInt(10, 30);
+        problemStr = `${base}² + ${addNum}`;
+        answer = Math.pow(base, 2) + addNum;
       } else {
-        const a = getRandomInt(16, 81);
-        const sqrtVal = Math.sqrt(a);
-        const b = getRandomInt(2, 8);
-        const c = getRandomInt(3, 10);
-        problemStr = `√${a} × ${b} + ${c}`;
-        answer = sqrtVal * b + c;
+        const a = getRandomInt(3, 9);
+        const b = getRandomInt(2, 5);
+        const c = getRandomInt(5, 15);
+        problemStr = `(${a} + ${b}) × ${c}`;
+        answer = (a + b) * c;
       }
     } else {
-      const pattern = getRandomInt(1, 3);
-      if (pattern === 1) {
-        const a = getRandomInt(2, 5);
-        const b = getRandomInt(2, 4);
-        const c = getRandomInt(10, 30);
-        problemStr = `(${a}³ + ${b}²) × (${c} - 5)`;
-        answer = (Math.pow(a, 3) + Math.pow(b, 2)) * (c - 5);
-      } else if (pattern === 2) {
-        const a = getRandomInt(36, 144);
-        const sqrtVal = Math.round(Math.sqrt(a));
-        const b = getRandomInt(2, 5);
-        const c = getRandomInt(10, 50);
-        problemStr = `(√${a} × ${b}³) - ${c}`;
-        answer = (sqrtVal * Math.pow(b, 3)) - c;
-      } else {
-        const a = getRandomInt(2, 4);
-        const b = getRandomInt(3, 7);
-        const c = getRandomInt(10, 25);
-        const d = getRandomInt(2, 5);
-        problemStr = `(${a}⁴ + ${b}³) ÷ ${d} + ${c}`;
-        answer = (Math.pow(a, 4) + Math.pow(b, 3)) / d + c;
-      }
+      // Max / Extreme
+      const a = getRandomInt(2, 5);
+      const b = getRandomInt(2, 4);
+      const c = getRandomInt(10, 25);
+      problemStr = `(${a}³ + ${b}²) - ${c}`;
+      answer = (Math.pow(a, 3) + Math.pow(b, 2)) - c;
     }
     if (!isNaN(answer) && Number.isInteger(answer)) break;
   } while (attempts < 10);
@@ -99,7 +83,7 @@ async function mathCommand(sock, msg, args) {
 
   if (global.db.game[remoteJid]) {
     return await sock.sendMessage(remoteJid, {
-      text: '⚠️ Masih ada kuis yang belum selesai di chat ini!'
+      text: '⚠️ Masih ada kuis yang aktif di chat ini!\nKetik jawabannya atau ketik *.nyerah* untuk menyerah.'
     }, { quoted: msg });
   }
 
@@ -130,7 +114,7 @@ Berapa hasil dari:
 
 ⏱️ Waktu: *${timeoutSec} Detik*
 
-_Ketik langsung angka jawabannya di chat tanpa prefix apa pun!_`;
+_Ketik langsung angka jawabannya di chat! Ketik .nyerah jika ingin menyerah._`;
 
   const sentMsg = await sock.sendMessage(remoteJid, { text: caption }, { quoted: msg });
 
@@ -147,8 +131,6 @@ _Ketik langsung angka jawabannya di chat tanpa prefix apa pun!_`;
     type: 'math',
     msgId: sentMsg.key.id,
     soal: problemStr,
-    jawabanOpsi: answer.toString(),
-    jawabanTeks: answer.toString(),
     jawabanBenar: answer.toString(),
     timer: timer
   };
