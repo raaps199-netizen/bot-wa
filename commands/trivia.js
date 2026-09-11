@@ -68,6 +68,7 @@ Respons WAJIB dalam format JSON murni tanpa markdown/backticks, contoh format:
   "jawabanSalah": ["Salah 1", "Salah 2", "Salah 3"]
 }`;
 
+    // Payload Axios diperbaiki (generationConfig ada di dalam body object)
     const response = await axios.post(url, {
       contents: [{
         parts: [{ text: promptText }]
@@ -75,17 +76,27 @@ Respons WAJIB dalam format JSON murni tanpa markdown/backticks, contoh format:
       generationConfig: {
         responseMimeType: "application/json"
       }
-    }, { timeout: 15000 });
+    }, { 
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 20000 
+    });
 
     let resultText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!resultText) throw new Error('Respon kosong dari AI Gemini');
 
-    // Sanitasi pembersihan markdown backticks (mencegah error JSON.parse)
+    // Sanitasi pembersihan markdown backticks
     resultText = resultText.replace(/```json|```/g, '').trim();
-    const quizData = JSON.parse(resultText);
+
+    let quizData;
+    try {
+      quizData = JSON.parse(resultText);
+    } catch (parseErr) {
+      console.error('Gagal parse JSON Gemini. Raw:', resultText);
+      throw new Error('Respon AI bukan format JSON murni yang valid');
+    }
 
     if (!quizData || !quizData.soal || !quizData.jawabanBenar || !Array.isArray(quizData.jawabanSalah)) {
-      throw new Error('Format JSON dari AI tidak valid');
+      throw new Error('Struktur JSON dari AI tidak lengkap');
     }
 
     // Acak Opsi Pilihan (A, B, C, D)
@@ -131,7 +142,7 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
 
     // Set Timer Penjawab
     const timer = setTimeout(async () => {
-      if (global.db.game[remoteJid]) {
+      if (global.db.game[remoteJid] && global.db.game[remoteJid].type === 'trivia') {
         delete global.db.game[remoteJid];
         await sock.sendMessage(remoteJid, {
           text: `⏳ *Waktu habis!*\nJawaban yang benar adalah: *${correctOptionLabel.toUpperCase()}. ${correctOptionText}*`
@@ -157,10 +168,10 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
     }
 
     const errorDetails = err?.response?.data?.error?.message || err?.message || String(err);
-    console.error('Error Trivia Gemini AI:', errorDetails);
+    console.error('Error Trivia Gemini AI Detail:', errorDetails);
 
     await sock.sendMessage(remoteJid, {
-      text: '❌ Terjadi kesalahan saat membuat soal trivia.'
+      text: `❌ Terjadi kesalahan saat membuat soal trivia.\n_Detail: ${errorDetails}_`
     }, { quoted: msg });
   }
 }
