@@ -5,10 +5,7 @@ async function ncodeCommand(sock, msg) {
   const caption = 
 `☢️ *6-DIGIT CODE GENERATOR* ☢️
 
-🔑 *Kode:* \`${randomCode}\`
-🔗 *Link:* https://nhentai.net/g/${randomCode}/
-
-_Semoga beruntung dengan kodenya!_ 🚀`;
+🔑 *Kode:* \`${randomCode}\``;
 
   await sock.sendMessage(msg.key.remoteJid, {
     text: caption
@@ -16,4 +13,3 @@ _Semoga beruntung dengan kodenya!_ 🚀`;
 }
 
 module.exports = ncodeCommand;
-
