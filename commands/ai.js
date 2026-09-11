@@ -11,42 +11,41 @@ async function aiCommand(sock, msg, args) {
     }, { quoted: msg });
   }
 
-  await sock.sendMessage(remoteJid, { text: '⏳ *Sedang memproses...*' }, { quoted: msg });
+  await sock.sendMessage(remoteJid, { text: '⏳ *Sedang memproses dengan Groq AI...*' }, { quoted: msg });
 
   try {
-    const apiKey = config.geminiKey || process.env.GEMINI_API_KEY;
+    const apiKey = config.groqKey || process.env.GROQ_API_KEY;
     if (!apiKey) {
       return await sock.sendMessage(remoteJid, {
-        text: '❌ API Key Gemini belum dipasang di config.js atau .env!'
+        text: '❌ API Key Groq belum dipasang di config.js atau .env!'
       }, { quoted: msg });
     }
 
-    // URL Bersih tanpa parameter ?key=
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
+    const url = 'https://api.groq.com/openai/v1/chat/completions';
 
     const response = await axios.post(url, {
-      contents: [{
-        parts: [{ text: textPrompt }]
-      }]
-    }, { 
-      headers: { 
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'system', content: 'Kamu adalah asisten AI bahasa Indonesia yang membantu.' },
+        { role: 'user', content: textPrompt }
+      ],
+      temperature: 0.7
+    }, {
+      headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey 
+        'Authorization': `Bearer ${apiKey}`
       },
-      timeout: 20000 
+      timeout: 20000
     });
 
-    let replyText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!replyText) {
-      throw new Error('Respon AI kosong dari Gemini.');
-    }
+    const replyText = response.data?.choices?.[0]?.message?.content;
+    if (!replyText) throw new Error('Respon kosong dari Groq AI.');
 
     await sock.sendMessage(remoteJid, { text: replyText.trim() }, { quoted: msg });
 
   } catch (err) {
     const errorDetails = err?.response?.data?.error?.message || err?.message || String(err);
-    console.error('Error Command AI Detail:', errorDetails);
+    console.error('Error Groq AI:', errorDetails);
 
     await sock.sendMessage(remoteJid, {
       text: `❌ Terjadi kesalahan saat memproses permintaan AI.\n_Detail: ${errorDetails}_`
