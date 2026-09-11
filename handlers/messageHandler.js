@@ -153,10 +153,12 @@ async function handleMessage(sock, msg) {
           break;
         }
 
+        // Jika data user belum ada, buat baru. Jika sudah ada, pertahankan skor yang lama!
         if (!global.db.users[senderId]) {
           global.db.users[senderId] = { mathScore: 0, triviaScore: 0, score: 0 };
         }
 
+        // Set atau update nickname tanpa mereset skor
         global.db.users[senderId].nickname = newNick;
 
         if (typeof global.saveDatabase === 'function') {
@@ -514,4 +516,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-      
+                           
