@@ -1,169 +1,138 @@
-function hitungReme(angka) {
-  if (angka === 0) return { finalNum: 0, isSpecial: 'win3x' };
-  if (angka === 9) return { finalNum: -1, isSpecial: 'autolose' };
+async function spinCommand(sock, msg) {
+  const remoteJid = msg.key.remoteJid;
+  const senderId = msg.key.participant || remoteJid;
 
-  let sum = String(angka).split('').reduce((acc, digit) => acc + parseInt(digit), 0);
-  while (sum > 9) {
-    sum = String(sum).split('').reduce((acc, digit) => acc + parseInt(digit), 0);
+  if (!global.db) global.db = {};
+  if (!global.db.users) global.db.users = {};
+  if (!global.db.game) global.db.game = {};
+
+  const currentGame = global.db.game[remoteJid];
+
+  if (!currentGame || currentGame.type !== 'reme') {
+    return;
   }
 
-  if (sum === 9) return { finalNum: -1, isSpecial: 'autolose' };
-  if (sum === 0) return { finalNum: 0, isSpecial: 'win3x' };
+  const emojis = ['🍒', '🍋', '🔔', '💎', '7️⃣'];
+  
+  const getRandomSpin = () => [
+    emojis[Math.floor(Math.random() * emojis.length)],
+    emojis[Math.floor(Math.random() * emojis.length)],
+    emojis[Math.floor(Math.random() * emojis.length)]
+  ];
 
-  return { finalNum: sum, isSpecial: null };
-}
+  const bet = currentGame.bet;
 
-async function processRoundEndOrNext(sock, remoteJid, game) {
-  const [p1, p2] = game.players;
-  const d1 = game.roundData[p1];
-  const d2 = game.roundData[p2];
+  // --- KONDISI 1: LAWAN BOT (Auto spin instan) ---
+  if (currentGame.mode === 'bot') {
+    if (currentGame.player !== senderId) return;
 
-  let roundWinner = null;
+    const playerRoll = getRandomSpin();
+    const botRoll = getRandomSpin();
 
-  if (d1.isSpecial === 'autolose' && d2.isSpecial !== 'autolose') {
-    roundWinner = p2;
-  } else if (d2.isSpecial === 'autolose' && d1.isSpecial !== 'autolose') {
-    roundWinner = p1;
-  } else if (d1.isSpecial === 'win3x' && d2.isSpecial !== 'win3x') {
-    roundWinner = p1;
-  } else if (d2.isSpecial === 'win3x' && d1.isSpecial !== 'win3x') {
-    roundWinner = p2;
-  } else {
-    if (d1.finalNum > d2.finalNum) roundWinner = p1;
-    else if (d2.finalNum > d1.finalNum) roundWinner = p2;
-    else roundWinner = 'tie';
-  }
+    const getScoreValue = (roll) => {
+      if (roll[0] === roll[1] && roll[1] === roll[2]) return 50;
+      if (roll[0] === roll[1] || roll[1] === roll[2] || roll[0] === roll[2]) return 20;
+      return 5;
+    };
 
-  const botNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-  const isPlayingWithBot = p2 === botNumber;
+    const playerScoreVal = getScoreValue(playerRoll);
+    const botScoreVal = getScoreValue(botRoll);
 
-  let summaryText = `📊 *HASIL RONDE ${game.round}*\n\n`;
-  summaryText += `• @${p1.split('@')[0]} : ${d1.raw} (Reme: ${d1.finalNum === -1 ? '9 (Auto Lose)' : (d1.finalNum === 0 ? '0 (Auto Win)' : d1.finalNum)})\n`;
-  summaryText += `• @${p2.split('@')[0]} ${isPlayingWithBot ? '(Bot)' : ''} : ${d2.raw} (Reme: ${d2.finalNum === -1 ? '9 (Auto Lose)' : (d2.finalNum === 0 ? '0 (Auto Win)' : d2.finalNum)})\n\n`;
+    const playerDb = global.db.users[currentGame.player];
+    let resultText = `🎰 *HASIL SPIN REME VS BOT* 🎰\n\n`;
+    resultText += `👤 @${currentGame.player.split('@')[0]}\n[ ${playerRoll.join(' | ')} ]\n\n`;
+    resultText += `🤖 *Bot Kasino*\n[ ${botRoll.join(' | ')} ]\n\n`;
 
-  if (roundWinner === 'tie') {
-    summaryText += `⚖️ Ronde ${game.round} *SERI*! Poin tidak bertambah.`;
-  } else {
-    game.scores[roundWinner]++;
-    summaryText += `🏆 Pemenang Ronde ini: @${roundWinner.split('@')[0]}!`;
-  }
-
-  await sock.sendMessage(remoteJid, { text: summaryText, mentions: [p1, p2] });
-
-  // CEK APAKAH PERMAINAN SELESAI
-  if (game.round >= game.maxRound) {
-    const scoreP1 = game.scores[p1];
-    const scoreP2 = game.scores[p2];
-
-    let finalMsg = `🏁 *PERMAINAN REME SELESAI!*\n\nSkor Akhir:\n• @${p1.split('@')[0]} : ${scoreP1} Win\n• @${p2.split('@')[0]} ${isPlayingWithBot ? '(Bot)' : ''} : ${scoreP2} Win\n\n`;
-
-    // Pastikan objek user ada sebelum ditambah poin
-    if (!global.db.users[p1]) global.db.users[p1] = { mathScore: 0, triviaScore: 0, score: 0 };
-    if (!global.db.users[p2]) global.db.users[p2] = { mathScore: 0, triviaScore: 0, score: 0 };
-
-    if (scoreP1 > scoreP2) {
-      finalMsg += `👑 Pemenang Utama: @${p1.split('@')[0]}!`;
-      if (!isPlayingWithBot && game.bet > 0) {
-        const totalPrize = game.bet * 2;
-        global.db.users[p1].triviaScore = (global.db.users[p1].triviaScore || 0) + totalPrize;
-        finalMsg += `\n💰 Berhasil ngeruk total taruhan sebesar *+${totalPrize} Poin*!`;
-      }
-    } else if (scoreP2 > scoreP1) {
-      finalMsg += `👑 Pemenang Utama: @${p2.split('@')[0]}!`;
-      if (!isPlayingWithBot && game.bet > 0) {
-        const totalPrize = game.bet * 2;
-        global.db.users[p2].triviaScore = (global.db.users[p2].triviaScore || 0) + totalPrize;
-        finalMsg += `\n💰 Berhasil ngeruk total taruhan sebesar *+${totalPrize} Poin*!`;
-      }
+    if (playerScoreVal > botScoreVal) {
+      playerDb.triviaScore = (playerDb.triviaScore || 0) + bet;
+      resultText += `🎉 Selamat! Lu menang dan dapet *+${bet}* poin!`;
+    } else if (playerScoreVal < botScoreVal) {
+      playerDb.triviaScore = Math.max(0, (playerDb.triviaScore || 0) - bet);
+      resultText += `💀 Waduh, lu kalah dan kehilangan *-${bet}* poin!`;
     } else {
-      finalMsg += `🤝 Pertandingan berakhir *SERI*!`;
-      if (!isPlayingWithBot && game.bet > 0) {
-        global.db.users[p1].triviaScore = (global.db.users[p1].triviaScore || 0) + game.bet;
-        global.db.users[p2].triviaScore = (global.db.users[p2].triviaScore || 0) + game.bet;
-        finalMsg += `\n🔄 Taruhan masing-masing ${game.bet} poin dikembalikan utuh.`;
-      }
+      resultText += `🤝 Seri! Poin lu aman tidak bertambah atau berkurang.`;
     }
 
     delete global.db.game[remoteJid];
-    await sock.sendMessage(remoteJid, { text: finalMsg, mentions: [p1, p2] });
-    return;
+    if (typeof global.saveDatabase === 'function') global.saveDatabase();
+
+    return await sock.sendMessage(remoteJid, { 
+      text: resultText,
+      mentions: [currentGame.player]
+    }, { quoted: msg });
   }
 
-  // LANJUT KE RONDE BERIKUTNYA (Bergantian siapa yang duluan spin)
-  game.round++;
-  // Ronde ganjil (1, 3) mulai dari p1, ronde genap (2) mulai dari p2 (biar adil)
-  game.currentTurnIndex = (game.round % 2 === 0) ? 1 : 0;
-  game.roundData = {};
+  // --- KONDISI 2: LAWAN ORANG LAIN (PvP Bergिलiran) ---
+  if (currentGame.mode === 'pvp') {
+    if (currentGame.status !== 'playing') return;
 
-  const nextStarter = game.players[game.currentTurnIndex];
+    // Tentukan siapa yang berhak spin saat giliran
+    const isChallenger = senderId === currentGame.challenger;
+    const isTarget = senderId === currentGame.target;
 
-  await sock.sendMessage(remoteJid, {
-    text: `▶️ Lanjut ke *Ronde ${game.round}*!\nSilakan @${nextStarter.split('@')[0]} ketik *.spin* duluan.`,
-    mentions: [nextStarter]
-  });
-}
+    if (!isChallenger && !isTarget) return;
 
-async function spinCommand(sock, msg) {
-  const remoteJid = msg.key.remoteJid;
-  const rawSenderId = msg.key.participant || remoteJid;
-  const senderId = rawSenderId.split(':')[0] + '@s.whatsapp.net';
-  
-  const game = global.db?.game?.[remoteJid];
+    // Cek apakah pemain mencoba spin di luar gilirannya
+    if (currentGame.turn && currentGame.turn !== senderId) {
+      return await sock.sendMessage(remoteJid, { text: `⚠️ Sabar, bre! Bukan giliran lu buat spin.` }, { quoted: msg });
+    }
 
-  if (!game || game.type !== 'reme') return;
+    const roll = getRandomSpin();
+    const getScoreValue = (roll) => {
+      if (roll[0] === roll[1] && roll[1] === roll[2]) return 50;
+      if (roll[0] === roll[1] || roll[1] === roll[2] || roll[0] === roll[2]) return 20;
+      return 5;
+    };
 
-  const expectedPlayer = game.players[game.currentTurnIndex];
-  const cleanExpectedPlayer = expectedPlayer.split(':')[0] + '@s.whatsapp.net';
+    const scoreVal = getScoreValue(roll);
 
-  if (senderId !== cleanExpectedPlayer) {
-    return await sock.sendMessage(remoteJid, { text: `⚠️ Sabar bre, bukan giliran lo!` }, { quoted: msg });
-  }
+    if (isChallenger) {
+      currentGame.challengerRoll = roll;
+      currentGame.challengerScore = scoreVal;
+      // Pindahkan giliran ke target
+      currentGame.turn = currentGame.target;
 
-  const rawSpin = Math.floor(Math.random() * 37);
-  const result = hitungReme(rawSpin);
+      if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
-  await sock.sendMessage(remoteJid, {
-    text: `🎰 @${senderId.split('@')[0]} melakukan SPIN!\n🎲 Angka Keluar: *${rawSpin}*\n➕ Hasil Reme: *${result.isSpecial === 'autolose' ? '9 (Auto Lose)' : (result.isSpecial === 'win3x' ? '0 (Auto Win 3x)' : result.finalNum)}*`,
-    mentions: [senderId]
-  }, { quoted: msg });
+      return await sock.sendMessage(remoteJid, {
+        text: `🎰 @${currentGame.challenger.split('@')[0]} telah memutar!\nHasil: [ ${roll.join(' | ')} ]\n\nGiliran @${currentGame.target.split('@')[0]}! Silakan ketik *.spin*`,
+        mentions: [currentGame.challenger, currentGame.target]
+      }, { quoted: msg });
+    }
 
-  game.roundData[expectedPlayer] = { raw: rawSpin, ...result };
-  game.currentTurnIndex++;
+    if (isTarget) {
+      currentGame.targetRoll = roll;
+      currentGame.targetScore = scoreVal;
 
-  const botNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-  const isPlayingWithBot = game.players.includes(botNumber);
+      const challengerDb = global.db.users[currentGame.challenger];
+      const targetDb = global.db.users[currentGame.target];
 
-  // Jika giliran berikutnya adalah Bot
-  if (isPlayingWithBot && game.currentTurnIndex < game.players.length && game.players[game.currentTurnIndex] === botNumber) {
-    setTimeout(async () => {
-      const botRawSpin = Math.floor(Math.random() * 37);
-      const botResult = hitungReme(botRawSpin);
+      let resultText = `🎰 *HASIL AKHIR REME PVP* 🎰\n\n`;
+      resultText += `👤 @${currentGame.challenger.split('@')[0]}\n[ ${currentGame.challengerRoll.join(' | ')} ]\n\n`;
+      resultText += `👤 @${currentGame.target.split('@')[0]}\n[ ${roll.join(' | ')} ]\n\n`;
 
-      await sock.sendMessage(remoteJid, {
-        text: `🤖 *Bot* ikut melakukan SPIN!\n🎲 Angka Keluar: *${botRawSpin}*\n➕ Hasil Reme: *${botResult.isSpecial === 'autolose' ? '9 (Auto Lose)' : (botResult.isSpecial === 'win3x' ? '0 (Auto Win 3x)' : botResult.finalNum)}*`,
-        mentions: [botNumber]
-      });
+      if (currentGame.challengerScore > currentGame.targetScore) {
+        challengerDb.triviaScore = (challengerDb.triviaScore || 0) + bet;
+        targetDb.triviaScore = Math.max(0, (targetDb.triviaScore || 0) - bet);
+        resultText += `🏆 Pemenang: @${currentGame.challenger.split('@')[0]} dan berhak bawa pulang *+${bet}* poin!`;
+      } else if (currentGame.challengerScore < currentGame.targetScore) {
+        targetDb.triviaScore = (targetDb.triviaScore || 0) + bet;
+        challengerDb.triviaScore = Math.max(0, (challengerDb.triviaScore || 0) - bet);
+        resultText += `🏆 Pemenang: @${currentGame.target.split('@')[0]} dan berhak bawa pulang *+${bet}* poin!`;
+      } else {
+        resultText += `🤝 Hasil Seri! Poin tidak ada yang berubah.`;
+      }
 
-      game.roundData[botNumber] = { raw: botRawSpin, ...botResult };
-      game.currentTurnIndex++;
+      delete global.db.game[remoteJid];
+      if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
-      await processRoundEndOrNext(sock, remoteJid, game);
-    }, 1500);
-
-    return;
-  }
-
-  // Cek apakah semua pemain sudah spin di ronde ini
-  if (game.currentTurnIndex >= game.players.length) {
-    await processRoundEndOrNext(sock, remoteJid, game);
-  } else {
-    const nextPlayer = game.players[game.currentTurnIndex];
-    await sock.sendMessage(remoteJid, {
-      text: `👉 Giliran selanjutnya: @${nextPlayer.split('@')[0]} (Ketik *.spin*)`,
-      mentions: [nextPlayer]
-    });
+      return await sock.sendMessage(remoteJid, {
+        text: resultText,
+        mentions: [currentGame.challenger, currentGame.target]
+      }, { quoted: msg });
+    }
   }
 }
 
 module.exports = spinCommand;
-        
+          
