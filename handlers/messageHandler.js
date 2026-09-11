@@ -153,20 +153,20 @@ async function handleMessage(sock, msg) {
           break;
         }
 
-        // Jika data user belum ada, buat baru. Jika sudah ada, pertahankan skor yang lama!
         if (!global.db.users[senderId]) {
           global.db.users[senderId] = { mathScore: 0, triviaScore: 0, score: 0 };
         }
 
-        // Set atau update nickname tanpa mereset skor
+        // Simpan nickname dan paksa juga ke properti name agar leaderboard/score langsung ngebaca
         global.db.users[senderId].nickname = newNick;
+        global.db.users[senderId].name = newNick;
 
         if (typeof global.saveDatabase === 'function') {
           global.saveDatabase();
         }
 
         await sock.sendMessage(remoteJid, { 
-          text: `✅ Sukses mengubah nickname leaderboard kamu menjadi: *${newNick}*\nNickname ini permanen tersimpan sampai kamu menggantinya lagi!` 
+          text: `✅ Sukses mengubah nickname leaderboard kamu menjadi: *${newNick}*` 
         }, { quoted: msg });
         break;
       }
@@ -382,7 +382,7 @@ async function handleMessage(sock, msg) {
       case 'menu_game':
       case 'games': {
         const gameText = 
-`┏━『 *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* 』
+`┏━(' *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* ')
 ┃
 ┣⌬ ${prefixUsed}bj
 ┣⌬ ${prefixUsed}math [mudah|sedang|hard|max]
@@ -408,7 +408,7 @@ async function handleMessage(sock, msg) {
       case 'menu_tools':
       case 'tools': {
         const toolsText = 
-`┏━『 *ᴍᴇɴᴜ ᴛᴏᴏʟꜱ* 』
+`┏━(' *ᴍᴇɴᴜ ᴛᴏᴏʟꜱ* ')
 ┃
 ┣⌬ ${prefixUsed}s
 ┣⌬ ${prefixUsed}wm <pack|author>
@@ -434,7 +434,7 @@ async function handleMessage(sock, msg) {
       case 'menu_group':
       case 'group': {
         const groupText = 
-`┏━『 *ᴍᴇɴᴜ ɢʀᴏᴜ𝚙* 』
+`┏━(' *ᴍᴇɴᴜ ɢʀᴏᴜ𝚙* ')
 ┃
 ┣⌬ ${prefixUsed}open
 ┣⌬ ${prefixUsed}close
@@ -448,7 +448,7 @@ async function handleMessage(sock, msg) {
 
       case 'allmenu': {
         const allText = 
-`┏━『 *ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ* 』
+`┏━(' *ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ* ')
 ┃
 ┣⌬ *ɢᴀᴍᴇꜱ*
 ┃  • ${prefixUsed}bj
@@ -516,4 +516,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-                           
+                                 
