@@ -28,19 +28,21 @@ async function remeCommand(sock, msg, args) {
     if (betAmount <= 0) betAmount = 15;
   }
 
-  const botNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-  const isTargetBot = targetId.includes(sock.user.id.split(':')[0]);
+  // Deteksi bot yang lebih akurat agar tidak minta taruhan poin
+  const botJid = sock.user.id;
+  const cleanBotId = botJid.includes(':') ? botJid.split(':')[0] + '@s.whatsapp.net' : botJid;
+  const isTargetBot = (targetId === cleanBotId || targetId.includes(sock.user.id.split(':')[0]) || targetId.includes('bot'));
 
   if (!global.db.users[senderId]) {
     global.db.users[senderId] = { mathScore: 0, triviaScore: 0, score: 0 };
   }
 
-  // 1. KHUSUS LAWAN BOT: Langsung gas tanpa cek poin
+  // 1. KHUSUS LAWAN BOT: Langsung gas tanpa cek poin & taruhan 0 (gratis)
   if (isTargetBot) {
     global.db.game[remoteJid] = {
       type: 'reme',
-      players: [senderId, botNumber],
-      scores: { [senderId]: 0, [botNumber]: 0 },
+      players: [senderId, cleanBotId],
+      scores: { [senderId]: 0, [cleanBotId]: 0 },
       currentTurnIndex: 0,
       round: 1,
       maxRound: 3,
