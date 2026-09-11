@@ -33,6 +33,7 @@ const tebakbenderaCommand = require('../commands/tebakbendera');
 const tebakkataCommand = require('../commands/tebakkata');
 const tebakgambarCommand = require('../commands/tebakgambar');
 const triviaCommand = require('../commands/trivia');
+const { tetrisCommand, claimTetrisCommand } = require('../commands/tetris');
 
 async function handleMessage(sock, msg) {
   try {
@@ -48,7 +49,7 @@ async function handleMessage(sock, msg) {
     const cleanText = text.trim();
     if (!cleanText) return;
 
-    // 1. CEK DULU JAWABAN GAME
+    // 1. CEK DULU JAWABAN GAME (Untuk Trivia, Math, dll)
     const isGameAnswered = await handleGameAnswer(sock, msg, cleanText);
     if (isGameAnswered) return;
 
@@ -220,7 +221,16 @@ async function handleMessage(sock, msg) {
         await triviaCommand(sock, msg, args);
         break;
 
-      // SUB-MENU DENGAN STYLE BARU
+      case 'tetris':
+        await tetrisCommand(sock, msg, args);
+        break;
+
+      case 'claimtetris':
+      case 'klaimtetris':
+        await claimTetrisCommand(sock, msg, args);
+        break;
+
+      // SUB-MENU DENGAN STYLE BARU (SMALL CAPS & BOX BORDER)
       case 'menu_game':
       case 'games': {
         const gameText = 
@@ -232,6 +242,8 @@ async function handleMessage(sock, msg) {
 ┣⌬ ${config.prefix}tebakkata
 ┣⌬ ${config.prefix}tebakgambar
 ┣⌬ ${config.prefix}trivia <kategori> <level>
+┣⌬ ${config.prefix}tetris
+┣⌬ ${config.prefix}claimtetris <kode>
 ┣⌬ ${config.prefix}cekkhodam <nama>
 ┣⌬ ${config.prefix}bucin <nama>
 ┣⌬ ${config.prefix}truth
@@ -291,6 +303,8 @@ async function handleMessage(sock, msg) {
 ┃  • ${config.prefix}tebakkata
 ┃  • ${config.prefix}tebakgambar
 ┃  • ${config.prefix}trivia <kategori> <level>
+┃  • ${config.prefix}tetris
+┃  • ${config.prefix}claimtetris <kode>
 ┃  • ${config.prefix}cekkhodam <nama>
 ┃  • ${config.prefix}bucin <nama>
 ┃  • ${config.prefix}truth
