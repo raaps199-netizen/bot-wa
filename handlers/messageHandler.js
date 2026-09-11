@@ -89,7 +89,7 @@ async function handleMessage(sock, msg) {
     switch (command) {
       case 'add': {
         const cleanSenderId = senderId.split(':')[0] + '@s.whatsapp.net';
-        const ownerNumber = '6289531307627@s.whatsapp.net';
+        const ownerNumber = '66477638029541@s.whatsapp.net';
         
         if (cleanSenderId !== ownerNumber) {
           await sock.sendMessage(remoteJid, { text: `❌ Lu bukan owner, gak usah sok asik mau nambah poin sendiri wkwk!\n(ID terdeteksi: ${cleanSenderId})` }, { quoted: msg });
