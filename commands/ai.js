@@ -24,7 +24,7 @@ async function aiCommand(sock, msg, args) {
     const url = 'https://api.groq.com/openai/v1/chat/completions';
 
     const response = await axios.post(url, {
-      model: 'llama-3.3-70b-versatile',
+      model: 'llama-3.1-8b-instant',
       messages: [
         { role: 'system', content: 'Kamu adalah asisten AI bahasa Indonesia yang membantu.' },
         { role: 'user', content: textPrompt }
