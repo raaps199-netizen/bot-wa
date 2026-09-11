@@ -53,7 +53,7 @@ async function triviaCommand(sock, msg, args) {
       }, { quoted: msg });
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const promptText = `Buatkan 1 soal trivia unik dan acak dalam Bahasa Indonesia.
 Kategori: ${targetTopic}
