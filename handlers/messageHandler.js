@@ -114,6 +114,11 @@ async function handleMessage(sock, msg) {
         await groupCommand(sock, msg, args, 'open');
         break;
 
+      case 'nyerah':
+      case 'menyerah':
+        await handleGameAnswer(sock, msg, '.nyerah');
+        break;
+        
       case 'promote':
       case 'pm':
         await groupCommand(sock, msg, args, 'promote');
