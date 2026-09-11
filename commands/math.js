@@ -57,8 +57,7 @@ function generateMathProblem(level) {
         problemStr = `(${a} + ${b})³ - ${c}`;
         answer = Math.pow(a + b, 3) - c;
       } else {
-        const a = getRandomInt(16, 81); // Angka yang bisa diakar kuadrat pas
-        // Cari akar kuadrat bulat
+        const a = getRandomInt(16, 81);
         const sqrtVal = Math.sqrt(a);
         const b = getRandomInt(2, 8);
         const c = getRandomInt(3, 10);
@@ -66,7 +65,6 @@ function generateMathProblem(level) {
         answer = sqrtVal * b + c;
       }
     } else {
-      // LEVEL MAX / EXTREME
       const pattern = getRandomInt(1, 3);
       if (pattern === 1) {
         const a = getRandomInt(2, 5);
@@ -90,7 +88,6 @@ function generateMathProblem(level) {
         answer = (Math.pow(a, 4) + Math.pow(b, 3)) / d + c;
       }
     }
-    // Pastikan hasil akhirnya bulat dan tidak infinite/NaN
     if (!isNaN(answer) && Number.isInteger(answer)) break;
   } while (attempts < 10);
 
@@ -133,7 +130,7 @@ Berapa hasil dari:
 
 ⏱️ Waktu: *${timeoutSec} Detik*
 
-_Ketik jawaban langsung atau gunakan garis miring (contoh: /${answer})_`;
+_Ketik langsung angka jawabannya di chat tanpa prefix apa pun!_`;
 
   const sentMsg = await sock.sendMessage(remoteJid, { text: caption }, { quoted: msg });
 
