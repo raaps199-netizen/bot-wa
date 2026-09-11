@@ -22,21 +22,23 @@ async function triviaCommand(sock, msg, args) {
     }, { quoted: msg });
   }
 
+  // Berikan reaksi emoji jam pasir ke pesan user tanpa mengirim teks proses
+  await sock.sendMessage(remoteJid, {
+    react: {
+      text: '⏳',
+      key: msg.key
+    }
+  });
+
   const inputKategori = (args[0] || 'umum').toLowerCase().trim();
   const inputLevel = (args[1] || 'mudah').toLowerCase().trim();
 
-  let targetTopic = 'UMUM';
-  if (['sejarah', 'history', 'sej'].includes(inputKategori)) targetTopic = 'SEJARAH';
-  else if (['geografi', 'geo', 'geography'].includes(inputKategori)) targetTopic = 'GEOGRAFI';
-  else if (['matematika', 'math'].includes(inputKategori)) targetTopic = 'MATEMATIKA';
-  else if (['komputer', 'tech', 'teknologi'].includes(inputKategori)) targetTopic = 'KOMPUTER & TEKNOLOGI';
-  else if (['sains', 'science', 'ipa'].includes(inputKategori)) targetTopic = 'SAINS';
+  // Membuat topik menyesuaikan apapun yang diketik user (misal: fisika -> FISIKA)
+  let targetTopic = inputKategori.toUpperCase();
 
   let difficulty = 'mudah';
   if (['sedang', 'medium'].includes(inputLevel)) difficulty = 'sedang';
   else if (['hard', 'sulit', 'susah'].includes(inputLevel)) difficulty = 'sulit';
-
-  await sock.sendMessage(remoteJid, { text: '⏳ *Sedang membuat soal trivia via Groq...*' }, { quoted: msg });
 
   try {
     const apiKey = config.groqKey || process.env.GROQ_API_KEY;
