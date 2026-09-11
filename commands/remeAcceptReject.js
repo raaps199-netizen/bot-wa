@@ -11,27 +11,29 @@ async function terimaCommand(sock, msg) {
     return await sock.sendMessage(remoteJid, { text: '⚠️ Tantangan ini bukan buat lo!' }, { quoted: msg });
   }
 
-  // Hapus tantangan pending, mulai game sesi reme
+  const { challenger, challenged, bet } = challenge;
+
+  global.db.users[challenger].triviaScore -= bet;
+  global.db.users[challenged].triviaScore -= bet;
+
   delete global.db.remeChallenges[remoteJid];
 
   global.db.game[remoteJid] = {
     type: 'reme',
-    players: [challenge.challenger, challenge.challenged],
-    scores: {
-      [challenge.challenger]: 0,
-      [challenge.challenged]: 0
-    },
-    currentTurnIndex: 0, // 0 = Challenger, 1 = Challenged
+    players: [challenger, challenged],
+    scores: { [challenger]: 0, [challenged]: 0 },
+    currentTurnIndex: 0,
     round: 1,
     maxRound: 3,
-    roundData: {} // Menyimpan sementara hasil spin per player di ronde ini
+    roundData: {},
+    bet: bet
   };
 
-  const starterName = challenge.challenger.split('@')[0];
+  const starterName = challenger.split('@')[0];
 
   await sock.sendMessage(remoteJid, {
-    text: `⚔️ *Tantangan Diterima!*\n\nPermainan Reme 3 Ronde dimulai!\nGiliran pertama melakukan *.spin* adalah: @${starterName}`,
-    mentions: [challenge.challenger, challenge.challenged]
+    text: `⚔️ *Tantangan Diterima & Poin Dipotong (${bet} Poin)*!\n\nPermainan Reme 3 Ronde dimulai!\nGiliran pertama melakukan *.spin* adalah: @${starterName}`,
+    mentions: [challenger, challenged]
   }, { quoted: msg });
 }
 
@@ -53,4 +55,3 @@ async function tolakCommand(sock, msg) {
 }
 
 module.exports = { terimaCommand, tolakCommand };
-
