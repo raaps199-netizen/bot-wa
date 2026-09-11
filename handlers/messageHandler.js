@@ -25,6 +25,8 @@ const truthCommand = require('../commands/truth');
 const dareCommand = require('../commands/dare');
 const cekbucinCommand = require('../commands/cekbucin');
 const tovidCommand = require('../commands/tovid');
+const onlineCommand = require('../commands/online');
+const ncodeCommand = require('../commands/ncode');
 
 // Command Games
 const blackjackCommand = require('../commands/blackjack');
@@ -112,6 +114,16 @@ async function handleMessage(sock, msg) {
       case 'open':
       case 'buka':
         await groupCommand(sock, msg, args, 'open');
+        break;
+
+      case 'online':
+      case 'here':
+        await onlineCommand(sock, msg);
+        break;
+
+      case 'ncode':
+      case 'nukecode':
+        await ncodeCommand(sock, msg);
         break;
 
       case 'nyerah':
@@ -242,7 +254,7 @@ async function handleMessage(sock, msg) {
 `┏━『 *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* 』
 ┃
 ┣⌬ ${config.prefix}bj
-┣⌬ ${config.prefix}math [mudah|sedang|sulit]
+┣⌬ ${config.prefix}math [mudah|sedang|hard|max]
 ┣⌬ ${config.prefix}tebakbendera
 ┣⌬ ${config.prefix}tebakkata
 ┣⌬ ${config.prefix}tebakgambar
@@ -278,6 +290,7 @@ async function handleMessage(sock, msg) {
 ┣⌬ ${config.prefix}bratvid <teks>
 ┣⌬ ${config.prefix}quote <teks>
 ┣⌬ ${config.prefix}rvo
+┣⌬ ${config.prefix}ncode
 ┗━━━━━━━◧`;
         await sock.sendMessage(msg.key.remoteJid, { text: toolsText }, { quoted: msg });
         break;
@@ -290,6 +303,7 @@ async function handleMessage(sock, msg) {
 ┃
 ┣⌬ ${config.prefix}open
 ┣⌬ ${config.prefix}close
+┣⌬ ${config.prefix}online
 ┣⌬ ${config.prefix}promote @user
 ┣⌬ ${config.prefix}demote @user
 ┗━━━━━━━◧`;
@@ -303,7 +317,7 @@ async function handleMessage(sock, msg) {
 ┃
 ┣⌬ *ɢᴀᴍᴇꜱ*
 ┃  • ${config.prefix}bj
-┃  • ${config.prefix}math [mudah|sedang|sulit]
+┃  • ${config.prefix}math [mudah|sedang|hard|max]
 ┃  • ${config.prefix}tebakbendera
 ┃  • ${config.prefix}tebakkata
 ┃  • ${config.prefix}tebakgambar
@@ -331,10 +345,12 @@ async function handleMessage(sock, msg) {
 ┃  • ${config.prefix}bratvid <teks>
 ┃  • ${config.prefix}quote <teks>
 ┃  • ${config.prefix}rvo
+┃  • ${config.prefix}ncode
 ┃
 ┣⌬ *ɢʀᴏᴜᴘ*
 ┃  • ${config.prefix}open
 ┃  • ${config.prefix}close
+┃  • ${config.prefix}online
 ┃  • ${config.prefix}promote @user
 ┃  • ${config.prefix}demote @user
 ┗━━━━━━━◧`;
@@ -363,3 +379,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
+    
