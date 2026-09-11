@@ -74,7 +74,7 @@ async function triviaCommand(sock, msg, args) {
   else if (['hard', 'sulit', 'susah'].includes(inputLevel)) difficulty = 'hard';
 
   await sock.sendMessage(remoteJid, { 
-    text: `... ${targetTopic.toUpperCase()} (${difficulty.toUpperCase()}) dari internet...*` 
+    text: `...` 
   }, { quoted: msg });
 
   try {
