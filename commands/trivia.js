@@ -18,11 +18,11 @@ async function triviaCommand(sock, msg, args) {
 
   if (global.db.game[remoteJid]) {
     return await sock.sendMessage(remoteJid, {
-      text: '⚠️ Masih ada kuis yang belum selesai di chat ini!'
+      text: '⚠️ Eh, selesaikan dulu kuis trivia yang lagi aktif di chat ini!'
     }, { quoted: msg });
   }
 
-  // Berikan reaksi emoji jam pasir ke pesan user
+  // Berikan reaksi emoji jam pasir ke pesan user tanpa mengirim teks proses
   await sock.sendMessage(remoteJid, {
     react: {
       text: '⏳',
@@ -49,15 +49,20 @@ async function triviaCommand(sock, msg, args) {
     const apiKey = config.groqKey || process.env.GROQ_API_KEY;
     if (!apiKey) {
       return await sock.sendMessage(remoteJid, {
-        text: '❌ API Key Groq belum dipasang di config.js atau .env!'
+        text: '❌ API Key Groq belum dipasang di config.js atau .env bre!'
       }, { quoted: msg });
     }
 
     const url = 'https://api.groq.com/openai/v1/chat/completions';
 
-    const promptText = `Buatkan 1 soal trivia unik dan acak dalam Bahasa Indonesia.
+    const promptText = `Buatkan 1 soal trivia berkualitas tinggi yang faktanya 100% akurat dan valid dalam Bahasa Indonesia.
 Kategori: ${targetTopic}
 Tingkat Kesulitan: ${difficulty}
+
+Pastikan:
+1. Pertanyaan jelas dan tidak ambigu.
+2. "jawabanBenar" harus dipastikan benar secara mutlak dan faktual.
+3. "jawabanSalah" berisi 3 pilihan pengecoh yang salah tapi masuk akal.
 
 Keluarkan hasil WAJIB dalam bentuk objek JSON valid dengan struktur persis seperti ini:
 {
@@ -67,9 +72,9 @@ Keluarkan hasil WAJIB dalam bentuk objek JSON valid dengan struktur persis seper
 }`;
 
     const response = await axios.post(url, {
-      model: 'llama3-8b-8192',
+      model: 'llama-3.1-8b-instant', // Model stabil dan super cepat
       messages: [
-        { role: 'system', content: 'Kamu adalah pembuat kuis trivia yang wajib merespon hanya dalam format JSON valid.' },
+        { role: 'system', content: 'Kamu adalah pembuat kuis trivia ahli yang sangat teliti menjaga keakuratan fakta dan wajib merespon hanya dalam format JSON valid.' },
         { role: 'user', content: promptText }
       ],
       response_format: { type: "json_object" }
@@ -106,8 +111,8 @@ Keluarkan hasil WAJIB dalam bentuk objek JSON valid dengan struktur persis seper
       const label = labels[index];
       formattedOptions[label] = opt.text;
       if (opt.isCorrect) {
-        correctOptionLabel = label; // misal: 'b'
-        correctOptionText = opt.text; // misal: 'Ampere'
+        correctOptionLabel = label;
+        correctOptionText = opt.text;
       }
     });
 
@@ -134,18 +139,19 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
       if (global.db.game[remoteJid] && global.db.game[remoteJid].type === 'trivia') {
         delete global.db.game[remoteJid];
         await sock.sendMessage(remoteJid, {
-          text: `⏳ *Waktu habis!*\nJawaban yang benar adalah: *${correctOptionLabel.toUpperCase()}. ${correctOptionText}*`
+          text: `⏰ *Waktu abis bro!* Nggak ada yang kejawab.\nJawaban yang bener tuh: *${correctOptionLabel.toUpperCase()}. ${correctOptionText}*`
         }, { quoted: sentMsg });
       }
     }, timeoutSec * 1000);
 
-    // Diselaraskan agar gameHandler bisa membaca huruf pilihan (a/b/c/d) ATAU teks aslinya
     global.db.game[remoteJid] = {
       type: 'trivia',
       msgId: sentMsg.key.id,
       soal: quizData.soal,
-      jawabanBenar: correctOptionLabel, // Huruf pilihan ('a', 'b', 'c', 'd')
-      jawabanTeks: correctOptionText.toLowerCase(), // Teks asli jawaban
+      jawabanBenar: correctOptionLabel,
+      jawabanOpsi: correctOptionLabel,
+      jawabanTeks: correctOptionText.toLowerCase(),
+      answer: quizData.jawabanBenar.toLowerCase(),
       points: points,
       timer: timer
     };
@@ -159,7 +165,7 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
     console.error('Error Groq Trivia Detail:', errorDetails);
 
     await sock.sendMessage(remoteJid, {
-      text: `❌ Terjadi kesalahan saat membuat soal trivia via Groq.\n_Detail: ${errorDetails}_`
+      text: `❌ Waduh error pas bikin soal trivia.\n_Detail: ${errorDetails}_`
     }, { quoted: msg });
   }
 }
