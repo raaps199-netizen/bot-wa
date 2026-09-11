@@ -19,7 +19,7 @@ function shuffleArray(array) {
 async function triviaCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
 
-  // Cek jika masih ada game berlangsung
+  // Cek sesi game aktif
   if (global.db.game[remoteJid]) {
     return await sock.sendMessage(remoteJid, {
       text: '⚠️ Masih ada kuis yang belum selesai di chat ini!'
@@ -51,7 +51,7 @@ async function triviaCommand(sock, msg, args) {
     const apiKey = config.geminiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return await sock.sendMessage(remoteJid, {
-        text: '❌ API Key Gemini belum dipasang di config.js!'
+        text: '❌ API Key Gemini belum dipasang di config.js atau .env!'
       }, { quoted: msg });
     }
 
@@ -80,7 +80,7 @@ Respons WAJIB dalam format JSON murni tanpa markdown/backticks, contoh format:
     let resultText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!resultText) throw new Error('Respon kosong dari AI Gemini');
 
-    // Sanitasi teks: bersihkan markdown backticks jika AI membungkusnya dengan ```json ... ```
+    // Sanitasi pembersihan markdown backticks (mencegah error JSON.parse)
     resultText = resultText.replace(/```json|```/g, '').trim();
     const quizData = JSON.parse(resultText);
 
@@ -151,12 +151,14 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
     };
 
   } catch (err) {
-    // Pastikan data game dibersihkan jika gagal membuat soal agar tidak terjebak "Kuis belum selesai"
+    // Bersihkan state game jika timbul error saat generate
     if (global.db.game[remoteJid]) {
       delete global.db.game[remoteJid];
     }
 
-    console.error('Error Trivia Gemini AI:', err?.response?.data || err.message || err);
+    const errorDetails = err?.response?.data?.error?.message || err?.message || String(err);
+    console.error('Error Trivia Gemini AI:', errorDetails);
+
     await sock.sendMessage(remoteJid, {
       text: '❌ Terjadi kesalahan saat membuat soal trivia.'
     }, { quoted: msg });
@@ -164,4 +166,3 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
 }
 
 module.exports = triviaCommand;
-        
