@@ -28,7 +28,6 @@ function generateMathProblem(level) {
         answer = maxVal - minVal;
       }
     } else if (level === 'sedang') {
-      // Medium: Perkalian/Pembagian sederhana atau penjumlahan kombinasi biasa tanpa pangkat rumit
       const type = getRandomInt(1, 3);
       if (type === 1) {
         const a = getRandomInt(3, 10);
@@ -50,7 +49,6 @@ function generateMathProblem(level) {
         answer = a + b - c;
       }
     } else if (level === 'hard') {
-      // Hard: Mulai ada kuadrat atau kurung tingkat lanjut yang wajar
       const pattern = getRandomInt(1, 2);
       if (pattern === 1) {
         const base = getRandomInt(2, 6);
@@ -64,13 +62,19 @@ function generateMathProblem(level) {
         problemStr = `(${a} + ${b}) × ${c}`;
         answer = (a + b) * c;
       }
-    } else {
-      // Max / Extreme
+    } else if (level === 'extreme') {
       const a = getRandomInt(2, 5);
       const b = getRandomInt(2, 4);
       const c = getRandomInt(10, 25);
       problemStr = `(${a}³ + ${b}²) - ${c}`;
       answer = (Math.pow(a, 3) + Math.pow(b, 2)) - c;
+    } else {
+      // Max / Extreme Max
+      const a = getRandomInt(3, 6);
+      const b = getRandomInt(2, 5);
+      const c = getRandomInt(15, 35);
+      problemStr = `(${a}³ × ${b}) - ${c}`;
+      answer = (Math.pow(a, 3) * b) - c;
     }
     if (!isNaN(answer) && Number.isInteger(answer)) break;
   } while (attempts < 10);
@@ -88,18 +92,30 @@ async function mathCommand(sock, msg, args) {
   }
 
   let levelInput = (args[0] || 'mudah').toLowerCase();
-  let levelName = 'EASY';
+  let levelName = 'MUDAH';
   let timeoutSec = 45;
+  let rewardPoints = 15; // Default mudah
 
   if (['sedang', 'medium'].includes(levelInput)) {
+    levelInput = 'sedang';
     levelName = 'MEDIUM';
     timeoutSec = 60;
+    rewardPoints = 30;
   } else if (['hard', 'susah'].includes(levelInput)) {
+    levelInput = 'hard';
     levelName = 'HARD';
     timeoutSec = 90;
-  } else if (['max', 'extreme', 'ekstrem'].includes(levelInput)) {
+    rewardPoints = 45;
+  } else if (['extreme', 'ekstrem'].includes(levelInput)) {
+    levelInput = 'extreme';
+    levelName = 'EXTREME';
+    timeoutSec = 105;
+    rewardPoints = 60;
+  } else if (['max', 'extreme max'].includes(levelInput)) {
+    levelInput = 'max';
     levelName = 'EXTREME MAX 💥';
     timeoutSec = 120;
+    rewardPoints = 70;
   } else {
     levelInput = 'mudah';
   }
@@ -108,6 +124,7 @@ async function mathCommand(sock, msg, args) {
 
   const caption = 
 `🧮 *KUIS MATEMATIKA (${levelName})*
+🎁 Hadiah Poin: *+${rewardPoints} Poin*
 
 Berapa hasil dari:
 *${problemStr}*
@@ -121,6 +138,7 @@ _Ketik langsung angka jawabannya di chat! Ketik .nyerah jika ingin menyerah._`;
   const timer = setTimeout(async () => {
     if (global.db.game[remoteJid]) {
       delete global.db.game[remoteJid];
+      if (typeof global.saveDatabase === 'function') global.saveDatabase();
       await sock.sendMessage(remoteJid, {
         text: `⏳ *Waktu habis!*\nJawaban yang benar adalah: *${answer}*`
       }, { quoted: sentMsg });
@@ -132,6 +150,7 @@ _Ketik langsung angka jawabannya di chat! Ketik .nyerah jika ingin menyerah._`;
     msgId: sentMsg.key.id,
     soal: problemStr,
     jawabanBenar: answer.toString(),
+    reward: rewardPoints, // Menyimpan jumlah poin hadiah di objek game
     timer: timer
   };
 }
