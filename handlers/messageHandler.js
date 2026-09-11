@@ -138,6 +138,37 @@ async function handleMessage(sock, msg) {
         break;
       }
 
+      case 'nickname':
+      case 'setname': {
+        const newNick = args.join(' ').trim();
+        if (!newNick) {
+          await sock.sendMessage(remoteJid, { 
+            text: `⚠️ Masukkan nickname baru yang kamu mau!\nContoh: *${prefixUsed}nickname azalia*` 
+          }, { quoted: msg });
+          break;
+        }
+
+        if (newNick.length > 20) {
+          await sock.sendMessage(remoteJid, { text: `❌ Nickname kepanjangan! Maksimal 20 karakter ya, bre.` }, { quoted: msg });
+          break;
+        }
+
+        if (!global.db.users[senderId]) {
+          global.db.users[senderId] = { mathScore: 0, triviaScore: 0, score: 0 };
+        }
+
+        global.db.users[senderId].nickname = newNick;
+
+        if (typeof global.saveDatabase === 'function') {
+          global.saveDatabase();
+        }
+
+        await sock.sendMessage(remoteJid, { 
+          text: `✅ Sukses mengubah nickname leaderboard kamu menjadi: *${newNick}*\nNickname ini permanen tersimpan sampai kamu menggantinya lagi!` 
+        }, { quoted: msg });
+        break;
+      }
+
       case 'jawab':
       case 'j': {
         const userAnswer = args.join(' ');
@@ -362,6 +393,7 @@ async function handleMessage(sock, msg) {
 ┣⌬ ${prefixUsed}reme @user <taruhan>
 ┣⌬ ${prefixUsed}score
 ┣⌬ ${prefixUsed}leaderboard
+┣⌬ ${prefixUsed}nickname <nama>
 ┣⌬ ${prefixUsed}cekkhodam <nama>
 ┣⌬ ${prefixUsed}bucin <nama>
 ┣⌬ ${prefixUsed}truth
@@ -400,7 +432,7 @@ async function handleMessage(sock, msg) {
       case 'menu_group':
       case 'group': {
         const groupText = 
-`┏━『 *ᴍᴇɴᴜ ɢʀᴏᴜᴘ* 』
+`┏━『 *ᴍᴇɴᴜ ɢʀᴏᴜ𝚙* 』
 ┃
 ┣⌬ ${prefixUsed}open
 ┣⌬ ${prefixUsed}close
@@ -428,6 +460,7 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}reme @user <taruhan>
 ┃  • ${prefixUsed}score
 ┃  • ${prefixUsed}leaderboard
+┃  • ${prefixUsed}nickname <nama>
 ┃  • ${prefixUsed}cekkhodam <nama>
 ┃  • ${prefixUsed}bucin <nama>
 ┃  • ${prefixUsed}truth
@@ -481,3 +514,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
+      
