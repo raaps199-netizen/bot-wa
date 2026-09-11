@@ -8,11 +8,12 @@ if (!global.db.game) global.db.game = {};
  * Helper acak pilihan jawaban
  */
 function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i--) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-  return array;
+  return arr;
 }
 
 async function triviaCommand(sock, msg, args) {
@@ -43,7 +44,7 @@ async function triviaCommand(sock, msg, args) {
   if (['sedang', 'medium'].includes(inputLevel)) difficulty = 'sedang';
   else if (['hard', 'sulit', 'susah'].includes(inputLevel)) difficulty = 'sulit';
 
-  await sock.sendMessage(remoteJid, { text: '...' }, { quoted: msg });
+  const loadingMsg = await sock.sendMessage(remoteJid, { text: '⏳ *Sedang membuat soal trivia...*' }, { quoted: msg });
 
   try {
     const apiKey = config.geminiKey || process.env.GEMINI_API_KEY;
@@ -75,11 +76,15 @@ Respons WAJIB dalam format JSON murni tanpa markdown/backticks, contoh format:
       }
     }, { timeout: 15000 });
 
-    const resultText = response.data.candidates[0].content.parts[0].text;
+    let resultText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!resultText) throw new Error('Respon kosong dari AI Gemini');
+
+    // Pembersihan tambahan dari kemungkinan markdown backticks
+    resultText = resultText.replace(/```json|```/g, '').trim();
     const quizData = JSON.parse(resultText);
 
-    if (!quizData || !quizData.soal || !quizData.jawabanBenar || !quizData.jawabanSalah) {
-      throw new Error('Format JSON dari AI tidak valid');
+    if (!quizData || !quizData.soal || !quizData.jawabanBenar || !Array.isArray(quizData.jawabanSalah)) {
+      throw new Error('Format JSON dari AI tidak valid atau tidak lengkap');
     }
 
     // Acak Opsi Pilihan (A, B, C, D)
@@ -133,8 +138,9 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
       }
     }, timeoutSec * 1000);
 
-    // Simpan Sesi Game (Lengkap dengan Soal & Penjelasan untuk konteks AI)
+    // Simpan Sesi Game
     global.db.game[remoteJid] = {
+      type: 'trivia',
       msgId: sentMsg.key.id,
       soal: quizData.soal,
       jawabanOpsi: correctOptionLabel,
@@ -144,9 +150,9 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
     };
 
   } catch (err) {
-    console.error('Error Trivia Gemini AI:', err);
+    console.error('Error Trivia Gemini AI:', err?.response?.data || err.message || err);
     await sock.sendMessage(remoteJid, {
-      text: '❌ Terjadi kesalahan saat membuat soal trivia.'
+      text: '❌ Terjadi kesalahan saat membuat soal trivia. Silakan coba lagi!'
     }, { quoted: msg });
   }
 }
