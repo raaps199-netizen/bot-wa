@@ -17,7 +17,7 @@ async function handleGameAnswer(sock, msg, userText) {
     return true;
   }
 
-  // 2. Ambil kunci jawaban yang mungkin disimpan oleh berbagai jenis game (math, trivia, tebak-tebakan)
+  // 2. Ambil kunci jawaban yang mungkin disimpan oleh berbagai jenis game
   const possibleAnswers = [
     session.jawabanBenar,
     session.jawabanTeks,
@@ -28,8 +28,32 @@ async function handleGameAnswer(sock, msg, userText) {
   if (possibleAnswers.includes(cleanAnswer)) {
     clearTimeout(session.timer);
     delete global.db.game[remoteJid];
+
+    // --- SISTEM SKOR OTOMATIS ---
+    const senderId = msg.key.participant || remoteJid;
+    const pushName = msg.pushName || 'User';
+
+    if (!global.db.users) global.db.users = {};
+    if (!global.db.users[senderId]) {
+      global.db.users[senderId] = { mathScore: 0, triviaScore: 0, name: pushName };
+    }
+
+    const earnedPoints = session.points || 10;
+
+    if (session.type === 'math') {
+      global.db.users[senderId].mathScore = (global.db.users[senderId].mathScore || 0) + earnedPoints;
+    } else if (session.type === 'trivia') {
+      global.db.users[senderId].triviaScore = (global.db.users[senderId].triviaScore || 0) + earnedPoints;
+    } else {
+      // Default jika tipe game lain, masuk ke mathScore atau buat umum
+      global.db.users[senderId].mathScore = (global.db.users[senderId].mathScore || 0) + earnedPoints;
+    }
+    
+    global.db.users[senderId].name = pushName;
+    // ----------------------------
+
     await sock.sendMessage(remoteJid, {
-      text: `🎉 *Benar sekali!*\nJawaban yang benar adalah: *${session.jawabanTeks || session.jawabanBenar || session.answer}*`
+      text: `🎉 *Benar sekali, ${pushName}!*\nJawaban yang benar adalah: *${session.jawabanTeks || session.jawabanBenar || session.answer}*\n✨ Poin didapat: *+${earnedPoints}*`
     }, { quoted: msg });
     return true;
   }
