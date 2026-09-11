@@ -6,20 +6,25 @@ async function handleGameAnswer(sock, msg, userText) {
 
   const cleanAnswer = userText.trim();
 
-  // Cek apakah ini game math atau trivia/tebak-tebakan lain
-  if (cleanAnswer.toLowerCase() === session.jawabanBenar.toLowerCase()) {
+  // Fitur Menyerah
+  if (['.nyerah', 'nyerah', 'menyerah', '/nyerah'].includes(cleanAnswer.toLowerCase())) {
+    clearTimeout(session.timer);
+    const correctAns = session.jawabanBenar;
+    delete global.db.game[remoteJid];
+    await sock.sendMessage(remoteJid, {
+      text: `🏳️ *Menyerah!*\nJawaban yang benar adalah: *${correctAns}*`
+    }, { quoted: msg });
+    return true;
+  }
+
+  // Cek Jawaban Benar
+  if (cleanAnswer === session.jawabanBenar) {
     clearTimeout(session.timer);
     delete global.db.game[remoteJid];
     await sock.sendMessage(remoteJid, {
       text: `🎉 *Benar sekali!*\nJawaban yang benar adalah: *${session.jawabanBenar}*`
     }, { quoted: msg });
     return true;
-  }
-
-  // Jika user mengetik jawaban salah saat game math aktif, abaikan atau beri tahu tipis
-  if (session.type === 'math') {
-    // Opsional: Diamkan atau beritahu salah jika mau
-    return false; 
   }
 
   return false;
