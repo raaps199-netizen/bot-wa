@@ -11,25 +11,39 @@ async function leaderboardCommand(sock, msg) {
   try {
     const groupMetadata = await sock.groupMetadata(remoteJid);
     const participants = groupMetadata.participants || [];
+    const participantJids = new Set(participants.map(p => p.id));
 
-    let leaderboardData = participants.map(p => {
-      const jid = p.id;
-      const data = global.db.users[jid] || {};
+    // Ambil semua user dari database yang skornya > 0 atau ada di grup ini
+    let leaderboardData = Object.entries(global.db.users).map(([jid, data]) => {
       const math = data.mathScore || 0;
       const trivia = data.triviaScore || 0;
       const total = math + trivia;
       
-      // Ambil nama dari pushName database atau potong nomor HP-nya
-      const name = data.name || jid.split('@')[0];
+      // Ambil nama dari nickname atau name yang sudah diset
+      const name = data.nickname || data.name || jid.split('@')[0];
 
-      return { name, math, trivia, total };
+      return { jid, name, math, trivia, total };
     });
+
+    // Filter hanya ambil user yang punya skor atau terdaftar di grup
+    leaderboardData = leaderboardData.filter(user => user.total > 0 || participantJids.has(user.jid));
+
+    // Jika database kosong, fallback ke participants grup
+    if (leaderboardData.length === 0) {
+      leaderboardData = participants.map(p => ({
+        jid: p.id,
+        name: p.id.split('@')[0],
+        math: 0,
+        trivia: 0,
+        total: 0
+      }));
+    }
 
     // Urutkan dari total skor tertinggi ke terendah
     leaderboardData.sort((a, b) => b.total - a.total);
 
     let text = `🏆 *LEADERBOARD GRUP* 🏆\n\n`;
-    leaderboardData.forEach((user, index) => {
+    leaderboardData.slice(0, 10).forEach((user, index) => {
       const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
       text += `${medal} *${user.name}*\n`;
       text += `   └ Math: ${user.math} | Trivia: ${user.trivia} | Total: *${user.total}*\n\n`;
@@ -43,4 +57,3 @@ async function leaderboardCommand(sock, msg) {
 }
 
 module.exports = leaderboardCommand;
-
