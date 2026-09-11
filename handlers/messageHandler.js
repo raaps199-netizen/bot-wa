@@ -179,18 +179,11 @@ async function handleMessage(sock, msg) {
           break;
         }
 
-        const isOwner = currentGame.mode === 'bot' && currentGame.player === senderId;
-        const isPvPParticipant = currentGame.mode === 'pvp' && (currentGame.challenger === senderId || currentGame.target === senderId);
-
-        if (!isOwner && !isPvPParticipant) {
-          await sock.sendMessage(remoteJid, { text: `❌ Lu bukan peserta yang main sesi Reme ini, jadi gak punya hak buat nge-cancel!` }, { quoted: msg });
-          break;
-        }
-
+        // Reset paksa tanpa validasi ketat peserta agar tidak nyangkut
         delete global.db.game[remoteJid];
         if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
-        await sock.sendMessage(remoteJid, { text: `✅ Sesi game Reme berhasil dibatalkan.` }, { quoted: msg });
+        await sock.sendMessage(remoteJid, { text: `✅ Sesi game Reme berhasil dibatalkan secara paksa.` }, { quoted: msg });
         break;
       }
 
@@ -543,4 +536,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-    
+       
