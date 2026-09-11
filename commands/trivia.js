@@ -55,14 +55,9 @@ async function triviaCommand(sock, msg, args) {
 
     const url = 'https://api.groq.com/openai/v1/chat/completions';
 
-    const promptText = `Buatkan 1 soal trivia berkualitas tinggi yang faktanya 100% akurat dan valid dalam Bahasa Indonesia.
+    const promptText = `Buatkan 1 soal trivia unik dan acak dalam Bahasa Indonesia.
 Kategori: ${targetTopic}
 Tingkat Kesulitan: ${difficulty}
-
-Pastikan:
-1. Pertanyaan jelas dan tidak ambigu.
-2. "jawabanBenar" harus dipastikan benar secara mutlak dan faktual.
-3. "jawabanSalah" berisi 3 pilihan pengecoh yang salah tapi masuk akal.
 
 Keluarkan hasil WAJIB dalam bentuk objek JSON valid dengan struktur persis seperti ini:
 {
@@ -72,9 +67,9 @@ Keluarkan hasil WAJIB dalam bentuk objek JSON valid dengan struktur persis seper
 }`;
 
     const response = await axios.post(url, {
-      model: 'llama-3.1-8b-instant', // Model stabil dan super cepat
+      model: 'openai/gpt-oss-20b', // Menggunakan model aktif Groq pengganti model lama yang deprecated
       messages: [
-        { role: 'system', content: 'Kamu adalah pembuat kuis trivia ahli yang sangat teliti menjaga keakuratan fakta dan wajib merespon hanya dalam format JSON valid.' },
+        { role: 'system', content: 'Kamu adalah pembuat kuis trivia yang wajib merespon hanya dalam format JSON valid.' },
         { role: 'user', content: promptText }
       ],
       response_format: { type: "json_object" }
