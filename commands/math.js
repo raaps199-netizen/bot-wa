@@ -1,94 +1,141 @@
-if (!global.db) global.db = {};
-if (!global.db.game) global.db.game = {};
+// Database Sesi Game Matematika Aktif
+if (!global.mathGame) global.mathGame = new Map();
 
+/**
+ * Helper untuk membuat angka acak dalam rentang [min, max]
+ */
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-async function mathCommand(sock, msg, args) {
-  const remoteJid = msg.key.remoteJid;
+/**
+ * Generator Soal Dinamis untuk Level Hard & Extreme/Max
+ */
+function generateMathProblem(level) {
+  let problemStr = '';
+  let answer = 0;
 
-  if (global.db.game[remoteJid]) {
-    await sock.sendMessage(remoteJid, { text: 'itu jawab dulu njir' }, { quoted: msg });
-    return;
-  }
-
-  const level = args[0]?.toLowerCase() || 'easy';
-  let soal = '';
-  let jawaban = '';
-
-  if (level === 'easy') {
+  if (level === 'mudah') {
     const a = getRandomInt(10, 99);
     const b = getRandomInt(10, 99);
-    const op = Math.random() > 0.5 ? '+' : '-';
-    soal = `${a} ${op} ${b}`;
-    jawaban = eval(soal).toString();
-
-  } else if (level === 'medium') {
+    const isAdd = Math.random() > 0.5;
+    problemStr = isAdd ? `${a} + ${b}` : `${Math.max(a, b)} - ${Math.min(a, b)}`;
+    answer = eval(problemStr);
+  } else if (level === 'sedang') {
     const a = getRandomInt(12, 50);
-    const b = getRandomInt(12, 30);
-    soal = `${a} × ${b}`;
-    jawaban = (a * b).toString();
-
+    const b = getRandomInt(3, 15);
+    const c = getRandomInt(10, 40);
+    const op = Math.random() > 0.5 ? '*' : '+';
+    problemStr = `${a} ${op} ${b} - ${c}`;
+    answer = eval(problemStr);
   } else if (level === 'hard') {
-    // FIX HARD: Perkalian angka besar + penjumlahan/pengurangan bertingkat
-    const a = getRandomInt(25, 85);
-    const b = getRandomInt(15, 45);
-    const c = getRandomInt(50, 200);
-    soal = `(${a} × ${b}) - ${c}`;
-    jawaban = (a * b - c).toString();
+    // Contoh bentuk: 2² + (-5 × 6³) atau 4³ - (8 × -3²)
+    const base1 = getRandomInt(2, 6);
+    const pow1 = getRandomInt(2, 3);
+    const num1 = getRandomInt(-9, -2);
+    const num2 = getRandomInt(3, 8);
+    const pow2 = getRandomInt(2, 3);
 
-  } else if (level === 'extreme') {
-    const tipe = getRandomInt(1, 2);
-    if (tipe === 1) {
-      const base = getRandomInt(12, 30);
-      soal = `${base}²`;
-      jawaban = (base * base).toString();
+    const pattern = getRandomInt(1, 2);
+    if (pattern === 1) {
+      // e.g. 3² + (-5 × 4³)
+      problemStr = `${base1}² + (${num1} × ${num2}³)`;
+      const evalExpr = `Math.pow(${base1}, ${pow1}) + (${num1} * Math.pow(${num2}, ${pow2}))`;
+      answer = eval(evalExpr);
     } else {
-      const ans = getRandomInt(15, 40);
-      soal = `√${ans * ans}`;
-      jawaban = ans.toString();
-    }
-
-  } else if (level === 'max') {
-    const tipeMax = getRandomInt(1, 3);
-    if (tipeMax === 1) {
-      const a = getRandomInt(3, 9);
-      soal = `Turunan pertama f(x) = ${a}x² pada x = 4`;
-      jawaban = (2 * a * 4).toString();
-    } else if (tipeMax === 2) {
-      const a = getRandomInt(3, 9), b = getRandomInt(2, 7), c = getRandomInt(2, 6), d = getRandomInt(4, 9);
-      soal = `Determinan matriks [[${a}, ${b}], [${c}, ${d}]]`;
-      jawaban = (a * d - b * c).toString();
-    } else {
-      const n = getRandomInt(6, 10);
-      soal = `Nilai Kombinasi C(${n}, 2)`;
-      jawaban = ((n * (n - 1)) / 2).toString();
+      // e.g. (-4 × 5²) - (3³ + 12)
+      problemStr = `(${num1} × ${num2}²) - (${base1}³ + ${getRandomInt(10, 50)})`;
+      const evalExpr = `(${num1} * Math.pow(${num2}, ${pow2})) - (Math.pow(${base1}, 3) + ${getRandomInt(10, 50)})`;
+      answer = eval(evalExpr);
     }
   } else {
-    await sock.sendMessage(remoteJid, { 
-      text: `❌ Level tidak valid!\nPilihan: easy, medium, hard, extreme, max` 
-    }, { quoted: msg });
-    return;
+    // LEVEL MAX / EXTREME (Di-generate super acak, panjang, & bervariasi)
+    const n1 = getRandomInt(2, 7);
+    const p1 = getRandomInt(2, 4);
+    const n2 = getRandomInt(-15, -3);
+    const n3 = getRandomInt(4, 12);
+    const p2 = getRandomInt(2, 3);
+    const n4 = getRandomInt(15, 80);
+    const n5 = getRandomInt(-20, -5);
+
+    const type = getRandomInt(1, 3);
+    if (type === 1) {
+      // e.g. 4³ + (-12 × 5³) - (-8 + 45)
+      problemStr = `${n1}³ + (${n2} × ${n3}³) - (${n5} + ${n4})`;
+      const expr = `Math.pow(${n1}, 3) + (${n2} * Math.pow(${n3}, ${p2})) - (${n5} + ${n4})`;
+      answer = eval(expr);
+    } else if (type === 2) {
+      // e.g. (${n1}⁴ - ${n4}) × (${n2} + ${n3}²)
+      problemStr = `(${n1}⁴ - ${n4}) × (${n2} + ${n3}²)`;
+      const expr = `(Math.pow(${n1}, 4) - ${n4}) * (${n2} + Math.pow(${n3}, 2))`;
+      answer = eval(expr);
+    } else {
+      // e.g. (${n2} × ${n1}³) + (${n4} - ${n3}³) × ${n5}
+      problemStr = `(${n2} × ${n1}³) + (${n4} - ${n3}³) × ${n5}`;
+      const expr = `(${n2} * Math.pow(${n1}, 3)) + (${n4} - Math.pow(${n3}, 3)) * ${n5}`;
+      answer = eval(expr);
+    }
   }
 
-  // FIX: Petunjuk pesan dibuat umum tanpa bocoran angka jawaban
-  const teks = `🧮 *KUIS MATEMATIKA (${level.toUpperCase()})*\n\n` +
-    `Berapa hasil dari: *${soal}* ?\n` +
-    `Waktu: *45 Detik*\n\n` +
-    `_Ketik langsung jawabannya di chat (misal: 150 atau /150)_`;
+  return { problemStr, answer: Math.round(answer) };
+}
 
-  const sentMsg = await sock.sendMessage(remoteJid, { text: teks }, { quoted: msg });
+async function mathCommand(sock, msg, args) {
+  const from = msg.key.remoteJid;
 
-  global.db.game[remoteJid] = {
-    jawaban: jawaban.toLowerCase().trim(),
-    timer: setTimeout(async () => {
-      if (global.db.game[remoteJid]) {
-        delete global.db.game[remoteJid];
-        await sock.sendMessage(remoteJid, { text: `lama ah kalian, yang bener: *${jawaban}*` }, { quoted: sentMsg });
-      }
-    }, 45000)
-  };
+  // Cek jika sedang ada game berjalan di obrolan ini
+  if (global.mathGame.has(from)) {
+    return await sock.sendMessage(from, {
+      text: '⚠️ Masih ada kuis matematika yang belum dijawab di chat ini!'
+    }, { quoted: msg });
+  }
+
+  let levelInput = (args[0] || 'mudah').toLowerCase();
+  let levelName = 'EASY';
+  let timeoutSec = 45;
+
+  if (['sedang', 'medium'].includes(levelInput)) {
+    levelName = 'MEDIUM';
+    timeoutSec = 60;
+  } else if (['hard', 'susah'].includes(levelInput)) {
+    levelName = 'HARD';
+    timeoutSec = 90;
+  } else if (['max', 'extreme', 'ekstrem'].includes(levelInput)) {
+    levelName = 'EXTREME MAX 💥';
+    timeoutSec = 120;
+  } else {
+    levelInput = 'mudah';
+  }
+
+  const { problemStr, answer } = generateMathProblem(levelInput);
+
+  const caption = 
+`🧮 *KUIS MATEMATIKA (${levelName})*
+
+Berapa hasil dari:
+*${problemStr}*
+
+⏱️ Waktu: *${timeoutSec} Detik*
+
+_Ketik langsung jawabannya di chat (contoh: ${answer} atau /${answer})_`;
+
+  const sentMsg = await sock.sendMessage(from, { text: caption }, { quoted: msg });
+
+  // Set Timer Penjawab
+  const timer = setTimeout(async () => {
+    if (global.mathGame.has(from)) {
+      global.mathGame.delete(from);
+      await sock.sendMessage(from, {
+        text: `⏳ *Waktu habis!*\nJawaban yang benar adalah: *${answer}*`
+      }, { quoted: sentMsg });
+    }
+  }, timeoutSec * 1000);
+
+  // Simpan Sesi Game
+  global.mathGame.set(from, {
+    answer: answer.toString(),
+    timer: timer
+  });
 }
 
 module.exports = mathCommand;
