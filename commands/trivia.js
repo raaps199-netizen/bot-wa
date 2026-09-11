@@ -1,4 +1,5 @@
 const axios = require('axios');
+const config = require('../config');
 
 if (!global.db) global.db = {};
 if (!global.db.game) global.db.game = {};
@@ -45,29 +46,39 @@ async function triviaCommand(sock, msg, args) {
   await sock.sendMessage(remoteJid, { text: '...' }, { quoted: msg });
 
   try {
-    const promptText = `Buatkan 1 soal trivia unik, acak, dan belum pernah ada sebelumnya.
+    const apiKey = config.geminiKey || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return await sock.sendMessage(remoteJid, {
+        text: '❌ API Key Gemini belum dipasang di config.js!'
+      }, { quoted: msg });
+    }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+    const promptText = `Buatkan 1 soal trivia unik dan acak dalam Bahasa Indonesia.
 Kategori: ${targetTopic}
 Tingkat Kesulitan: ${difficulty}
 
-SANGAT PENTING: Kembalikan respon HANYA berupa JSON murni tanpa format markdown/backticks/penjelasan tambahan.
-Contoh format wajib:
-{"soal":"Pertanyaan","jawabanBenar":"Benar","jawabanSalah":["Salah1","Salah2","Salah3"]}`;
+Respons WAJIB dalam format JSON murni tanpa markdown/backticks, contoh format:
+{
+  "soal": "Pertanyaan di sini",
+  "jawabanBenar": "Jawaban yang benar",
+  "jawabanSalah": ["Salah 1", "Salah 2", "Salah 3"]
+}`;
 
-    // Memanggil API AI Publik Gratisan (Tanpa API Key & Tanpa Terminal)
-    const res = await axios.post('https://text.pollinations.ai/', {
-      messages: [
-        { role: 'user', content: promptText }
-      ],
-      jsonMode: true
+    const response = await axios.post(url, {
+      contents: [{
+        parts: [{ text: promptText }]
+      }],
+      generationConfig: {
+        responseMimeType: "application/json"
+      }
     }, { timeout: 15000 });
 
-    let rawText = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
-    
-    // Clean string jika AI memberikan format markdown
-    rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const quizData = JSON.parse(rawText);
+    const resultText = response.data.candidates[0].content.parts[0].text;
+    const quizData = JSON.parse(resultText);
 
-    if (!quizData || !quizData.soal || !quizData.jawabanBenar || !quizData.jawabanSalah) {
+    if (!quizData || !quizData.soal || !quizData.jawabanBenar) {
       throw new Error('Format JSON dari AI tidak valid');
     }
 
@@ -122,18 +133,20 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
       }
     }, timeoutSec * 1000);
 
-    // Simpan Sesi Game
+    // Simpan Sesi Game (Lengkap dengan Soal & Penjelasan untuk konteks AI)
     global.db.game[remoteJid] = {
       msgId: sentMsg.key.id,
+      soal: quizData.soal,
       jawabanOpsi: correctOptionLabel,
       jawabanTeks: `${correctOptionLabel.toUpperCase()}. ${correctOptionText}`,
+      jawabanBenar: quizData.jawabanBenar,
       timer: timer
     };
 
   } catch (err) {
-    console.error('Error Trivia AI:', err);
+    console.error('Error Trivia Gemini AI:', err);
     await sock.sendMessage(remoteJid, {
-      text: '❌ Terjadi kesalahan saat meracik soal trivia baru.'
+      text: '❌ Terjadi kesalahan saat membuat soal trivia.'
     }, { quoted: msg });
   }
 }
