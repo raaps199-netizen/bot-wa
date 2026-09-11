@@ -9,7 +9,7 @@ function getRandomInt(min, max) {
 }
 
 /**
- * Generator Soal Dinamis untuk Level Hard & Extreme/Max
+ * Generator Soal Dinamis untuk Level Easy, Medium, Hard & Extreme/Max
  */
 function generateMathProblem(level) {
   let problemStr = '';
@@ -26,10 +26,10 @@ function generateMathProblem(level) {
     const b = getRandomInt(3, 15);
     const c = getRandomInt(10, 40);
     const op = Math.random() > 0.5 ? '*' : '+';
-    problemStr = `${a} ${op} ${b} - ${c}`;
-    answer = eval(problemStr);
+    problemStr = `${a} ${op === '*' ? '×' : '+'} ${b} - ${c}`;
+    const evalExpr = `${a} ${op} ${b} - ${c}`;
+    answer = eval(evalExpr);
   } else if (level === 'hard') {
-    // Contoh bentuk: 2² + (-5 × 6³) atau 4³ - (8 × -3²)
     const base1 = getRandomInt(2, 6);
     const pow1 = getRandomInt(2, 3);
     const num1 = getRandomInt(-9, -2);
@@ -38,20 +38,17 @@ function generateMathProblem(level) {
 
     const pattern = getRandomInt(1, 2);
     if (pattern === 1) {
-      // e.g. 3² + (-5 × 4³)
       problemStr = `${base1}² + (${num1} × ${num2}³)`;
       const evalExpr = `Math.pow(${base1}, ${pow1}) + (${num1} * Math.pow(${num2}, ${pow2}))`;
       answer = eval(evalExpr);
     } else {
-      // e.g. (-4 × 5²) - (3³ + 12)
       problemStr = `(${num1} × ${num2}²) - (${base1}³ + ${getRandomInt(10, 50)})`;
       const evalExpr = `(${num1} * Math.pow(${num2}, ${pow2})) - (Math.pow(${base1}, 3) + ${getRandomInt(10, 50)})`;
       answer = eval(evalExpr);
     }
   } else {
-    // LEVEL MAX / EXTREME (Di-generate super acak, panjang, & bervariasi)
+    // LEVEL MAX / EXTREME
     const n1 = getRandomInt(2, 7);
-    const p1 = getRandomInt(2, 4);
     const n2 = getRandomInt(-15, -3);
     const n3 = getRandomInt(4, 12);
     const p2 = getRandomInt(2, 3);
@@ -60,17 +57,14 @@ function generateMathProblem(level) {
 
     const type = getRandomInt(1, 3);
     if (type === 1) {
-      // e.g. 4³ + (-12 × 5³) - (-8 + 45)
       problemStr = `${n1}³ + (${n2} × ${n3}³) - (${n5} + ${n4})`;
       const expr = `Math.pow(${n1}, 3) + (${n2} * Math.pow(${n3}, ${p2})) - (${n5} + ${n4})`;
       answer = eval(expr);
     } else if (type === 2) {
-      // e.g. (${n1}⁴ - ${n4}) × (${n2} + ${n3}²)
       problemStr = `(${n1}⁴ - ${n4}) × (${n2} + ${n3}²)`;
       const expr = `(Math.pow(${n1}, 4) - ${n4}) * (${n2} + Math.pow(${n3}, 2))`;
       answer = eval(expr);
     } else {
-      // e.g. (${n2} × ${n1}³) + (${n4} - ${n3}³) × ${n5}
       problemStr = `(${n2} × ${n1}³) + (${n4} - ${n3}³) × ${n5}`;
       const expr = `(${n2} * Math.pow(${n1}, 3)) + (${n4} - Math.pow(${n3}, 3)) * ${n5}`;
       answer = eval(expr);
@@ -83,7 +77,6 @@ function generateMathProblem(level) {
 async function mathCommand(sock, msg, args) {
   const from = msg.key.remoteJid;
 
-  // Cek jika sedang ada game berjalan di obrolan ini
   if (global.mathGame.has(from)) {
     return await sock.sendMessage(from, {
       text: '⚠️ Masih ada kuis matematika yang belum dijawab di chat ini!'
@@ -109,6 +102,7 @@ async function mathCommand(sock, msg, args) {
 
   const { problemStr, answer } = generateMathProblem(levelInput);
 
+  // Caption diubah agar HANYA MENAMPILKAN CONTOH, TANPA MENAMPILKAN JAWABAN
   const caption = 
 `🧮 *KUIS MATEMATIKA (${levelName})*
 
@@ -117,7 +111,7 @@ Berapa hasil dari:
 
 ⏱️ Waktu: *${timeoutSec} Detik*
 
-_Ketik langsung jawabannya di chat (contoh: ${answer} atau /${answer})_`;
+_Ketik langsung jawabannya di chat (contoh: 15 atau /15)_`;
 
   const sentMsg = await sock.sendMessage(from, { text: caption }, { quoted: msg });
 
@@ -131,7 +125,7 @@ _Ketik langsung jawabannya di chat (contoh: ${answer} atau /${answer})_`;
     }
   }, timeoutSec * 1000);
 
-  // Simpan Sesi Game
+  // Simpan Sesi Game ke Memory
   global.mathGame.set(from, {
     answer: answer.toString(),
     timer: timer
