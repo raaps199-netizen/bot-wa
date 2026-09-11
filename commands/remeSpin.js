@@ -13,9 +13,8 @@ function hitungReme(angka) {
   return { finalNum: sum, isSpecial: null };
 }
 
-// Fungsi eksekusi akhir ronde khusus Bot
 async function processBotRoundEnd(sock, remoteJid, game, playerRoll, botRoll) {
-  const [p1, p2] = game.players; // p1 = player, p2 = bot
+  const [p1, p2] = game.players; 
   const d1 = hitungReme(playerRoll);
   const d2 = hitungReme(botRoll);
 
@@ -48,7 +47,6 @@ async function processBotRoundEnd(sock, remoteJid, game, playerRoll, botRoll) {
 
   await sock.sendMessage(remoteJid, { text: summaryText, mentions: [p1] });
 
-  // CEK APAKAH PERMAINAN 3 RONDE SELESAI
   if (game.round >= game.maxRound) {
     const scoreP1 = game.scores[p1];
     const scoreP2 = game.scores[p2];
@@ -79,7 +77,6 @@ async function processBotRoundEnd(sock, remoteJid, game, playerRoll, botRoll) {
     return await sock.sendMessage(remoteJid, { text: finalMsg, mentions: [p1] });
   }
 
-  // LANJUT RONDE BERIKUTNYA (Pemain selalu duluan ketik .spin lagi)
   game.round++;
   await sock.sendMessage(remoteJid, {
     text: `▶️ Lanjut ke *Ronde ${game.round}*!\nSilakan @${p1.split('@')[0]} ketik *.spin* lagi.`,
@@ -90,30 +87,30 @@ async function processBotRoundEnd(sock, remoteJid, game, playerRoll, botRoll) {
 async function spinCommand(sock, msg) {
   const remoteJid = msg.key.remoteJid;
   const rawSenderId = msg.key.participant || remoteJid;
-  const senderId = rawSenderId.split(':')[0] + '@s.whatsapp.net';
+  const senderNumber = rawSenderId.split('@')[0].split(':')[0]; // Ambil nomor bersihnya saja tanpa embel-embel device
   
   const game = global.db?.game?.[remoteJid];
 
   if (!game || game.type !== 'reme') return;
 
-  // --- KONDISI KHUSUS: LAWAN BOT (Auto-spin instan & Pemain selalu duluan) ---
   const botNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
   const isPlayingWithBot = game.players.includes(botNumber);
 
   if (isPlayingWithBot) {
-    const playerId = game.players.find(p => p !== botNumber);
-    if (senderId !== playerId) return; // Abaikan jika bukan pemain yang main
+    const targetPlayer = game.players.find(p => p !== botNumber);
+    const targetNumber = targetPlayer.split('@')[0].split(':')[0];
 
-    // 1. Pemain spin duluan
+    // Cocokkan berdasarkan nomor bersihnya agar tidak error gara-gara beda format JID device
+    if (senderNumber !== targetNumber) return;
+
     const playerRaw = Math.floor(Math.random() * 37);
     const playerRes = hitungReme(playerRaw);
 
     await sock.sendMessage(remoteJid, {
-      text: `🎰 @${senderId.split('@')[0]} melakukan SPIN!\n🎲 Angka Keluar: *${playerRaw}*\n➕ Hasil Reme: *${playerRes.isSpecial === 'autolose' ? '9 (Auto Lose)' : (playerRes.isSpecial === 'win3x' ? '0 (Auto Win 3x)' : playerRes.finalNum)}*`,
-      mentions: [senderId]
+      text: `🎰 @${senderNumber} melakukan SPIN!\n🎲 Angka Keluar: *${playerRaw}*\n➕ Hasil Reme: *${playerRes.isSpecial === 'autolose' ? '9 (Auto Lose)' : (playerRes.isSpecial === 'win3x' ? '0 (Auto Win 3x)' : playerRes.finalNum)}*`,
+      mentions: [targetPlayer]
     }, { quoted: msg });
 
-    // 2. Bot langsung otomatis spin detik itu juga (tanpa jeda lama / nunggu giliran)
     const botRaw = Math.floor(Math.random() * 37);
     const botRes = hitungReme(botRaw);
 
@@ -121,20 +118,8 @@ async function spinCommand(sock, msg) {
       text: `🤖 *Bot* langsung balas SPIN!\n🎲 Angka Keluar: *${botRaw}*\n➕ Hasil Reme: *${botRes.isSpecial === 'autolose' ? '9 (Auto Lose)' : (botRes.isSpecial === 'win3x' ? '0 (Auto Win 3x)' : botRes.finalNum)}*`
     });
 
-    // 3. Hitung hasil ronde saat itu juga
     return await processBotRoundEnd(sock, remoteJid, game, playerRaw, botRaw);
   }
-
-  // --- KONDISI PVP (ANTAR PLAYER) ---
-  // Tetap pakai logika giliran bergantian seperti biasa
-  const expectedPlayer = game.players[game.currentTurnIndex];
-  const cleanExpectedPlayer = expectedPlayer.split(':')[0] + '@s.whatsapp.net';
-
-  if (senderId !== cleanExpectedPlayer) {
-    return await sock.sendMessage(remoteJid, { text: `⚠️ Sabar bre, bukan giliran lo!` }, { quoted: msg });
-  }
-
-  // (Logika PvP lama di bawah biarkan atau sesuaikan jika dibutuhkan)
 }
 
 module.exports = spinCommand;
