@@ -60,7 +60,7 @@ Keluarkan hasil WAJIB dalam bentuk objek JSON valid dengan struktur persis seper
 }`;
 
     const response = await axios.post(url, {
-      model: 'llama-3.3-70b-versatile',
+      model: 'llama-3.1-8b-instant',
       messages: [
         { role: 'system', content: 'Kamu adalah pembuat kuis trivia yang wajib merespon hanya dalam format JSON valid.' },
         { role: 'user', content: promptText }
