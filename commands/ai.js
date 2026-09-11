@@ -5,17 +5,21 @@ async function aiCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
   const textPrompt = args.join(' ').trim();
 
+  // Cek apakah ada prompt
   if (!textPrompt) {
     return await sock.sendMessage(remoteJid, {
-      text: '⚠️ Silakan masukkan pertanyaan/perintah!\n\n*Contoh:* `.ai Siapa presiden pertama Indonesia?`'
+      text: '⚠️ Silakan masukkan pertanyaan atau perintah!\n\n*Contoh:* `.ai Siapa presiden pertama Indonesia?`'
     }, { quoted: msg });
   }
+
+  // Indikator proses
+  await sock.sendMessage(remoteJid, { text: '⏳ *Sedang memproses...*' }, { quoted: msg });
 
   try {
     const apiKey = config.geminiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return await sock.sendMessage(remoteJid, {
-        text: '❌ API Key Gemini belum dipasang di config.js!'
+        text: '❌ API Key Gemini belum dipasang di config.js atau .env!'
       }, { quoted: msg });
     }
 
@@ -25,20 +29,25 @@ async function aiCommand(sock, msg, args) {
       contents: [{
         parts: [{ text: textPrompt }]
       }]
-    }, { timeout: 15000 });
+    }, { 
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 20000 
+    });
 
-    const replyText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    let replyText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!replyText) {
-      throw new Error('Respon AI kosong');
+      throw new Error('Respon AI kosong dari Gemini.');
     }
 
-    await sock.sendMessage(remoteJid, { text: replyText }, { quoted: msg });
+    await sock.sendMessage(remoteJid, { text: replyText.trim() }, { quoted: msg });
 
   } catch (err) {
-    console.error('Error Command AI:', err?.response?.data || err.message || err);
+    const errorDetails = err?.response?.data?.error?.message || err?.message || String(err);
+    console.error('Error Command AI:', errorDetails);
+
     await sock.sendMessage(remoteJid, {
-      text: '❌ Terjadi kesalahan saat memproses permintaan AI.'
+      text: '❌ Terjadi kesalahan saat memproses permintaan AI. Silakan coba lagi nanti.'
     }, { quoted: msg });
   }
 }
