@@ -4,12 +4,12 @@ async function handleGameAnswer(sock, msg, userText) {
 
   if (!session) return false;
 
-  const cleanAnswer = userText.trim();
+  const cleanAnswer = userText.trim().toLowerCase();
 
-  // 1. Cek fitur menyerah (.nyerah)
-  if (['.nyerah', 'nyerah', 'menyerah', '/nyerah'].includes(cleanAnswer.toLowerCase())) {
+  // 1. Deteksi Menyerah
+  if (['.nyerah', 'nyerah', 'menyerah', '/nyerah'].includes(cleanAnswer)) {
     clearTimeout(session.timer);
-    const correctAns = session.jawabanTeks || session.jawabanBenar;
+    const correctAns = session.jawabanTeks || session.jawabanBenar || session.answer || 'Tidak diketahui';
     delete global.db.game[remoteJid];
     await sock.sendMessage(remoteJid, {
       text: `🏳️ *Menyerah!*\nJawaban yang benar adalah: *${correctAns}*`
@@ -17,16 +17,19 @@ async function handleGameAnswer(sock, msg, userText) {
     return true;
   }
 
-  // 2. Cek jawaban benar (Support untuk case-insensitive & spasi berlebih)
-  const isCorrect = 
-    cleanAnswer.toLowerCase() === session.jawabanBenar.toLowerCase() ||
-    (session.jawabanTeks && cleanAnswer.toLowerCase() === session.jawabanTeks.toLowerCase());
+  // 2. Ambil kunci jawaban yang mungkin disimpan oleh berbagai jenis game (math, trivia, tebak-tebakan)
+  const possibleAnswers = [
+    session.jawabanBenar,
+    session.jawabanTeks,
+    session.answer
+  ].filter(Boolean).map(ans => String(ans).trim().toLowerCase());
 
-  if (isCorrect) {
+  // Cek apakah jawaban user cocok
+  if (possibleAnswers.includes(cleanAnswer)) {
     clearTimeout(session.timer);
     delete global.db.game[remoteJid];
     await sock.sendMessage(remoteJid, {
-      text: `🎉 *Benar sekali!*\nJawaban yang benar adalah: *${session.jawabanTeks || session.jawabanBenar}*`
+      text: `🎉 *Benar sekali!*\nJawaban yang benar adalah: *${session.jawabanTeks || session.jawabanBenar || session.answer}*`
     }, { quoted: msg });
     return true;
   }
