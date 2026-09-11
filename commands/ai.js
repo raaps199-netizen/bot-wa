@@ -1,49 +1,15 @@
 const axios = require('axios');
 const config = require('../config');
 
-if (!global.db) global.db = {};
-if (!global.db.game) global.db.game = {};
-
-/**
- * Helper acak pilihan jawaban
- */
-function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-}
-
-async function triviaCommand(sock, msg, args) {
+async function aiCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
+  const textPrompt = args.join(' ').trim();
 
-  if (global.db.game[remoteJid]) {
+  if (!textPrompt) {
     return await sock.sendMessage(remoteJid, {
-      text: '⚠️ Masih ada kuis yang belum selesai di chat ini!'
+      text: '⚠️ Silakan masukkan pertanyaan/perintah!\n\n*Contoh:* `.ai Siapa presiden pertama Indonesia?`'
     }, { quoted: msg });
   }
-
-  const inputKategori = (args[0] || 'umum').toLowerCase().trim();
-  const inputLevel = (args[1] || 'mudah').toLowerCase().trim();
-
-  // Pemetaan Kategori
-  let targetTopic = 'UMUM';
-  if (['sejarah', 'history', 'sej'].includes(inputKategori)) targetTopic = 'SEJARAH';
-  else if (['geografi', 'geo', 'geography'].includes(inputKategori)) targetTopic = 'GEOGRAFI';
-  else if (['matematika', 'math'].includes(inputKategori)) targetTopic = 'MATEMATIKA';
-  else if (['komputer', 'tech', 'teknologi'].includes(inputKategori)) targetTopic = 'KOMPUTER & TEKNOLOGI';
-  else if (['sains', 'science', 'ipa'].includes(inputKategori)) targetTopic = 'SAINS';
-  else if (['otomotif', 'auto', 'mobil', 'motor'].includes(inputKategori)) targetTopic = 'OTOMOTIF';
-  else if (['kimia'].includes(inputKategori)) targetTopic = 'KIMIA';
-  else if (['fisika'].includes(inputKategori)) targetTopic = 'FISIKA';
-  else if (['biologi', 'bio'].includes(inputKategori)) targetTopic = 'BIOLOGI';
-
-  let difficulty = 'mudah';
-  if (['sedang', 'medium'].includes(inputLevel)) difficulty = 'sedang';
-  else if (['hard', 'sulit', 'susah'].includes(inputLevel)) difficulty = 'sulit';
-
-  await sock.sendMessage(remoteJid, { text: '...' }, { quoted: msg });
 
   try {
     const apiKey = config.geminiKey || process.env.GEMINI_API_KEY;
@@ -53,103 +19,28 @@ async function triviaCommand(sock, msg, args) {
       }, { quoted: msg });
     }
 
-    // Menggunakan nama model resmi: gemini-1.5-flash
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
-    const promptText = `Buatkan 1 soal trivia unik dan acak dalam Bahasa Indonesia.
-Kategori: ${targetTopic}
-Tingkat Kesulitan: ${difficulty}
-
-Respons WAJIB dalam format JSON murni tanpa markdown/backticks, contoh format:
-{
-  "soal": "Pertanyaan di sini",
-  "jawabanBenar": "Jawaban yang benar",
-  "jawabanSalah": ["Salah 1", "Salah 2", "Salah 3"]
-}`;
 
     const response = await axios.post(url, {
       contents: [{
-        parts: [{ text: promptText }]
-      }],
-      generationConfig: {
-        responseMimeType: "application/json"
-      }
+        parts: [{ text: textPrompt }]
+      }]
     }, { timeout: 15000 });
 
-    const resultText = response.data.candidates[0].content.parts[0].text;
-    const quizData = JSON.parse(resultText);
+    const replyText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    if (!quizData || !quizData.soal || !quizData.jawabanBenar || !quizData.jawabanSalah) {
-      throw new Error('Format JSON dari AI tidak valid');
+    if (!replyText) {
+      throw new Error('Respon AI kosong');
     }
 
-    // Acak Opsi Pilihan (A, B, C, D)
-    const optionsRaw = [
-      { isCorrect: true, text: quizData.jawabanBenar },
-      ...quizData.jawabanSalah.map(ans => ({ isCorrect: false, text: ans }))
-    ];
-
-    const shuffledOptions = shuffleArray(optionsRaw);
-    const labels = ['a', 'b', 'c', 'd'];
-
-    let correctOptionLabel = '';
-    let correctOptionText = '';
-    const formattedOptions = {};
-
-    shuffledOptions.forEach((opt, index) => {
-      const label = labels[index];
-      formattedOptions[label] = opt.text;
-      if (opt.isCorrect) {
-        correctOptionLabel = label;
-        correctOptionText = opt.text;
-      }
-    });
-
-    const timeoutSec = 60;
-
-    const caption = 
-`❓ *TRIVIA (${targetTopic} - ${difficulty.toUpperCase()})*
-
-${quizData.soal}
-
-*Pilihan Jawaban:*
-A. ${formattedOptions.a}
-B. ${formattedOptions.b}
-C. ${formattedOptions.c}
-D. ${formattedOptions.d}
-
-⏱️ Waktu: *${timeoutSec} Detik*
-
-_Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
-
-    const sentMsg = await sock.sendMessage(remoteJid, { text: caption }, { quoted: msg });
-
-    // Set Timer Penjawab
-    const timer = setTimeout(async () => {
-      if (global.db.game[remoteJid]) {
-        delete global.db.game[remoteJid];
-        await sock.sendMessage(remoteJid, {
-          text: `⏳ *Waktu habis!*\nJawaban yang benar adalah: *${correctOptionLabel.toUpperCase()}. ${correctOptionText}*`
-        }, { quoted: sentMsg });
-      }
-    }, timeoutSec * 1000);
-
-    // Simpan Sesi Game (Lengkap dengan Soal & Penjelasan untuk konteks AI)
-    global.db.game[remoteJid] = {
-      msgId: sentMsg.key.id,
-      soal: quizData.soal,
-      jawabanOpsi: correctOptionLabel,
-      jawabanTeks: `${correctOptionLabel.toUpperCase()}. ${correctOptionText}`,
-      jawabanBenar: quizData.jawabanBenar,
-      timer: timer
-    };
+    await sock.sendMessage(remoteJid, { text: replyText }, { quoted: msg });
 
   } catch (err) {
-    console.error('Error Trivia Gemini AI:', err?.response?.data || err.message);
+    console.error('Error Command AI:', err?.response?.data || err.message || err);
     await sock.sendMessage(remoteJid, {
-      text: '❌ Terjadi kesalahan saat membuat soal trivia.'
+      text: '❌ Terjadi kesalahan saat memproses permintaan AI.'
     }, { quoted: msg });
   }
 }
 
-module.exports = triviaCommand;
+module.exports = aiCommand;
