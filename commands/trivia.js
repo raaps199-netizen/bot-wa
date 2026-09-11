@@ -1,23 +1,24 @@
+const axios = require('axios');
+
 if (!global.db) global.db = {};
 if (!global.db.game) global.db.game = {};
 
-const categoryMap = {
-  biologi: 17,
-  fisika: 17,
-  kimia: 17,
-  sejarah: 23,
-  geografi: 22,
-  inggris: 10,
-  indonesia: 9
-};
+/**
+ * Helper Translate menggunakan Google Translate API (Gratis)
+ */
+async function translateToId(text) {
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=id&dt=t&q=${encodeURIComponent(text)}`;
+    const res = await axios.get(url);
+    return res.data[0].map(item => item[0]).join('');
+  } catch (err) {
+    return text; // Jika gagal translate, kirim teks asli
+  }
+}
 
-const difficultyMap = {
-  mudah: 'easy',
-  sedang: 'medium',
-  sulit: 'hard'
-};
-
-// Fungsi acak array (Shuffle)
+/**
+ * Helper untuk mengacak urutan pilihan jawaban
+ */
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -26,124 +27,116 @@ function shuffleArray(array) {
   return array;
 }
 
-async function translateToId(text) {
-  try {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=id&dt=t&q=${encodeURIComponent(text)}`;
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    const json = await res.json();
-    return json[0].map(item => item[0]).join('');
-  } catch (e) {
-    return text;
-  }
-}
-
-function decodeHTML(str) {
-  return str
-    .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
-}
-
-async function triviaCommand(sock, msg, args = []) {
+async function triviaCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
 
+  // Cek jika sedang ada game berjalan
   if (global.db.game[remoteJid]) {
-    await sock.sendMessage(remoteJid, { text: '⚠️ Masih ada game yang belum selesai di chat ini!' }, { quoted: msg });
-    return;
-  }
-
-  const kategoriInput = args[0]?.toLowerCase();
-  const levelInput = args[1]?.toLowerCase() || 'mudah';
-
-  if (!kategoriInput || !categoryMap[kategoriInput]) {
-    await sock.sendMessage(remoteJid, {
-      text: `📚 *TRIVIA SMA*\n\n` +
-        `Ketik format: *.trivia <kategori> <level>*\n\n` +
-        `*Kategori:* biologi, fisika, kimia, sejarah, geografi, inggris, indonesia\n` +
-        `*Level:* mudah, sedang, sulit\n\n` +
-        `*Contoh:* .trivia biologi mudah`
+    return await sock.sendMessage(remoteJid, {
+      text: '⚠️ Masih ada kuis yang belum selesai di chat ini!'
     }, { quoted: msg });
-    return;
   }
 
-  const categoryId = categoryMap[kategoriInput];
-  const difficulty = difficultyMap[levelInput] || 'easy';
+  const inputLevel = (args[1] || 'mudah').toLowerCase().trim();
+  let difficulty = 'easy';
+  if (['sedang', 'medium'].includes(inputLevel)) difficulty = 'medium';
+  else if (['hard', 'sulit', 'susah'].includes(inputLevel)) difficulty = 'hard';
 
-  await sock.sendMessage(remoteJid, { text: '⏳' }, { quoted: msg });
+  // Kirim notifikasi loading
+  await sock.sendMessage(remoteJid, { 
+    text: '🔄 *Mengambil soal terbaru dari internet...*' 
+  }, { quoted: msg });
 
   try {
-    const apiUrl = `https://opentdb.com/api.php?amount=1&category=${categoryId}&difficulty=${difficulty}&type=multiple`;
-    const res = await fetch(apiUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    const data = await res.json();
+    // Ambil soal dari OpenTDB (Category 17 = Science & Nature)
+    const apiUrl = `https://opentdb.com/api.php?amount=1&category=17&difficulty=${difficulty}&type=multiple`;
+    const response = await axios.get(apiUrl);
 
-    if (!data.results || data.results.length === 0) {
-      await sock.sendMessage(remoteJid, { text: '❌ Gagal mengambil soal. Coba lagi!' }, { quoted: msg });
-      return;
+    if (!response.data.results || response.data.results.length === 0) {
+      return await sock.sendMessage(remoteJid, {
+        text: '❌ Gagal mengambil soal dari internet. Coba beberapa saat lagi!'
+      }, { quoted: msg });
     }
 
-    const item = data.results[0];
-    const rawQuestion = decodeHTML(item.question);
-    const rawCorrectAnswer = decodeHTML(item.correct_answer);
-    const rawIncorrectAnswers = item.incorrect_answers.map(ans => decodeHTML(ans));
+    const quizData = response.data.results[0];
 
-    // Terjemahkan soal dan opsi
-    const questionId = await translateToId(rawQuestion);
-    const correctId = await translateToId(rawCorrectAnswer);
-    
-    // Siapkan daftar opsi (1 Benar + 3-4 Salah)
-    const optionsRaw = [rawCorrectAnswer, ...rawIncorrectAnswers];
-    const optionsTranslated = await Promise.all(optionsRaw.map(opt => translateToId(opt)));
+    // Bersihkan entitas HTML
+    const cleanQuestion = quizData.question
+      .replace(/&quot;/g, '"')
+      .replace(/&#039;/g, "'")
+      .replace(/&amp;/g, '&');
 
-    // Gabungkan teks terjemahan & asli, lalu acak
-    const combinedOptions = optionsTranslated.map((indo, idx) => ({
-      indo: indo,
-      asli: optionsRaw[idx],
-      isCorrect: idx === 0
-    }));
+    // Translate ke Bahasa Indonesia
+    const translatedQuestion = await translateToId(cleanQuestion);
+    const translatedCorrect = await translateToId(quizData.correct_answer);
+    const translatedIncorrect = await Promise.all(
+      quizData.incorrect_answers.map(async (ans) => await translateToId(ans))
+    );
 
-    const shuffledOptions = shuffleArray(combinedOptions);
+    // Acak Opsi Jawaban
+    const optionsRaw = [
+      { isCorrect: true, text: translatedCorrect },
+      ...translatedIncorrect.map(ans => ({ isCorrect: false, text: ans }))
+    ];
 
-    const labels = ['A', 'B', 'C', 'D', 'E'];
+    const shuffledOptions = shuffleArray(optionsRaw);
+    const labels = ['a', 'b', 'c', 'd'];
+
     let correctOptionLabel = '';
-    let opsiText = '';
+    let correctOptionText = '';
+    const formattedOptions = {};
 
     shuffledOptions.forEach((opt, index) => {
       const label = labels[index];
-      if (opt.isCorrect) correctOptionLabel = label;
-      opsiText += `*${label}.* ${opt.indo}\n`;
+      formattedOptions[label] = opt.text;
+      if (opt.isCorrect) {
+        correctOptionLabel = label;
+        correctOptionText = opt.text;
+      }
     });
 
-    const teks = `🧠 *TRIVIA ${kategoriInput.toUpperCase()} (${levelInput.toUpperCase()})*\n\n` +
-      `*Soal:* ${questionId}\n\n` +
-      `*Pilihan Jawaban:*\n${opsiText}\n` +
-      `⏱️ Waktu: *60 Detik*\n` +
-      `💡 _Reply/balas pesan soal ini lalu jawab pakai slash, misal: /a atau /b_`;
+    const timeoutSec = 60;
 
-    const sentMsg = await sock.sendMessage(remoteJid, { text: teks }, { quoted: msg });
+    const caption = 
+`❓ *TRIVIA SAINS ONLINE (${difficulty.toUpperCase()})*
 
+${translatedQuestion}
+
+*Pilihan Jawaban:*
+A. ${formattedOptions.a}
+B. ${formattedOptions.b}
+C. ${formattedOptions.c}
+D. ${formattedOptions.d}
+
+⏱️ Waktu: *${timeoutSec} Detik*
+
+_Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
+
+    const sentMsg = await sock.sendMessage(remoteJid, { text: caption }, { quoted: msg });
+
+    // Set Timer Penjawab
+    const timer = setTimeout(async () => {
+      if (global.db.game[remoteJid]) {
+        delete global.db.game[remoteJid];
+        await sock.sendMessage(remoteJid, {
+          text: `⏳ *Waktu habis!*\nJawaban yang benar adalah: *${correctOptionLabel.toUpperCase()}. ${correctOptionText}*`
+        }, { quoted: sentMsg });
+      }
+    }, timeoutSec * 1000);
+
+    // Simpan Sesi
     global.db.game[remoteJid] = {
-      msgId: sentMsg.key.id, // Menyimpan ID pesan soal untuk pengecekan reply
-      jawabanOpsi: correctOptionLabel.toLowerCase(), // Misal: 'a'
-      jawabanTeks: `${correctOptionLabel}. ${correctId} (${rawCorrectAnswer})`,
-      timer: setTimeout(async () => {
-        if (global.db.game[remoteJid]) {
-          delete global.db.game[remoteJid];
-          await sock.sendMessage(remoteJid, { 
-            text: `⌛ *Waktu habis!*\nJawaban benar: *${correctOptionLabel}. ${correctId}*` 
-          }, { quoted: sentMsg });
-        }
-      }, 60000)
+      msgId: sentMsg.key.id,
+      jawabanOpsi: correctOptionLabel,
+      jawabanTeks: `${correctOptionLabel.toUpperCase()}. ${correctOptionText}`,
+      timer: timer
     };
 
   } catch (err) {
-    console.error('Error Trivia:', err);
-    await sock.sendMessage(remoteJid, { text: '❌ Terjadi kesalahan server.' }, { quoted: msg });
+    console.error('Error Trivia API:', err);
+    await sock.sendMessage(remoteJid, {
+      text: '❌ Terjadi kesalahan saat mengambil soal trivia dari internet.'
+    }, { quoted: msg });
   }
 }
 
