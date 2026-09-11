@@ -5,14 +5,12 @@ async function aiCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
   const textPrompt = args.join(' ').trim();
 
-  // Cek apakah ada prompt
   if (!textPrompt) {
     return await sock.sendMessage(remoteJid, {
       text: '⚠️ Silakan masukkan pertanyaan atau perintah!\n\n*Contoh:* `.ai Siapa presiden pertama Indonesia?`'
     }, { quoted: msg });
   }
 
-  // Indikator proses
   await sock.sendMessage(remoteJid, { text: '⏳ *Sedang memproses...*' }, { quoted: msg });
 
   try {
@@ -23,14 +21,18 @@ async function aiCommand(sock, msg, args) {
       }, { quoted: msg });
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // URL Bersih tanpa parameter ?key=
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
 
     const response = await axios.post(url, {
       contents: [{
         parts: [{ text: textPrompt }]
       }]
     }, { 
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey 
+      },
       timeout: 20000 
     });
 
@@ -44,10 +46,10 @@ async function aiCommand(sock, msg, args) {
 
   } catch (err) {
     const errorDetails = err?.response?.data?.error?.message || err?.message || String(err);
-    console.error('Error Command AI:', errorDetails);
+    console.error('Error Command AI Detail:', errorDetails);
 
     await sock.sendMessage(remoteJid, {
-      text: '❌ Terjadi kesalahan saat memproses permintaan AI. Silakan coba lagi nanti.'
+      text: `❌ Terjadi kesalahan saat memproses permintaan AI.\n_Detail: ${errorDetails}_`
     }, { quoted: msg });
   }
 }
