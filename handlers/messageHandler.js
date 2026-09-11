@@ -89,9 +89,10 @@ async function handleMessage(sock, msg) {
     switch (command) {
       case 'add': {
         const ownerPhone = '6289531307627';
+        const ownerLid = '66477638029541';
         
-        if (!senderId.includes(ownerPhone)) {
-          await sock.sendMessage(remoteJid, { text: `❌ Lu bukan owner, gak usah sok asik mau nambah poin sendiri wkwk!` }, { quoted: msg });
+        if (!senderId.includes(ownerPhone) && !senderId.includes(ownerLid)) {
+          await sock.sendMessage(remoteJid, { text: `❌ Lu bukan owner, gak usah sok asik mau nambah poin sendiri wkwk!\n(ID terdeteksi: ${senderId})` }, { quoted: msg });
           break;
         }
 
@@ -480,4 +481,3 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-            
