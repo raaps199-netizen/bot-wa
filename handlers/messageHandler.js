@@ -157,7 +157,6 @@ async function handleMessage(sock, msg) {
           global.db.users[senderId] = { mathScore: 0, triviaScore: 0, score: 0 };
         }
 
-        // Simpan nickname dan paksa juga ke properti name agar leaderboard/score langsung ngebaca
         global.db.users[senderId].nickname = newNick;
         global.db.users[senderId].name = newNick;
 
@@ -168,6 +167,30 @@ async function handleMessage(sock, msg) {
         await sock.sendMessage(remoteJid, { 
           text: `✅ Sukses mengubah nickname leaderboard kamu menjadi: *${newNick}*` 
         }, { quoted: msg });
+        break;
+      }
+
+      case 'batal':
+      case 'cancel': {
+        const currentGame = global.db.game?.[remoteJid];
+        
+        if (!currentGame || currentGame.type !== 'reme') {
+          await sock.sendMessage(remoteJid, { text: `⚠️ Lagi tidak ada sesi game Reme yang aktif di chat ini.` }, { quoted: msg });
+          break;
+        }
+
+        const isOwner = currentGame.mode === 'bot' && currentGame.player === senderId;
+        const isPvPParticipant = currentGame.mode === 'pvp' && (currentGame.challenger === senderId || currentGame.target === senderId);
+
+        if (!isOwner && !isPvPParticipant) {
+          await sock.sendMessage(remoteJid, { text: `❌ Lu bukan peserta yang main sesi Reme ini, jadi gak punya hak buat nge-cancel!` }, { quoted: msg });
+          break;
+        }
+
+        delete global.db.game[remoteJid];
+        if (typeof global.saveDatabase === 'function') global.saveDatabase();
+
+        await sock.sendMessage(remoteJid, { text: `✅ Sesi game Reme berhasil dibatalkan.` }, { quoted: msg });
         break;
       }
 
@@ -382,7 +405,7 @@ async function handleMessage(sock, msg) {
       case 'menu_game':
       case 'games': {
         const gameText = 
-`┏━(' *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* ')
+`┏━『 *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* 』
 ┃
 ┣⌬ ${prefixUsed}bj
 ┣⌬ ${prefixUsed}math [mudah|sedang|hard|max]
@@ -392,7 +415,9 @@ async function handleMessage(sock, msg) {
 ┣⌬ ${prefixUsed}trivia <kategori> <level>
 ┣⌬ ${prefixUsed}tetris
 ┣⌬ ${prefixUsed}claimtetris <kode>
-┣⌬ ${prefixUsed}reme @user <taruhan>
+┣⌬ ${prefixUsed}reme <taruhan> (Lawan Bot)
+┣⌬ ${prefixUsed}reme @user <taruhan> (PvP)
+┣⌬ ${prefixUsed}batal
 ┣⌬ ${prefixUsed}score
 ┣⌬ ${prefixUsed}leaderboard
 ┣⌬ ${prefixUsed}nickname <nama>
@@ -408,7 +433,7 @@ async function handleMessage(sock, msg) {
       case 'menu_tools':
       case 'tools': {
         const toolsText = 
-`┏━(' *ᴍᴇɴᴜ ᴛᴏᴏʟꜱ* ')
+`┏━『 *ᴍᴇɴᴜ ᴛᴏᴏʟꜱ* 』
 ┃
 ┣⌬ ${prefixUsed}s
 ┣⌬ ${prefixUsed}wm <pack|author>
@@ -434,7 +459,7 @@ async function handleMessage(sock, msg) {
       case 'menu_group':
       case 'group': {
         const groupText = 
-`┏━(' *ᴍᴇɴᴜ ɢʀᴏᴜ𝚙* ')
+`┏━『 *ᴍᴇɴᴜ ɢʀᴏᴜ𝚙* 』
 ┃
 ┣⌬ ${prefixUsed}open
 ┣⌬ ${prefixUsed}close
@@ -448,7 +473,7 @@ async function handleMessage(sock, msg) {
 
       case 'allmenu': {
         const allText = 
-`┏━(' *ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ* ')
+`┏━『 *ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ* 』
 ┃
 ┣⌬ *ɢᴀᴍᴇꜱ*
 ┃  • ${prefixUsed}bj
@@ -459,7 +484,9 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}trivia <kategori> <level>
 ┃  • ${prefixUsed}tetris
 ┃  • ${prefixUsed}claimtetris <kode>
-┃  • ${prefixUsed}reme @user <taruhan>
+┃  • ${prefixUsed}reme <taruhan> (Lawan Bot)
+┃  • ${prefixUsed}reme @user <taruhan> (PvP)
+┃  • ${prefixUsed}batal
 ┃  • ${prefixUsed}score
 ┃  • ${prefixUsed}leaderboard
 ┃  • ${prefixUsed}nickname <nama>
@@ -516,4 +543,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-                                 
+    
