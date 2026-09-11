@@ -28,7 +28,7 @@ const tovidCommand = require('../commands/tovid');
 const onlineCommand = require('../commands/online');
 const ncodeCommand = require('../commands/ncode');
 
-// Command Games
+// Command Games & Leaderboard
 const blackjackCommand = require('../commands/blackjack');
 const mathCommand = require('../commands/math');
 const tebakbenderaCommand = require('../commands/tebakbendera');
@@ -36,6 +36,8 @@ const tebakkataCommand = require('../commands/tebakkata');
 const tebakgambarCommand = require('../commands/tebakgambar');
 const triviaCommand = require('../commands/trivia');
 const { tetrisCommand, claimTetrisCommand } = require('../commands/tetris');
+const scoreCommand = require('../commands/score');
+const leaderboardCommand = require('../commands/leaderboard');
 
 async function handleMessage(sock, msg) {
   try {
@@ -212,6 +214,17 @@ async function handleMessage(sock, msg) {
         await cekbucinCommand(sock, msg, args);
         break;
 
+      case 'score':
+      case 'skor':
+        await scoreCommand(sock, msg, args);
+        break;
+
+      case 'leaderboard':
+      case 'lb':
+      case 'top':
+        await leaderboardCommand(sock, msg);
+        break;
+
       case 'bj':
       case 'blackjack':
       case 'hit':
@@ -267,6 +280,8 @@ async function handleMessage(sock, msg) {
 ┣⌬ ${prefixUsed}trivia <kategori> <level>
 ┣⌬ ${prefixUsed}tetris
 ┣⌬ ${prefixUsed}claimtetris <kode>
+┣⌬ ${prefixUsed}score
+┣⌬ ${prefixUsed}leaderboard
 ┣⌬ ${prefixUsed}cekkhodam <nama>
 ┣⌬ ${prefixUsed}bucin <nama>
 ┣⌬ ${prefixUsed}truth
@@ -330,6 +345,8 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}trivia <kategori> <level>
 ┃  • ${prefixUsed}tetris
 ┃  • ${prefixUsed}claimtetris <kode>
+┃  • ${prefixUsed}score
+┃  • ${prefixUsed}leaderboard
 ┃  • ${prefixUsed}cekkhodam <nama>
 ┃  • ${prefixUsed}bucin <nama>
 ┃  • ${prefixUsed}truth
@@ -383,3 +400,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
+    
