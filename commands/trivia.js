@@ -19,6 +19,7 @@ function shuffleArray(array) {
 async function triviaCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
 
+  // Cek jika ada game yang sedang berjalan
   if (global.db.game[remoteJid]) {
     return await sock.sendMessage(remoteJid, {
       text: '⚠️ Masih ada kuis yang belum selesai di chat ini!'
@@ -54,7 +55,7 @@ async function triviaCommand(sock, msg, args) {
       }, { quoted: msg });
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const url = `[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$){apiKey}`;
 
     const promptText = `Buatkan 1 soal trivia unik dan acak dalam Bahasa Indonesia.
 Kategori: ${targetTopic}
@@ -79,7 +80,7 @@ Respons WAJIB dalam format JSON murni tanpa markdown/backticks, contoh format:
     let resultText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!resultText) throw new Error('Respon kosong dari AI Gemini');
 
-    // Pembersihan tambahan dari kemungkinan markdown backticks
+    // Sanitasi String JSON dari kemungkinan karakter markdown
     resultText = resultText.replace(/```json|```/g, '').trim();
     const quizData = JSON.parse(resultText);
 
@@ -138,7 +139,7 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
       }
     }, timeoutSec * 1000);
 
-    // Simpan Sesi Game
+    // Simpan Sesi Game ke Memory
     global.db.game[remoteJid] = {
       type: 'trivia',
       msgId: sentMsg.key.id,
@@ -150,7 +151,17 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
     };
 
   } catch (err) {
-    console.error('Error Trivia Gemini AI:', err?.response?.data || err.message || err);
+    // 💡 SANGAT PENTING: Hapus dari db.game jika timbul error agar tidak mengganggu fitur lain (.ai)
+    if (global.db.game[remoteJid]) {
+      delete global.db.game[remoteJid];
+    }
+
+    if (err?.response?.data) {
+      console.error('Error Trivia Gemini API Response:', JSON.stringify(err.response.data, null, 2));
+    } else {
+      console.error('Error Trivia Gemini AI:', err.message || err);
+    }
+
     await sock.sendMessage(remoteJid, {
       text: '❌ Terjadi kesalahan saat membuat soal trivia. Silakan coba lagi!'
     }, { quoted: msg });
