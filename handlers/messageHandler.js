@@ -88,11 +88,11 @@ async function handleMessage(sock, msg) {
     // 3. SWITCH CASE COMMAND
     switch (command) {
       case 'add': {
-        const cleanSenderId = senderId.split(':')[0] + '@s.whatsapp.net';
-        const ownerNumber = '66477638029541@s.whatsapp.net';
+        const ownerPhone = '6289531307627';
         
-        if (cleanSenderId !== ownerNumber) {
-          await sock.sendMessage(remoteJid, { text: `❌ Lu bukan owner, gak usah sok asik mau nambah poin sendiri wkwk!\n(ID terdeteksi: ${cleanSenderId})` }, { quoted: msg });
+        // Validasi fleksibel: mendukung nomor biasa, device extension, maupun LID WhatsApp
+        if (!senderId.includes(ownerPhone)) {
+          await sock.sendMessage(remoteJid, { text: `❌ Lu bukan owner, gak usah sok asik mau nambah poin sendiri wkwk!\n(ID terdeteksi: ${senderId})` }, { quoted: msg });
           break;
         }
 
@@ -435,7 +435,7 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}rvo
 ┃  • ${prefixUsed}ncode
 ┃
-┣⌬ *ɢʀᴏᴜᴘ*
+┣⌬ *ɢʀᴏᴜ𝚙*
 ┃  • ${prefixUsed}open
 ┃  • ${prefixUsed}close
 ┃  • ${prefixUsed}online
