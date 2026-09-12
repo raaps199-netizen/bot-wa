@@ -310,6 +310,12 @@ async function handleMessage(sock, msg) {
         await hdCommand(sock, msg);
         break;
 
+      case 'recover':
+      case 'restore':
+        await recoverCommand(sock, msg);
+        break;
+        
+
       case 'ss':
       case 'ssweb':
         await sswebCommand(sock, msg, args);
