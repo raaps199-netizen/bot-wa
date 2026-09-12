@@ -1,9 +1,6 @@
 // File: commands/duel.js
 const axios = require('axios');
 
-global.db.duel = global.db.duel || {};
-
-// Database soal cadangan lokal (berjalan otomatis jika API luar down/gagal)
 const localTriviaFallback = [
   { question: "Ibu kota negara Indonesia adalah...", options: ["Jakarta", "Bandung", "Surabaya", "Medan"], answer: "jakarta", category: "Geografi" },
   { question: "Planet terbesar di dalam tata surya kita adalah...", options: ["Mars", "Jupiter", "Saturnus", "Venus"], answer: "jupiter", category: "Sains" },
@@ -13,6 +10,9 @@ const localTriviaFallback = [
 ];
 
 module.exports = async function duelCommand(sock, msg, args) {
+  global.db = global.db || {};
+  global.db.duel = global.db.duel || {};
+
   const remoteJid = msg.key.remoteJid;
   const senderId = msg.key.participant || remoteJid;
 
@@ -51,6 +51,7 @@ module.exports = async function duelCommand(sock, msg, args) {
     return await sock.sendMessage(remoteJid, { text: `⚠️ Masukkan nominal taruhan poin yang valid!` }, { quoted: msg });
   }
 
+  global.db.users = global.db.users || {};
   if (!global.db.users[senderId]) global.db.users[senderId] = { mathScore: 0, triviaScore: 0, score: 0 };
   const senderTotal = (global.db.users[senderId].mathScore || 0) + (global.db.users[senderId].triviaScore || 0);
 
@@ -101,6 +102,9 @@ module.exports = async function duelCommand(sock, msg, args) {
 };
 
 async function handleAcceptDuel(sock, msg) {
+  global.db = global.db || {};
+  global.db.duel = global.db.duel || {};
+
   const remoteJid = msg.key.remoteJid;
   const senderId = msg.key.participant || remoteJid;
   const duel = global.db.duel[remoteJid];
@@ -150,7 +154,6 @@ async function handleAcceptDuel(sock, msg) {
         throw new Error('Data kosong dari API');
       }
     } catch (err) {
-      // AMBIL DARI CADANGAN LOKAL JIKA API GAGAL
       const fallback = localTriviaFallback[Math.floor(Math.random() * localTriviaFallback.length)];
       correctAnswer = fallback.answer;
       options = [...fallback.options].sort(() => Math.random() - 0.5);
@@ -172,6 +175,9 @@ async function handleAcceptDuel(sock, msg) {
 }
 
 async function handleRejectDuel(sock, msg) {
+  global.db = global.db || {};
+  global.db.duel = global.db.duel || {};
+
   const remoteJid = msg.key.remoteJid;
   const senderId = msg.key.participant || remoteJid;
   const duel = global.db.duel[remoteJid];
@@ -184,6 +190,9 @@ async function handleRejectDuel(sock, msg) {
 }
 
 async function handleDuelAnswer(sock, msg, userAnswer) {
+  global.db = global.db || {};
+  global.db.duel = global.db.duel || {};
+
   const remoteJid = msg.key.remoteJid;
   const senderId = msg.key.participant || remoteJid;
   const duel = global.db.duel?.[remoteJid];
@@ -251,12 +260,14 @@ function generateMathQuestion(diff) {
 }
 
 function addPoints(userId, amount) {
+  global.db.users = global.db.users || {};
   const user = global.db.users[userId];
   user.triviaScore = (user.triviaScore || 0) + amount;
   user.score = (user.mathScore || 0) + (user.triviaScore || 0);
 }
 
 function deductPoints(userId, amount) {
+  global.db.users = global.db.users || {};
   const user = global.db.users[userId];
   let remaining = amount;
   if (user.triviaScore && user.triviaScore > 0) {
@@ -278,4 +289,4 @@ function decodeHtml(html) {
 
 module.exports.duelCommand = duelCommand;
 module.exports.handleDuelAnswer = handleDuelAnswer;
-  
+    
