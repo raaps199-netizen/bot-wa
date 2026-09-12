@@ -703,5 +703,10 @@ async function handleMessage(sock, msg) {
         break;
     }
 
-  } catch (err) {
-    console.error('Error di handleMessage:', err?.st
+   } catch (err) {
+    console.error('Error di handleMessage:', err?.stack || err?.message || err);
+  }
+}
+
+module.exports = handleMessage;
+
