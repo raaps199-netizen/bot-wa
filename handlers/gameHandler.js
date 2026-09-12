@@ -20,7 +20,8 @@ async function handleGameAnswer(sock, msg) {
                  innerMsg?.imageMessage?.caption || 
                  innerMsg?.videoMessage?.caption || '';
 
-    const cleanBody = body.trim().toLowerCase();
+    // Konversi string eksplisit agar tipe data angka tidak bikin crash
+    const cleanBody = String(body).trim().toLowerCase();
     if (!cleanBody) return false;
 
     const senderId = getSenderId(msg, remoteJid) || msg.key.participant || remoteJid;
