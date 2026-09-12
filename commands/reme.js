@@ -11,19 +11,26 @@ async function remeCommand(sock, msg, args) {
     return await sock.sendMessage(remoteJid, { text: '⚠️ Chat ini sedang ada game aktif, selesaikan dulu bro! (Atau ketik .batal)' }, { quoted: msg });
   }
 
-  // Ambil target dari mention, pesan yang direply, atau argumen teks
-  let mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+  // 1. Deteksi target dari berbagai metode (Mention, Reply, atau Ketik Nomor/Teks)
+  let targetId = null;
+  const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
   const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
 
-  if (mentioned.length === 0 && quotedParticipant) {
-    mentioned.push(quotedParticipant);
+  if (mentioned.length > 0) {
+    targetId = mentioned[0];
+  } else if (quotedParticipant) {
+    targetId = quotedParticipant;
+  } else if (args.length > 0 && args[0].includes('@')) {
+    // Antisipasi jika argumen pertama mengandung format nomor
+    const cleanNum = args[0].replace(/[^0-9]/g, '');
+    if (cleanNum.length >= 5) targetId = cleanNum + '@s.whatsapp.net';
   }
 
-  // Filter angka taruhan dari args
-  const nonTagArgs = args.filter(arg => !arg.includes('@') && !isNaN(arg));
+  // 2. Ambil angka taruhan dari argumen (cari argumen yang berupa angka murni)
   let betAmount = 15;
-  if (nonTagArgs.length > 0) {
-    betAmount = parseInt(nonTagArgs[0]);
+  const numericArgs = args.filter(arg => !arg.includes('@') && !isNaN(arg));
+  if (numericArgs.length > 0) {
+    betAmount = parseInt(numericArgs[0]);
     if (betAmount <= 0) betAmount = 15;
   }
 
@@ -31,8 +38,8 @@ async function remeCommand(sock, msg, args) {
     global.db.users[senderId] = { mathScore: 0, triviaScore: 0, score: 0 };
   }
 
-  // --- 1. KONDISI MAIN SENDIRI (TANPA TAG / REPLY) -> OTOMATIS LAWAN BOT ---
-  if (mentioned.length === 0) {
+  // --- KONDISI A: MAIN SENDIRI (TANPA TARGET) -> LAWAN BOT ---
+  if (!targetId) {
     const senderStats = global.db.users[senderId];
     const senderScore = (senderStats.triviaScore || 0) + (senderStats.mathScore || 0) + (senderStats.score || 0);
 
@@ -56,15 +63,13 @@ async function remeCommand(sock, msg, args) {
     };
 
     const senderName = senderId.split('@')[0];
-    await sock.sendMessage(remoteJid, {
+    return await sock.sendMessage(remoteJid, {
       text: `🤖 *Wuih, nantangin bot buat Remenan mandiri!*\n\nTaruhan: *${betAmount}* poin (3 Ronde).\nSilakan @${senderName} ketik *.spin* buat mulai ronde 1!`,
       mentions: [senderId]
     }, { quoted: msg });
-    return;
   }
 
-  // --- 2. KONDISI LAWAN MANUSIA (PVP) ---
-  const targetId = mentioned[0];
+  // --- KONDISI B: LAWAN MANUSIA (PVP) ---
   if (targetId === senderId) {
     return await sock.sendMessage(remoteJid, { text: '⚠️ Gila ya, mau main lawan diri sendiri wkwk!' }, { quoted: msg });
   }
@@ -80,7 +85,7 @@ async function remeCommand(sock, msg, args) {
   const targetScore = (targetStats.triviaScore || 0) + (targetStats.mathScore || 0) + (targetStats.score || 0);
 
   if (senderScore < betAmount) {
-    return await sock.sendMessage(remoteJid, { text: `⚠️ Total poin lo kurang, bre! Poin lo saat ini: *${senderScore}*, tapi taruhannya *${betAmount}*.` }, { quoted: msg });
+    return await sock.sendMessage(remoteJid, { text: `⚠️ Total poin lo kurang, bre! Poin lo saat este: *${senderScore}*, tapi taruhannya *${betAmount}*.` }, { quoted: msg });
   }
 
   if (targetScore < betAmount) {
