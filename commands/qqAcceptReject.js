@@ -1,55 +1,67 @@
-// File: commands/qqAcceptReject.js
-const { getUserData, addPoints, deductPoints } = require('../utils/helper');
-const { getSenderId } = require('../utils/jid-utils');
-
 async function qqAcceptCommand(sock, msg) {
-  const remoteJid = msg.key.remoteJid;
-  if (!global.db?.qqChallenges?.[remoteJid]) {
-    return await sock.sendMessage(remoteJid, { text: '⚠️ Tidak ada tantangan QQ yang aktif di grup ini!' }, { quoted: msg });
+  try {
+    const remoteJid = msg.key.remoteJid;
+    const senderId = msg.key.participant || remoteJid;
+    const game = global.db.game?.[remoteJid];
+
+    if (!game || game.type !== 'qq' || game.status !== 'pending') {
+      await sock.sendMessage(remoteJid, { text: `⚠️ Tidak ada tantangan QQ yang menunggu untuk diterima di chat ini.` }, { quoted: msg });
+      return;
+    }
+
+    if (senderId !== game.p2) {
+      await sock.sendMessage(remoteJid, { text: `❌ Kamu bukan orang yang ditantang untuk duel ini!` }, { quoted: msg });
+      return;
+    }
+
+    // Potong poin kedua pemain
+    global.db.users[game.p1].score -= game.taruhan;
+    global.db.users[game.p2].score -= game.taruhan;
+    if (typeof global.saveDatabase === 'function') global.saveDatabase();
+
+    game.status = 'playing';
+    game.round = 1;
+    game.turn = game.p1;
+    game.scores = {
+      [game.p1]: { wins: 0 },
+      [game.p2]: { wins: 0 }
+    };
+
+    const p1Name = game.p1.split('@')[0];
+    const p2Name = game.p2.split('@')[0];
+
+    await sock.sendMessage(remoteJid, {
+      text: `⚔️ *Tantangan Diterima & Poin Dipotong (${game.taruhan} Poin)*!\n\nPermainan QQ 3 Ronde dimulai!\nGiliran pertama melakukan *.spinqq* adalah: @${p1Name}`,
+      mentions: [game.p1, game.p2]
+    }, { quoted: msg });
+
+  } catch (err) {
+    console.error('Error di qqAcceptCommand:', err);
   }
-
-  const challenge = global.db.qqChallenges[remoteJid];
-  const senderId = getSenderId(msg, remoteJid);
-
-  if (senderId !== challenge.challenged) {
-    return await sock.sendMessage(remoteJid, { text: '⚠️ Tantangan ini bukan untuk lu!' }, { quoted: msg });
-  }
-
-  delete global.db.qqChallenges[remoteJid];
-
-  // Mulai game QQ multiplayer (3 Ronde)
-  global.db.game[remoteJid] = {
-    type: 'qq',
-    players: [challenge.challenger, challenge.challenged],
-    scores: { [challenge.challenger]: 0, [challenge.challenged]: 0 },
-    round: 1,
-    maxRound: 3,
-    bet: challenge.bet,
-    mode: 'pvp'
-  };
-
-  await sock.sendMessage(remoteJid, {
-    text: `🃏 *DUEL QQ DIMULAI!*\n\n@${challenge.challenger.split('@')[0]} vs @${challenge.challenged.split('@')[0]}\nTaruhan: *${challenge.bet}* poin (3 Ronde).\n\nKetik *.qq* untuk mulai Ronde 1!`,
-    mentions: [challenge.challenger, challenge.challenged]
-  }, { quoted: msg });
 }
 
 async function qqRejectCommand(sock, msg) {
-  const remoteJid = msg.key.remoteJid;
-  if (!global.db?.qqChallenges?.[remoteJid]) {
-    return await sock.sendMessage(remoteJid, { text: '⚠️ Tidak ada tantangan QQ yang aktif!' }, { quoted: msg });
+  try {
+    const remoteJid = msg.key.remoteJid;
+    const senderId = msg.key.participant || remoteJid;
+    const game = global.db.game?.[remoteJid];
+
+    if (!game || game.type !== 'qq' || game.status !== 'pending') {
+      await sock.sendMessage(remoteJid, { text: `⚠️ Tidak ada tantangan QQ yang bisa ditolak.` }, { quoted: msg });
+      return;
+    }
+
+    if (senderId !== game.p2 && senderId !== game.p1) {
+      text: `❌ Kamu tidak berhak membatalkan tantangan ini.`
+      return;
+    }
+
+    delete global.db.game[remoteJid];
+    await sock.sendMessage(remoteJid, { text: `❌ Tantangan QQ dibatalkan/ditolak.` }, { quoted: msg });
+
+  } catch (err) {
+    console.error('Error di qqRejectCommand:', err);
   }
-
-  const challenge = global.db.qqChallenges[remoteJid];
-  const senderId = getSenderId(msg, remoteJid);
-
-  if (senderId !== challenge.challenged && senderId !== challenge.challenger) {
-    return await sock.sendMessage(remoteJid, { text: '⚠️ Lu bukan bagian dari tantangan ini!' }, { quoted: msg });
-  }
-
-  delete global.db.qqChallenges[remoteJid];
-  await sock.sendMessage(remoteJid, { text: `❌ Tantangan QQ dibatalkan/ditolak.` }, { quoted: msg });
 }
 
 module.exports = { qqAcceptCommand, qqRejectCommand };
-
