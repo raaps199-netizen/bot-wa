@@ -142,7 +142,7 @@ async function handleMessage(sock, msg) {
           // 2. Tag member & berikan peringatan
           const senderName = senderId.split('@')[0];
           await sock.sendMessage(remoteJid, {
-            text: `⚠️ Pesan dari @${senderName} telah **dihapus otomatis** karena mengandung kata terlarang!`,
+            text: `~pesan telah *dihapus otomatis* karena mengandung kata terlarang~`,
             mentions: [senderId]
           });
         } catch (delErr) {
