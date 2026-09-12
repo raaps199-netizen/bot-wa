@@ -543,7 +543,7 @@ async function handleMessage(sock, msg) {
       case 'menu_game':
       case 'games': {
         const gameText = 
-`┏━『 *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* 』
+`┏━I *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* I
 ┃
 ┣⌬ ${prefixUsed}bj
 ┣⌬ ${prefixUsed}math [mudah|sedang|hard|max]
@@ -577,7 +577,7 @@ async function handleMessage(sock, msg) {
       case 'menu_tools':
       case 'tools': {
         const toolsText = 
-`┏━『 *ᴍᴇɴᴜ ᴛᴏᴏʟꜱ* 』
+`┏━I *ᴍᴇɴᴜ ᴛᴏᴏʟꜱ* I
 ┃
 ┣⌬ ${prefixUsed}ping
 ┣⌬ ${prefixUsed}s
@@ -604,7 +604,7 @@ async function handleMessage(sock, msg) {
       case 'menu_group':
       case 'group': {
         const groupText = 
-`┏━『 *ᴍᴇɴᴜ ɢʀᴏᴜ𝚙* 』
+`┏━I *ᴍᴇɴᴜ ɢʀᴏᴜ𝚙* I
 ┃
 ┣⌬ ${prefixUsed}open
 ┣⌬ ${prefixUsed}close
@@ -618,7 +618,7 @@ async function handleMessage(sock, msg) {
 
       case 'allmenu': {
         const allText = 
-`┏━『 *ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ* 』
+`┏━I *ꜱᴇᴍᴜ🇦 ᴍᴇɴᴜ* I
 ┃
 ┣⌬ *ɢᴀᴍᴇꜱ*
 ┃  • ${prefixUsed}bj
@@ -677,20 +677,22 @@ async function handleMessage(sock, msg) {
 
       case 'list':
       case 'menu':
-      case 'help':
-        await listCommand(sock, msg);
-        break;
-
-      default:
+      case 'help': {
         await sock.sendMessage(remoteJid, {
-          text: `❌ Command *${prefixUsed}${command}* tidak ditemukan!\nKetik *${prefixUsed}menu* untuk melihat daftar menu.`
-        }, { quoted: msg });
-        break;
-    }
-
-  } catch (err) {
-    console.error('Error di handleMessage:', err?.stack || err?.message || err);
-  }
-}
-
-module.exports = handleMessage;
+          interactiveMessage: {
+            body: {
+              text: `📋 *KATEGORI MENU BOT* 📋\n\n` +
+                    `1. 🎮 *Game & Ekonomi* (${prefixUsed}games)\n` +
+                    `2. 📥 *Tools & Downloader* (${prefixUsed}tools)\n` +
+                    `3. 🛠️ *Group Management* (${prefixUsed}group)\n\n` +
+                    `Silakan pilih kategori di atas atau klik tombol di bawah untuk melihat seluruh daftar perintah.`
+            },
+            footer: {
+              text: "Powered by Baileys v7"
+            },
+            nativeFlowMessage: {
+              buttons: [
+                {
+                  name: "quick_reply",
+                  buttonParamsJson: JSON.stringify({
+                    display_text: "📂 All Menu"
