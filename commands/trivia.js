@@ -1,4 +1,3 @@
-// File: commands/trivia.js
 const axios = require('axios');
 const config = require('../config');
 
@@ -17,7 +16,8 @@ function shuffleArray(array) {
 async function triviaCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
 
-  if (global.db.game[remoteJid]) {
+  // Validasi ketat pengecekan game aktif
+  if (global.db.game && global.db.game[remoteJid] && global.db.game[remoteJid].type) {
     await sock.sendMessage(remoteJid, {
       text: '⚠️ Eh, selesaikan dulu kuis trivia yang lagi aktif di chat ini!'
     }, { quoted: msg });
@@ -135,7 +135,7 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
 
     const timer = setTimeout(async () => {
       try {
-        if (global.db.game[remoteJid] && global.db.game[remoteJid].type === 'trivia') {
+        if (global.db.game && global.db.game[remoteJid] && global.db.game[remoteJid].type === 'trivia') {
           delete global.db.game[remoteJid];
           await sock.sendMessage(remoteJid, {
             text: `⏰ *Waktu abis bro!* Nggak ada yang kejawab.\nJawaban yang bener tuh: *${correctOptionLabel.toUpperCase()}. ${correctOptionText}*`
@@ -157,7 +157,7 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
     };
 
   } catch (err) {
-    if (global.db.game[remoteJid]) {
+    if (global.db.game && global.db.game[remoteJid]) {
       delete global.db.game[remoteJid];
     }
 
