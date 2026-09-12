@@ -1,4 +1,4 @@
-const { getSenderId } = require('../utils/jid-utils'); // sesuaikan path kalau spin.js gak di folder commands/
+const { getSenderId } = require('../utils/jid-utils'); 
 
 function hitungReme(angka) {
   if (angka === 0) return { finalNum: 0, isSpecial: 'win3x' };
@@ -37,30 +37,45 @@ async function finishGame(sock, remoteJid, game, isVsBot) {
   if (!global.db.users[p1]) global.db.users[p1] = { mathScore: 0, triviaScore: 0, score: 0 };
   if (!isVsBot && !global.db.users[p2]) global.db.users[p2] = { mathScore: 0, triviaScore: 0, score: 0 };
 
+  const potReward = game.bet * 2; // Total taruhan meja (P1 + P2)
+  const refundAmount = game.bet;  // Kalau seri, balik modal
+
   if (scoreP1 > scoreP2) {
     finalMsg += `👑 Pemenang Utama: @${p1.split('@')[0]}!`;
     if (game.bet > 0) {
-      global.db.users[p1].triviaScore = (global.db.users[p1].triviaScore || 0) + game.bet;
       if (isVsBot) {
+         // Kalo lawan bot, tadi pas .reme poin P1 BELUM dipotong, jadi kalo menang dapet murni +bet
+        global.db.users[p1].triviaScore = (global.db.users[p1].triviaScore || 0) + game.bet;
         finalMsg += `\n💰 Menang lawan bot, dapet hadiah *+${game.bet} Poin*!`;
       } else {
-        global.db.users[p2].triviaScore = Math.max(0, (global.db.users[p2].triviaScore || 0) - game.bet);
-        finalMsg += `\n💰 @${p1.split('@')[0]} menang, dapet *+${game.bet} Poin* dari @${p2.split('@')[0]}!`;
+        // PvP: Poin udah ditarik pas di-acc. Jadi hadiahnya Bet x 2 (modalnya balik + ngambil poin lawan)
+        global.db.users[p1].triviaScore = (global.db.users[p1].triviaScore || 0) + potReward;
+        finalMsg += `\n💰 @${p1.split('@')[0]} menang, mengambil Total Pot *+${potReward} Poin*!`;
       }
     }
   } else if (scoreP2 > scoreP1) {
     finalMsg += `👑 Pemenang Utama: ${isVsBot ? '*Bot Kasino*' : '@' + p2.split('@')[0]}!`;
     if (game.bet > 0) {
-      global.db.users[p1].triviaScore = Math.max(0, (global.db.users[p1].triviaScore || 0) - game.bet);
       if (isVsBot) {
-        finalMsg += `\n💀 Kalah lawan bot, kehilangan taruhan sebesar *-${game.bet} Poin*!`;
+        // Kalo kalah lawan bot, baru deh poin dipotong karena belum dipotong di awal
+        global.db.users[p1].triviaScore = Math.max(0, (global.db.users[p1].triviaScore || 0) - game.bet);
+        finalMsg += `\n💀 Kalah lawan bot, lu dipalak sebesar *-${game.bet} Poin*!`;
       } else {
-        global.db.users[p2].triviaScore = (global.db.users[p2].triviaScore || 0) + game.bet;
-        finalMsg += `\n💀 @${p1.split('@')[0]} kalah, poin taruhan pindah ke @${p2.split('@')[0]}!`;
+        // PvP: Poin udah ditarik pas di-acc. P2 (lawan) menang, dia dapet Bet x 2 (modal balik + ngambil poin lu)
+        global.db.users[p2].triviaScore = (global.db.users[p2].triviaScore || 0) + potReward;
+        finalMsg += `\n💀 @${p1.split('@')[0]} kalah, Total Pot *${potReward} Poin* ditarik ke @${p2.split('@')[0]}!`;
       }
     }
   } else {
-    finalMsg += `🤝 Pertandingan berakhir *SERI*! Poin aman.`;
+    finalMsg += `🤝 Pertandingan berakhir *SERI*!`;
+    if (game.bet > 0 && !isVsBot) {
+      // PvP Seri: Refund taruhan ke masing-masing player karena udah kepotong di awal
+      global.db.users[p1].triviaScore = (global.db.users[p1].triviaScore || 0) + refundAmount;
+      global.db.users[p2].triviaScore = (global.db.users[p2].triviaScore || 0) + refundAmount;
+      finalMsg += ` Poin lu berdua (*${refundAmount}*) aman dikembalikan!`;
+    } else {
+      finalMsg += ` Poin aman.`;
+    }
   }
 
   if (typeof global.saveDatabase === 'function') global.saveDatabase();
@@ -116,7 +131,7 @@ async function processRoundEnd(sock, remoteJid, game, rolls, isVsBot) {
 
   game.round++;
   game.roundData = {};
-  game.currentTurnIndex = 0; // ronde baru, giliran balik ke p1
+  game.currentTurnIndex = 0; 
 
   const nextText = isVsBot
     ? `▶️ Lanjut ke *Ronde ${game.round}*!\nSilakan @${p1.split('@')[0]} ketik *.spin* lagi.`
@@ -136,7 +151,6 @@ async function spinCommand(sock, msg) {
   const botNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
   const isPlayingWithBot = game.players.includes(botNumber);
 
-  // --- MODE LAWAN BOT (logic lama, cuma dirapihin) ---
   if (isPlayingWithBot) {
     const targetPlayer = game.players.find(p => p !== botNumber);
 
@@ -160,7 +174,6 @@ async function spinCommand(sock, msg) {
     return await processRoundEnd(sock, remoteJid, game, { [targetPlayer]: playerRaw, [botNumber]: botRaw }, true);
   }
 
-  // --- MODE PVP (yang tadinya belum ada sama sekali) ---
   if (!game.roundData) game.roundData = {};
   if (typeof game.currentTurnIndex !== 'number') game.currentTurnIndex = 0;
 
@@ -173,7 +186,7 @@ async function spinCommand(sock, msg) {
     }, { quoted: msg });
   }
 
-  if (game.roundData[currentPlayer] !== undefined) return; // udah spin ronde ini, abaikan spam
+  if (game.roundData[currentPlayer] !== undefined) return; 
 
   const raw = Math.floor(Math.random() * 37);
   const res = hitungReme(raw);
@@ -199,4 +212,3 @@ async function spinCommand(sock, msg) {
 }
 
 module.exports = spinCommand;
-                                           
