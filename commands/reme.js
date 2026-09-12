@@ -36,20 +36,21 @@ async function remeCommand(sock, msg, args) {
       if (betAmount <= 0) betAmount = 15;
     }
 
-    // Helper pencari skor yang mencocokan digit ID secara fleksibel dengan database
-    const getScore = (userJid) => {
+    // Helper pencari skor yang anti salah daftar ke ID Grup
+    const getScore = (userJid, fallbackId) => {
       if (!global.db.users) global.db.users = {};
       
       const rawDigits = userJid.replace(/[^0-9]/g, '');
-      
+      const userPhoneSuffix = rawDigits.slice(-6);
+
       const foundKey = Object.keys(global.db.users).find(k => {
-        const cleanKeyDigits = k.replace(/[^0-9]/g, '');
-        return cleanKeyDigits.length >= 7 && rawDigits.length >= 7 && 
-               (cleanKeyDigits.includes(rawDigits.slice(-7)) || rawDigits.includes(cleanKeyDigits.slice(-7)));
+        const keyDigits = k.replace(/[^0-9]/g, '');
+        return keyDigits.endsWith(userPhoneSuffix) || userPhoneSuffix.endsWith(keyDigits);
       });
       
-      if (!foundKey || !global.db.users[foundKey]) {
-        global.db.users[userJid] = { mathScore: 0, triviaScore: 0, score: 0 };
+      if (!foundKey) {
+        const newKey = fallbackId.includes('@g.us') ? userJid : fallbackId;
+        global.db.users[newKey] = { mathScore: 0, triviaScore: 0, score: 0 };
         return 0;
       }
       
@@ -57,7 +58,7 @@ async function remeCommand(sock, msg, args) {
       return (stats.triviaScore || 0) + (stats.mathScore || 0) + (stats.score || 0);
     };
 
-    const senderScore = getScore(senderId);
+    const senderScore = getScore(senderId, senderId);
 
     // --- KONDISI A: MAIN SENDIRI (LAWAN BOT) ---
     if (!targetId) {
@@ -92,7 +93,7 @@ async function remeCommand(sock, msg, args) {
       return await sock.sendMessage(remoteJid, { text: '⚠️ Gila ya, mau main lawan diri sendiri wkwk!' }, { quoted: msg });
     }
 
-    const targetScore = getScore(targetId);
+    const targetScore = getScore(targetId, targetId);
 
     if (senderScore < betAmount) {
       return await sock.sendMessage(remoteJid, { text: `⚠️ Total poin lo kurang, bre! Poin lu saat ini: *${senderScore}*, tapi taruhannya *${betAmount}*.` }, { quoted: msg });
@@ -124,3 +125,4 @@ async function remeCommand(sock, msg, args) {
 }
 
 module.exports = remeCommand;
+          
