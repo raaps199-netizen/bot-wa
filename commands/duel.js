@@ -9,7 +9,7 @@ const localTriviaFallback = [
   { question: "Bahasa pemrograman yang paling identik dengan logo kopi/ular adalah...", options: ["JavaScript", "HTML", "CSS", "SQL"], answer: "javascript", category: "Teknologi" }
 ];
 
-module.exports = async function duelCommand(sock, msg, args) {
+async function duelCommand(sock, msg, args) {
   global.db = global.db || {};
   global.db.duel = global.db.duel || {};
 
@@ -99,7 +99,7 @@ module.exports = async function duelCommand(sock, msg, args) {
     text: `⚔️ *TANTANGAN DUEL 1V1!*\n\n@${targetId.split('@')[0]}, lu ditantang duel *${modeText}* oleh @${senderId.split('@')[0]} dengan taruhan *${taruhan} Poin*!\n\nKetik *.duel terima* untuk menerima atau *.duel tolak* untuk kabur.`,
     mentions: [senderId, targetId]
   }, { quoted: msg });
-};
+}
 
 async function handleAcceptDuel(sock, msg) {
   global.db = global.db || {};
@@ -287,6 +287,8 @@ function decodeHtml(html) {
   return html.replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&amp;/g, '&').replace(/&eacute;/g, 'é');
 }
 
-module.exports.duelCommand = duelCommand;
-module.exports.handleDuelAnswer = handleDuelAnswer;
-    
+module.exports = {
+  duelCommand,
+  handleDuelAnswer
+};
+        
