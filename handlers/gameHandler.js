@@ -8,10 +8,11 @@ async function handleGameAnswer(sock, msg) {
     
     if (!game) return false;
 
-    // Unwrap pesan jika terbungkus ephemeral atau viewOnce
+    // Unwrap pesan dari berbagai tipe (ephemeral, viewOnce, document)
     const innerMsg = msg.message?.ephemeralMessage?.message || 
                      msg.message?.viewOnceMessage?.message || 
                      msg.message?.viewOnceMessageV2?.message || 
+                     msg.message?.documentWithCaptionMessage?.message || 
                      msg.message;
 
     const body = innerMsg?.conversation || 
@@ -24,6 +25,7 @@ async function handleGameAnswer(sock, msg) {
 
     const senderId = getSenderId(msg, remoteJid) || msg.key.participant || remoteJid;
 
+    // 1. Logika Nyerah
     if (cleanBody === '.nyerah' || cleanBody === 'nyerah') {
       if (['math', 'trivia'].includes(game.type)) {
         if (game.timer) clearTimeout(game.timer);
@@ -31,14 +33,15 @@ async function handleGameAnswer(sock, msg) {
         if (typeof global.saveDatabase === 'function') global.saveDatabase();
         
         await sock.sendMessage(remoteJid, { 
-          text: `🏳️ *Menyerah!* Game ${game.type.toUpperCase()} dihentikan.\nJawaban yang benar adalah: *${game.jawabanBenar}*` 
+          text: `🏳️ *Menyerah!* Game ${game.type.toUpperCase()} dihentikan.\nJawaban yang benar adalah: *${String(game.jawabanBenar).toUpperCase()}*` 
         }, { quoted: msg });
         return true;
       }
     }
 
+    // 2. Logika Game Math
     if (game.type === 'math') {
-      if (cleanBody === game.jawabanBenar) {
+      if (cleanBody === String(game.jawabanBenar)) {
         if (game.timer) clearTimeout(game.timer);
         delete global.db.game[remoteJid];
 
@@ -57,9 +60,11 @@ async function handleGameAnswer(sock, msg) {
       }
     }
 
+    // 3. Logika Game Trivia
     if (game.type === 'trivia') {
-      const isCorrectOption = cleanBody === game.jawabanBenar.toLowerCase();
-      const isCorrectText = cleanBody === game.jawabanTeks;
+      // Pengaman String() biar ga crash misal property-nya ga sengaja hilang
+      const isCorrectOption = game.jawabanBenar ? cleanBody === String(game.jawabanBenar).toLowerCase() : false;
+      const isCorrectText = game.jawabanTeks ? cleanBody === String(game.jawabanTeks).toLowerCase() : false;
 
       if (isCorrectOption || isCorrectText) {
         if (game.timer) clearTimeout(game.timer);
@@ -77,6 +82,10 @@ async function handleGameAnswer(sock, msg) {
           mentions: [senderId]
         }, { quoted: msg });
         return true;
+      } else if (['a', 'b', 'c', 'd'].includes(cleanBody)) {
+        // [FITUR DEBUGGING]: Kasih react ❌ kalau dia ngetik a/b/c/d tapi salah
+        // Kalau pas lu ketik 'c' kaga muncul react silang ini, fix messageHandler lu ngeblokir!
+        await sock.sendMessage(remoteJid, { react: { text: '❌', key: msg.key } });
       }
     }
 
