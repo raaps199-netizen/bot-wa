@@ -143,7 +143,7 @@ async function handleMessage(sock, msg) {
             mentions: [senderId]
           });
         } catch (delErr) {
-          console.error('Gagal auto delete pesan (Pastikan bot sudah jadi ADMIN!):', delErr);
+          console.error('Gagal auto delete pesan:', delErr);
         }
         return;
       }
@@ -696,6 +696,9 @@ async function handleMessage(sock, msg) {
     }
 
   } catch (err) {
-    console.error('Error di handleMessage:', err?.stack || err?.message || err);
+    console.error('Error di handleMessage:', err);
   }
-  }
+}
+
+module.exports = handleMessage;
+          
