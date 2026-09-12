@@ -171,3 +171,4 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
 }
 
 module.exports = triviaCommand;
+  
