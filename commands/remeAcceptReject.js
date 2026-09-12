@@ -17,13 +17,42 @@ async function terimaCommand(sock, msg) {
 
   const { challenger, challenged, bet } = challenge;
 
-  // Potong poin dari total akumulasi atau properti yang tersedia
-  if (!global.db.users[challenger]) global.db.users[challenger] = { mathScore: 0, triviaScore: 0, score: 0 };
-  if (!global.db.users[challenged]) global.db.users[challenged] = { mathScore: 0, triviaScore: 0, score: 0 };
+  // Fungsi helper buat motong poin dari properti mana aja yang ada isinya (mathScore / triviaScore / score)
+  function deductUserScore(userId, amount) {
+    const cleanTarget = userId.split(':')[0].split('@')[0];
+    let foundKey = Object.keys(global.db.users || {}).find(k => k.includes(cleanTarget));
 
-  // Potong dari triviaScore (atau sesuaikan sumber utama)
-  global.db.users[challenger].triviaScore -= bet;
-  global.db.users[challenged].triviaScore -= bet;
+    if (!foundKey) {
+      foundKey = userId;
+      global.db.users[foundKey] = { mathScore: 0, triviaScore: 0, score: 0 };
+    }
+
+    let user = global.db.users[foundKey];
+    let remaining = amount;
+
+    // Potong dari triviaScore dulu kalau ada
+    if (user.triviaScore && user.triviaScore > 0) {
+      const take = Math.min(user.triviaScore, remaining);
+      user.triviaScore -= take;
+      remaining -= take;
+    }
+    // Kalau masih kurang, potong dari mathScore
+    if (remaining > 0 && user.mathScore && user.mathScore > 0) {
+      const take = Math.min(user.mathScore, remaining);
+      user.mathScore -= take;
+      remaining -= take;
+    }
+    // Kalau masih kurang juga, potong dari score utama
+    if (remaining > 0 && user.score && user.score > 0) {
+      const take = Math.min(user.score, remaining);
+      user.score -= take;
+      remaining -= take;
+    }
+  }
+
+  // Eksekusi potong poin untuk challenger dan challenged
+  deductUserScore(challenger, bet);
+  deductUserScore(challenged, bet);
 
   delete global.db.remeChallenges[remoteJid];
 
@@ -68,4 +97,3 @@ async function tolakCommand(sock, msg) {
 }
 
 module.exports = { terimaCommand, tolakCommand };
-  
