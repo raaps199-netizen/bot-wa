@@ -126,7 +126,6 @@ async function handleMessage(sock, msg) {
     const ownerLid = '66477638029541';
     const isOwner = senderId.includes(ownerPhone) || senderId.includes(ownerLid);
 
-    // Kalau bukan owner, lakukan pengecekan kata terlarang
     if (!isOwner) {
       const lowerText = cleanText.toLowerCase();
       const normalizedText = lowerText.replace(/[^a-z0-9]/g, '');
@@ -697,4 +696,5 @@ async function handleMessage(sock, msg) {
             }
           ];
 
-          const formattedBut
+          const formattedButtons = buttonsArray.map(btn => ({
+            name: btn.name
