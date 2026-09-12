@@ -3,6 +3,25 @@ if (!global.db.remeChallenges) global.db.remeChallenges = {};
 if (!global.db.game) global.db.game = {};
 if (!global.db.users) global.db.users = {};
 
+// Helper untuk mencari data user di database secara akurat tanpa peduli format JID/LID/Device
+function findUserStats(userId) {
+  if (!global.db.users) global.db.users = {};
+  
+  // Ambil deretan angka murni nomor HP (minimal 5 digit terakhir untuk amannya)
+  const cleanNum = userId.replace(/[^0-9]/g, '');
+  const searchKey = cleanNum.slice(-10); // Ambil 10 digit nomor belakang
+
+  let matchedKey = Object.keys(global.db.users).find(k => k.includes(searchKey));
+
+  if (!matchedKey) {
+    // Kalau benar-benar belum ada, buat baru pakai format standar senderId
+    matchedKey = userId;
+    global.db.users[matchedKey] = { mathScore: 0, triviaScore: 0, score: 0 };
+  }
+
+  return global.db.users[matchedKey];
+}
+
 async function remeCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
   const rawSenderId = msg.key.participant || remoteJid;
@@ -18,9 +37,9 @@ async function remeCommand(sock, msg, args) {
   const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
 
   if (mentioned.length > 0) {
-    targetId = mentioned[0].split(':')[0] + '@s.whatsapp.net';
+    targetId = mentioned[0];
   } else if (quotedParticipant) {
-    targetId = quotedParticipant.split(':')[0] + '@s.whatsapp.net';
+    targetId = quotedParticipant;
   } else if (args.length > 0 && args[0].includes('@')) {
     const cleanNum = args[0].replace(/[^0-9]/g, '');
     if (cleanNum.length >= 5) targetId = cleanNum + '@s.whatsapp.net';
@@ -34,12 +53,8 @@ async function remeCommand(sock, msg, args) {
     if (betAmount <= 0) betAmount = 15;
   }
 
-  // Pastikan data user ada di database
-  if (!global.db.users[senderId]) {
-    global.db.users[senderId] = { mathScore: 0, triviaScore: 0, score: 0 };
-  }
-
-  const senderStats = global.db.users[senderId];
+  // Ambil data skor pengirim pakai helper yang aman dari beda format ID
+  const senderStats = findUserStats(senderId);
   const senderScore = (senderStats.triviaScore || 0) + (senderStats.mathScore || 0) + (senderStats.score || 0);
 
   // --- KONDISI A: MAIN SENDIRI (LAWAN BOT) ---
@@ -71,15 +86,12 @@ async function remeCommand(sock, msg, args) {
   }
 
   // --- KONDISI B: PVP (LAWAN MANUSIA) ---
-  if (targetId === senderId) {
+  if (targetId === senderId || targetId.includes(senderId.split('@')[0])) {
     return await sock.sendMessage(remoteJid, { text: '⚠️ Gila ya, mau main lawan diri sendiri wkwk!' }, { quoted: msg });
   }
 
-  if (!global.db.users[targetId]) {
-    global.db.users[targetId] = { mathScore: 0, triviaScore: 0, score: 0 };
-  }
-
-  const targetStats = global.db.users[targetId];
+  // Ambil data skor target pakai helper yang sama
+  const targetStats = findUserStats(targetId);
   const targetScore = (targetStats.triviaScore || 0) + (targetStats.mathScore || 0) + (targetStats.score || 0);
 
   if (senderScore < betAmount) {
