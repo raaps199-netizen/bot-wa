@@ -1,33 +1,26 @@
+// File: commands/score.js
 const { getUserData, getTotalScore } = require('../utils/helper');
+const { getSenderId } = require('../utils/jid-utils');
 
 async function scoreCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
-  const senderId = msg.key.participant || remoteJid;
+  const senderId = getSenderId(msg, remoteJid) || msg.key.participant || remoteJid;
 
-  if (!global.db) global.db = {};
-  if (!global.db.users) global.db.users = {};
+  const user = getUserData(global.db, senderId);
+  const totalScore = getTotalScore(user);
+  const mathCount = user.mathCount || 0;
+  const triviaCount = user.triviaCount || 0;
 
-  try {
-    const user = getUserData(global.db, senderId);
-    const math = user.mathScore || 0;
-    const trivia = user.triviaScore || 0;
-    const totalScore = getTotalScore(user);
-    
-    const displayName = user.nickname || user.name || msg.pushName || senderId.split('@')[0];
+  const pushName = msg.pushName || 'User';
 
-    const text = 
-`📊 *SKOR KAMU*
+  const text = `📊 *STATUS SKOR & STATISTIK* 📊\n\n` +
+    `👤 Nama: *${user.nickname || pushName}*\n` +
+    `💰 Total Poin: *${totalScore}*\n` +
+    `🧮 Math Selesai: *${mathCount} soal*\n` +
+    `🧠 Trivia Selesai: *${triviaCount} soal*\n\n` +
+    `_Semua poin game & aktivitas terpusat di Total Poin!_`;
 
-👤 Nama: *${displayName}*
-🧮 Skor Math: *${math}*
-🧠 Skor Trivia: *${trivia}*
-🏆 Total Skor: *${totalScore}*`;
-
-    await sock.sendMessage(remoteJid, { text }, { quoted: msg });
-  } catch (err) {
-    console.error('Error di scoreCommand:', err);
-    await sock.sendMessage(remoteJid, { text: '❌ Gagal memuat data skor.' }, { quoted: msg });
-  }
+  await sock.sendMessage(remoteJid, { text }, { quoted: msg });
 }
 
 module.exports = scoreCommand;
