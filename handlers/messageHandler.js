@@ -668,14 +668,16 @@ async function handleMessage(sock, msg) {
       case 'menu':
       case 'help': {
         const menuText = 
-`📋 *KATEGORI MENU BOT* 📋
+`┏━『 *ᴍᴇɴᴜ ᴜᴛᴀᴍᴀ* 』
+┃
+┣⌬ ɢᴀᴍᴇꜱ
+┣⌬ ᴛᴏᴏʟꜱ
+┣⌬ ɢʀᴏᴜᴘ
+┣⌬ ᴀʟʟᴍᴇɴᴜ
+┗━━━━━━━◧
 
-Ketik salah satu perintah di bawah ini untuk melihat menu berdasarkan kategori:
-
-• *${prefixUsed}games* -> Menu Game & Ekonomi
-• *${prefixUsed}tools* -> Menu Tools & Media
-• *${prefixUsed}group* -> Menu Group Management
-• *${prefixUsed}allmenu* -> Tampilkan Semua Menu Sekaligus`;
+_ᴋᴇᴛɪᴋ ɴᴀᴍᴀ ᴋᴀᴛᴇɢᴏʀɪ ᴜɴᴛᴜᴋ ᴍᴇʟɪʜᴀᴛ ɪꜱɪɴʏᴀ._
+_ᴄᴏɴᴛᴏ🇭: *.menu_game* ᴀᴛᴀᴜ *.allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍpilkan ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ_`;
 
         await sock.sendMessage(remoteJid, { text: menuText }, { quoted: msg });
         break;
@@ -694,4 +696,4 @@ Ketik salah satu perintah di bawah ini untuk melihat menu berdasarkan kategori:
 }
 
 module.exports = handleMessage;
-                               
+        
