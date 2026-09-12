@@ -677,7 +677,7 @@ async function handleMessage(sock, msg) {
 ┗━━━━━━━◧
 
 _ᴋᴇᴛɪᴋ ɴᴀᴍᴀ ᴋᴀᴛᴇɢᴏʀɪ ᴜɴᴛᴜᴋ ᴍᴇʟɪʜᴀᴛ ɪꜱɪɴʏᴀ._
-_ᴄᴏɴᴛᴏ🇭: *.menu_game* ᴀᴛᴀᴜ *.allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍpilkan ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ_`;
+_ᴄᴏɴᴛᴏʜ: *.menu_game* ᴀᴛᴀᴜ *.allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍpilkan ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ_`;
 
         await sock.sendMessage(remoteJid, { text: menuText }, { quoted: msg });
         break;
