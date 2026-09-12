@@ -3,6 +3,7 @@
 const config = require('../config');
 const handleGameAnswer = require('./gameHandler');
 const { getUserData, getTotalScore, addPoints, deductPoints } = require('../utils/helper');
+const { generateWAMessageFromContent, proto } = require('@whiskeysockets/baileys');
 
 // Command Media & Utility
 const stickerCommand = require('../commands/sticker');
@@ -674,31 +675,26 @@ async function handleMessage(sock, msg) {
       case 'menu':
       case 'help': {
         try {
-          await sock.sendMessage(remoteJid, {
-            text: `📋 *KATEGORI MENU BOT* 📋\n\n` +
-                  `1. 🎮 *Game & Ekonomi* (${prefixUsed}games)\n` +
-                  `2. 📥 *Tools & Downloader* (${prefixUsed}tools)\n` +
-                  `3. 🛠️ *Group Management* (${prefixUsed}group)\n\n` +
-                  `Ketik *${prefixUsed}allmenu* untuk melihat seluruh perintah.`
-          }, { quoted: msg });
-        } catch (errDb) {
-          console.error('[DEBUG ERROR] Gagal mengeksekusi .menu:', errDb);
-          await sock.sendMessage(remoteJid, { text: `❌ Terjadi error pada .menu: ${errDb.message}` }, { quoted: msg });
-        }
-        break;
-      }
+          const menuText = `📋 *KATEGORI MENU BOT* 📋\n\n` +
+                           `Silakan pilih kategori menu di bawah ini menggunakan tombol interaktif atau ketik perintahnya secara manual.`;
 
-      default:
-        await sock.sendMessage(remoteJid, {
-          text: `❌ Command *${prefixUsed}${command}* tidak ditemukan!\nKetik *${prefixUsed}menu* untuk melihat daftar menu.`
-        }, { quoted: msg });
-        break;
-    }
+          const buttonsArray = [
+            {
+              name: 'quick_reply',
+              buttonParamsJson: JSON.stringify({ display_text: '🎮 Menu Games', id: `${prefixUsed}games` })
+            },
+            {
+              name: 'quick_reply',
+              buttonParamsJson: JSON.stringify({ display_text: '📥 Menu Tools', id: `${prefixUsed}tools` })
+            },
+            {
+              name: 'quick_reply',
+              buttonParamsJson: JSON.stringify({ display_text: '🛠️ Menu Group', id: `${prefixUsed}group` })
+            },
+            {
+              name: 'quick_reply',
+              buttonParamsJson: JSON.stringify({ display_text: '📜 Semua Menu', id: `${prefixUsed}allmenu` })
+            }
+          ];
 
-  } catch (err) {
-    console.error('Error di handleMessage:', err);
-  }
-}
-
-module.exports = handleMessage;
-          
+          const formattedBut
