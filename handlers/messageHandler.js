@@ -607,7 +607,8 @@ async function handleMessage(sock, msg) {
       }
 
       case 'allmenu': {
-        const allText = 
+        try {
+          const allText = 
 `┏━『 *ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ* 』
 ┃
 ┣⌬ *ɢᴀᴍᴇꜱ*
@@ -661,52 +662,34 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}promote @user
 ┃  • ${prefixUsed}demote @user
 ┗━━━━━━━◧`;
-        await sock.sendMessage(remoteJid, { text: allText }, { quoted: msg });
+          await sock.sendMessage(remoteJid, { text: allText }, { quoted: msg });
+        } catch (errDb) {
+          console.error('[DEBUG ERROR] Gagal mengeksekusi .allmenu:', errDb);
+          await sock.sendMessage(remoteJid, { text: `❌ Terjadi error pada .allmenu: ${errDb.message}` }, { quoted: msg });
+        }
         break;
       }
 
       case 'list':
       case 'menu':
       case 'help': {
-        await sock.sendMessage(remoteJid, {
-          interactiveMessage: {
-            body: {
-              text: `📋 *KATEGORI MENU BOT* 📋\n\n` +
-                    `1. 🎮 *Game & Ekonomi* (${prefixUsed}games)\n` +
-                    `2. 📥 *Tools & Downloader* (${prefixUsed}tools)\n` +
-                    `3. 🛠️ *Group Management* (${prefixUsed}group)\n\n` +
-                    `Silakan pilih kategori di atas atau klik tombol di bawah untuk melihat seluruh daftar perintah.`
-            },
-            footer: {
-              text: "Powered by Baileys v7"
-            },
-            nativeFlowMessage: {
-              buttons: [
-                {
-                  name: "quick_reply",
-                  buttonParamsJson: JSON.stringify({
-                    display_text: "📂 All Menu",
-                    id: `${prefixUsed}allmenu`
-                  })
-                }
-              ]
-            }
-          }
-        }, { quoted: msg });
+        try {
+          // Menggunakan format teks aman dengan fallback total agar tidak crash jika interactiveMessage tidak didukung versi Baileys
+          await sock.sendMessage(remoteJid, {
+            text: `📋 *KATEGORI MENU BOT* 📋\n\n` +
+                  `1. 🎮 *Game & Ekonomi* (${prefixUsed}games)\n` +
+                  `2. 📥 *Tools & Downloader* (${prefixUsed}tools)\n` +
+                  `3. 🛠️ *Group Management* (${prefixUsed}group)\n\n` +
+                  `Ketik *${prefixUsed}allmenu* untuk melihat seluruh perintah.`
+          }, { quoted: msg });
+        } catch (errDb) {
+          console.error('[DEBUG ERROR] Gagal mengeksekusi .menu:', errDb);
+          await sock.sendMessage(remoteJid, { text: `❌ Terjadi error pada .menu: ${errDb.message}` }, { quoted: msg });
+        }
         break;
       }
 
       default:
         await sock.sendMessage(remoteJid, {
           text: `❌ Command *${prefixUsed}${command}* tidak ditemukan!\nKetik *${prefixUsed}menu* untuk melihat daftar menu.`
-        }, { quoted: msg });
-        break;
-    }
-
-   } catch (err) {
-    console.error('Error di handleMessage:', err?.stack || err?.message || err);
-  }
-}
-
-module.exports = handleMessage;
-
+        }, { quoted: 
