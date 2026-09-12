@@ -1,37 +1,39 @@
 function getUserData(db, userId) {
+  if (!db) global.db = {};
   if (!db.users) db.users = {};
+  
+  // Normalisasi aman jika userId kosong/undefined
+  if (!userId) userId = 'unknown';
+
   if (!db.users[userId]) {
     db.users[userId] = {
       mathScore: 0,
       triviaScore: 0,
-      score: 0, // Penampung poin net (menyatukan hasil judi ke total skor)
+      score: 0,
       nickname: null
     };
   }
   return db.users[userId];
 }
 
-// Menghitung Total Skor murni yang jadi acuan utama
 function getTotalScore(user) {
+  if (!user) return 0;
   const math = user.mathScore || 0;
   const trivia = user.triviaScore || 0;
   const gamblingNet = user.score || 0;
   return math + trivia + gamblingNet;
 }
 
-// Cek dan potong langsung dari Total Skor
 function deductPoints(db, userId, amount) {
   const user = getUserData(db, userId);
   const total = getTotalScore(user);
 
-  if (total < amount) return false; // Poin total tidak cukup
+  if (total < amount) return false; 
 
-  // Kurangi dari field score agar Total Skor ikut berkurang
   user.score = (user.score || 0) - amount;
   return true;
 }
 
-// Tambah poin langsung ke Total Skor (kemenangan judi)
 function addPoints(db, userId, amount) {
   const user = getUserData(db, userId);
   user.score = (user.score || 0) + amount;
