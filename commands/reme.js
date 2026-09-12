@@ -28,7 +28,17 @@ async function remeCommand(sock, msg, args) {
     const senderScore = senderUser.score || ((senderUser.mathScore || 0) + (senderUser.triviaScore || 0));
 
     if (senderScore <= 0) {
-      return await sock.sendMessage(remoteJid, { text: '⚠️ Poin lu 0 di grup ini, gak bisa main reme!' }, { quoted: msg });
+      const globalKeys = Object.keys(global.db.users || {});
+      const groupDataKeys = Object.keys(global.db.groups?.[remoteJid]?.users || {});
+      const debugMsg = `⚠️ [DEBUG ERROR]\n` +
+        `- remoteJid: ${remoteJid}\n` +
+        `- senderId terdeteksi: ${senderId}\n` +
+        `- senderUser object: ${JSON.stringify(senderUser)}\n` +
+        `- Total key di global.db.users: ${globalKeys.length}\n` +
+        `- Contoh key global: ${globalKeys.slice(0, 3).join(', ')}\n` +
+        `- Key grup saat ini: ${groupDataKeys.join(', ')}`;
+      
+      return await sock.sendMessage(remoteJid, { text: debugMsg }, { quoted: msg });
     }
 
     let targetId = null;
@@ -116,4 +126,3 @@ async function remeCommand(sock, msg, args) {
 }
 
 module.exports = remeCommand;
-      
