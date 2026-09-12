@@ -36,13 +36,14 @@ async function remeCommand(sock, msg, args) {
       if (betAmount <= 0) betAmount = 15;
     }
 
-    // Helper aman langsung di dalam fungsi tanpa fungsi luar yang berisiko
+    // Helper pencari skor yang kebal dari perbedaan format LID / Device / @s.whatsapp.net
     const getScore = (jid) => {
       if (!global.db.users) global.db.users = {};
       
-      // Cari key user yang cocok dengan nomor HP-nya
-      const cleanNum = jid.replace(/[^0-9]/g, '').slice(-10);
-      const foundKey = Object.keys(global.db.users).find(k => k.includes(cleanNum));
+      const rawDigits = jid.replace(/[^0-9]/g, '');
+      const phoneDigits = rawDigits.slice(-9); // Ambil 9 digit nomor belakang untuk pencocokan akurat
+
+      const foundKey = Object.keys(global.db.users).find(k => k.replace(/[^0-9]/g, '').includes(phoneDigits));
       
       if (!foundKey || !global.db.users[foundKey]) {
         global.db.users[jid] = { mathScore: 0, triviaScore: 0, score: 0 };
