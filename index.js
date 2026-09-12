@@ -10,7 +10,9 @@ const qrcode = require('qrcode-terminal'); // Tambahan library QR
 const handleMessage = require('./handlers/messageHandler');
 
 // --- INISIALISASI DATABASE JSON ---
-const dbFilePath = path.join(__dirname, 'database.json');
+// Disimpen DI DALAM folder auth_info biar numpang di Volume Railway yang sama
+// (folder ini udah kebukti persist antar redeploy karena dipakai buat sesi WhatsApp)
+const dbFilePath = path.join(__dirname, 'auth_info', 'database.json');
 
 if (fs.existsSync(dbFilePath)) {
   try {
@@ -31,6 +33,9 @@ if (!global.db.game) global.db.game = {};
 // Fungsi global untuk menyimpan database secara otomatis ke file
 global.saveDatabase = () => {
   try {
+    // Jaga-jaga kalau folder auth_info belum sempet dibikin sama Baileys
+    const dir = path.dirname(dbFilePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(dbFilePath, JSON.stringify(global.db, null, 2), 'utf-8');
   } catch (err) {
     console.error('Gagal menyimpan database ke file:', err);
@@ -80,3 +85,4 @@ async function startBot() {
 }
 
 startBot();
+    
