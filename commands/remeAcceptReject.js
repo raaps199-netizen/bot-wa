@@ -1,10 +1,10 @@
 // File: commands/remeAcceptReject.js
 const { deductPoints } = require('../utils/helper');
+const { getSenderId } = require('../utils/jid-utils');
 
 async function terimaCommand(sock, msg) {
   const remoteJid = msg.key.remoteJid;
-  const rawSenderId = msg.key.participant || remoteJid;
-  const senderId = rawSenderId.split(':')[0] + '@s.whatsapp.net';
+  const senderId = getSenderId(msg, remoteJid) || msg.key.participant || remoteJid;
 
   const challenge = global.db?.remeChallenges?.[remoteJid];
 
@@ -12,16 +12,18 @@ async function terimaCommand(sock, msg) {
     return await sock.sendMessage(remoteJid, { text: '⚠️ Nggak ada tantangan Reme yang aktif di chat ini.' }, { quoted: msg });
   }
 
-  const targetChallenged = challenge.challenged.split(':')[0] + '@s.whatsapp.net';
+  const targetChallenged = challenge.challenged;
 
-  if (targetChallenged !== senderId) {
+  // Verifikasi pencocokan ID (menghindari error beda format @lid / @s.whatsapp.net)
+  if (targetChallenged !== senderId && targetChallenged.split('@')[0] !== senderId.split('@')[0]) {
     return await sock.sendMessage(remoteJid, { text: '⚠️ Tantangan ini bukan buat lo, bro!' }, { quoted: msg });
   }
 
   const { challenger, challenged, bet } = challenge;
 
-  deductPoints(remoteJid, challenger, bet);
-  deductPoints(remoteJid, challenged, bet);
+  // Perbaikan utama: Mengirim global.db sebagai argumen pertama ke fungsi deductPoints
+  deductPoints(global.db, challenger, bet);
+  deductPoints(global.db, challenged, bet);
 
   delete global.db.remeChallenges[remoteJid];
 
@@ -46,8 +48,7 @@ async function terimaCommand(sock, msg) {
 
 async function tolakCommand(sock, msg) {
   const remoteJid = msg.key.remoteJid;
-  const rawSenderId = msg.key.participant || remoteJid;
-  const senderId = rawSenderId.split(':')[0] + '@s.whatsapp.net';
+  const senderId = getSenderId(msg, remoteJid) || msg.key.participant || remoteJid;
 
   const challenge = global.db?.remeChallenges?.[remoteJid];
 
@@ -55,9 +56,9 @@ async function tolakCommand(sock, msg) {
     return await sock.sendMessage(remoteJid, { text: '⚠️ Nggak ada tantangan Reme yang aktif.' }, { quoted: msg });
   }
 
-  const targetChallenged = challenge.challenged.split(':')[0] + '@s.whatsapp.net';
+  const targetChallenged = challenge.challenged;
 
-  if (targetChallenged !== senderId) {
+  if (targetChallenged !== senderId && targetChallenged.split('@')[0] !== senderId.split('@')[0]) {
     return await sock.sendMessage(remoteJid, { text: '⚠️ Bukan hak lo buat nolak tantangan ini!' }, { quoted: msg });
   }
 
