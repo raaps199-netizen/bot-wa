@@ -3,6 +3,22 @@ if (!global.db.remeChallenges) global.db.remeChallenges = {};
 if (!global.db.game) global.db.game = {};
 if (!global.db.users) global.db.users = {};
 
+// Fungsi helper buat ambil total skor tanpa peduli beda format JID / device
+function getUserTotalScore(userId) {
+  if (!global.db.users) return 0;
+  
+  // Cari berdasarkan key persis atau nomor bersihnya
+  const cleanTarget = userId.split(':')[0].split('@')[0];
+  let foundUserKey = Object.keys(global.db.users).find(k => k.includes(cleanTarget));
+  
+  if (!foundUserKey || !global.db.users[foundUserKey]) {
+    return 0;
+  }
+
+  const stats = global.db.users[foundUserKey];
+  return (stats.triviaScore || 0) + (stats.mathScore || 0) + (stats.score || 0);
+}
+
 async function remeCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
   const rawSenderId = msg.key.participant || remoteJid;
@@ -34,15 +50,10 @@ async function remeCommand(sock, msg, args) {
     if (betAmount <= 0) betAmount = 15;
   }
 
-  if (!global.db.users[senderId]) {
-    global.db.users[senderId] = { mathScore: 0, triviaScore: 0, score: 0 };
-  }
+  const senderScore = getUserTotalScore(senderId);
 
   // --- 1. MAIN SENDIRI (LAWAN BOT) ---
   if (!targetId) {
-    const senderStats = global.db.users[senderId] || {};
-    const senderScore = (senderStats.triviaScore || 0) + (senderStats.mathScore || 0) + (senderStats.score || 0);
-
     if (senderScore < betAmount) {
       return await sock.sendMessage(remoteJid, { text: `⚠️ Poin total lu kurang, bre! Poin lu saat ini: *${senderScore}*, tapi mau taruhan *${betAmount}*.` }, { quoted: msg });
     }
@@ -74,22 +85,14 @@ async function remeCommand(sock, msg, args) {
     return await sock.sendMessage(remoteJid, { text: '⚠️ Gila ya, mau main lawan diri sendiri wkwk!' }, { quoted: msg });
   }
 
-  if (!global.db.users[targetId]) {
-    global.db.users[targetId] = { mathScore: 0, triviaScore: 0, score: 0 };
-  }
-
-  const senderStats = global.db.users[senderId] || {};
-  const senderScore = (senderStats.triviaScore || 0) + (senderStats.mathScore || 0) + (senderStats.score || 0);
-
-  const targetStats = global.db.users[targetId] || {};
-  const targetScore = (targetStats.triviaScore || 0) + (targetStats.mathScore || 0) + (targetStats.score || 0);
+  const targetScore = getUserTotalScore(targetId);
 
   if (senderScore < betAmount) {
     return await sock.sendMessage(remoteJid, { text: `⚠️ Total poin lo kurang, bre! Poin lo saat ini: *${senderScore}*, tapi taruhannya *${betAmount}*.` }, { quoted: msg });
   }
 
   if (targetScore < betAmount) {
-    return await sock.sendMessage(remoteJid, { text: `⚠️ Lawan lu total poinnya gak cukup buat taruhan *${betAmount}* poin!` }, { quoted: msg });
+    return await sock.sendMessage(remoteJid, { text: `⚠️ Lawan lu total poinnya gak cukup buat taruhan *${betAmount}* poin! (Poin target: ${targetScore})` }, { quoted: msg });
   }
 
   // Simpan data challenge dengan format JID bersih
@@ -109,4 +112,3 @@ async function remeCommand(sock, msg, args) {
 }
 
 module.exports = remeCommand;
-      
