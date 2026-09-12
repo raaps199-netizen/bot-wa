@@ -8,14 +8,16 @@ async function qqCommand(sock, msg, args) {
     }
 
     const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
-    let betArg = mentioned.length > 0 ? args.filter(arg => !arg.includes('@')[0]) : args;
-    let betInput = betArg[0] ? betArg[0].toLowerCase() : '';
+    
+    // Perbaikan pemfilteran argumen & penambahan info debug
+    let nonTagArgs = args;
+    let betInput = '';
 
-    if (!betInput) {
-      await sock.sendMessage(remoteJid, { 
-        text: `⚠️ Format salah!\nContoh lawan bot: *.qq 30* atau *.qq all*\nContoh PvP: *.qq @user 30*` 
-      }, { quoted: msg });
-      return;
+    if (mentioned.length > 0) {
+      nonTagArgs = args.filter(arg => !arg.includes('@'));
+      betInput = nonTagArgs[0] ? nonTagArgs[0].toLowerCase() : '';
+    } else {
+      betInput = args[0] ? args[0].toLowerCase() : '';
     }
 
     let userScore = global.db.users[senderId].score || 0;
@@ -27,8 +29,11 @@ async function qqCommand(sock, msg, args) {
       taruhan = parseInt(betInput);
     }
 
+    // Error message dengan info debug lengkap untuk melacak kesalahan
     if (isNaN(taruhan) || taruhan <= 0) {
-      await sock.sendMessage(remoteJid, { text: `❌ Jumlah taruhan tidak valid!` }, { quoted: msg });
+      await sock.sendMessage(remoteJid, { 
+        text: `❌ *DEBUG ERROR QQ* ❌\n- args mentah: ${JSON.stringify(args)}\n- nonTagArgs: ${JSON.stringify(nonTagArgs)}\n- betInput terbaca: "${betInput}"\n\n⚠️ Jumlah taruhan tidak valid atau tidak ditemukan! Pastikan format benar.\nContoh: *.qq @user 100*` 
+      }, { quoted: msg });
       return;
     }
 
@@ -47,7 +52,6 @@ async function qqCommand(sock, msg, args) {
 
     // Mode Lawan Bot
     if (mentioned.length === 0) {
-      // Potong poin player di awal
       global.db.users[senderId].score -= taruhan;
       if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
@@ -109,6 +113,7 @@ async function qqCommand(sock, msg, args) {
 
   } catch (err) {
     console.error('Error di qqCommand:', err);
+    await sock.sendMessage(remoteJid, { text: `❌ Terjadi error fatal pada command qq: ${err.message}` }, { quoted: msg });
   }
 }
 
