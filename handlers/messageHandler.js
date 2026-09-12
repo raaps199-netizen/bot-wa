@@ -674,7 +674,6 @@ async function handleMessage(sock, msg) {
       case 'menu':
       case 'help': {
         try {
-          // Menggunakan format teks aman dengan fallback total agar tidak crash jika interactiveMessage tidak didukung versi Baileys
           await sock.sendMessage(remoteJid, {
             text: `📋 *KATEGORI MENU BOT* 📋\n\n` +
                   `1. 🎮 *Game & Ekonomi* (${prefixUsed}games)\n` +
@@ -692,4 +691,11 @@ async function handleMessage(sock, msg) {
       default:
         await sock.sendMessage(remoteJid, {
           text: `❌ Command *${prefixUsed}${command}* tidak ditemukan!\nKetik *${prefixUsed}menu* untuk melihat daftar menu.`
-        }, { quoted: 
+        }, { quoted: msg });
+        break;
+    }
+
+  } catch (err) {
+    console.error('Error di handleMessage:', err?.stack || err?.message || err);
+  }
+  }
