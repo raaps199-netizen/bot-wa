@@ -1,5 +1,6 @@
 const config = require('../config');
 const { handleGameAnswer } = require('./gameHandler');
+const { getUserData, getTotalScore, addPoints, deductPoints } = require('../utils/helper');
 
 // Command Media & Utility
 const stickerCommand = require('../commands/sticker');
@@ -136,20 +137,26 @@ async function handleMessage(sock, msg) {
           break;
         }
 
-        if (!global.db.users[targetId]) {
-          global.db.users[targetId] = { mathScore: 0, triviaScore: 0, score: 0 };
+        if (addAmount < 0) {
+          const success = deductPoints(global.db, targetId, Math.abs(addAmount));
+          if (!success) {
+            await sock.sendMessage(remoteJid, { text: `❌ Poin total user tidak mencukupi untuk dikurangi sebesar ${Math.abs(addAmount)}!` }, { quoted: msg });
+            break;
+          }
+        } else {
+          addPoints(global.db, targetId, addAmount);
         }
-
-        global.db.users[targetId].triviaScore += addAmount;
-        global.db.users[targetId].score = (global.db.users[targetId].mathScore || 0) + (global.db.users[targetId].triviaScore || 0);
 
         if (typeof global.saveDatabase === 'function') {
           global.saveDatabase();
         }
 
+        const userData = getUserData(global.db, targetId);
+        const currentTotal = getTotalScore(userData);
         const targetName = targetId.split('@')[0];
+
         await sock.sendMessage(remoteJid, { 
-          text: `✅ Sukses nambahin *+${addAmount}* poin ke @${targetName}!\nTotal poin target sekarang: *${global.db.users[targetId].score}*`,
+          text: `✅ Sukses mengubah poin sebesar *${addAmount}* ke @${targetName}!\nTotal poin target sekarang: *${currentTotal}*`,
           mentions: [targetId]
         }, { quoted: msg });
         break;
@@ -184,12 +191,9 @@ async function handleMessage(sock, msg) {
           break;
         }
 
-        if (!global.db.users[senderId]) {
-          global.db.users[senderId] = { mathScore: 0, triviaScore: 0, score: 0 };
-        }
-
-        global.db.users[senderId].nickname = newNick;
-        global.db.users[senderId].name = newNick;
+        const user = getUserData(global.db, senderId);
+        user.nickname = newNick;
+        user.name = newNick;
 
         if (typeof global.saveDatabase === 'function') {
           global.saveDatabase();
@@ -593,4 +597,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-                               
+                                 
