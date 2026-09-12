@@ -1,3 +1,6 @@
+// File: commands/remeAcceptReject.js
+const { deductPoints } = require('../utils/helper');
+
 async function terimaCommand(sock, msg) {
   const remoteJid = msg.key.remoteJid;
   const rawSenderId = msg.key.participant || remoteJid;
@@ -17,42 +20,8 @@ async function terimaCommand(sock, msg) {
 
   const { challenger, challenged, bet } = challenge;
 
-  // Fungsi helper buat motong poin dari properti mana aja yang ada isinya (mathScore / triviaScore / score)
-  function deductUserScore(userId, amount) {
-    const cleanTarget = userId.split(':')[0].split('@')[0];
-    let foundKey = Object.keys(global.db.users || {}).find(k => k.includes(cleanTarget));
-
-    if (!foundKey) {
-      foundKey = userId;
-      global.db.users[foundKey] = { mathScore: 0, triviaScore: 0, score: 0 };
-    }
-
-    let user = global.db.users[foundKey];
-    let remaining = amount;
-
-    // Potong dari triviaScore dulu kalau ada
-    if (user.triviaScore && user.triviaScore > 0) {
-      const take = Math.min(user.triviaScore, remaining);
-      user.triviaScore -= take;
-      remaining -= take;
-    }
-    // Kalau masih kurang, potong dari mathScore
-    if (remaining > 0 && user.mathScore && user.mathScore > 0) {
-      const take = Math.min(user.mathScore, remaining);
-      user.mathScore -= take;
-      remaining -= take;
-    }
-    // Kalau masih kurang juga, potong dari score utama
-    if (remaining > 0 && user.score && user.score > 0) {
-      const take = Math.min(user.score, remaining);
-      user.score -= take;
-      remaining -= take;
-    }
-  }
-
-  // Eksekusi potong poin untuk challenger dan challenged
-  deductUserScore(challenger, bet);
-  deductUserScore(challenged, bet);
+  deductPoints(remoteJid, challenger, bet);
+  deductPoints(remoteJid, challenged, bet);
 
   delete global.db.remeChallenges[remoteJid];
 
