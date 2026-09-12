@@ -28,7 +28,7 @@ const tovidCommand = require('../commands/tovid');
 const onlineCommand = require('../commands/online');
 const ncodeCommand = require('../commands/ncode');
 
-// Command Games & Leaderboard
+// Command Games, Leaderboard, & Ekonomi Baru
 const blackjackCommand = require('../commands/blackjack');
 const mathCommand = require('../commands/math');
 const tebakbenderaCommand = require('../commands/tebakbendera');
@@ -38,6 +38,8 @@ const triviaCommand = require('../commands/trivia');
 const { tetrisCommand, claimTetrisCommand } = require('../commands/tetris');
 const scoreCommand = require('../commands/score');
 const leaderboardCommand = require('../commands/leaderboard');
+const claimCommand = require('../commands/claim');
+const tfCommand = require('../commands/tf');
 
 // Command Reme Kasino
 const remeCommand = require('../commands/reme');
@@ -96,7 +98,6 @@ async function handleMessage(sock, msg) {
           break;
         }
 
-        // Cek apakah ada user yang ditag
         const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
         let targetId = senderId;
         let addAmount = NaN;
@@ -121,22 +122,30 @@ async function handleMessage(sock, msg) {
         }
 
         global.db.users[targetId].triviaScore += addAmount;
+        // Sinkronisasi total score
+        global.db.users[targetId].score = (global.db.users[targetId].mathScore || 0) + (global.db.users[targetId].triviaScore || 0);
 
         if (typeof global.saveDatabase === 'function') {
           global.saveDatabase();
         }
 
-        const currentTotal = (global.db.users[targetId].triviaScore || 0) + 
-                             (global.db.users[targetId].mathScore || 0) + 
-                             (global.db.users[targetId].score || 0);
-
         const targetName = targetId.split('@')[0];
         await sock.sendMessage(remoteJid, { 
-          text: `✅ Sukses nambahin *+${addAmount}* poin ke @${targetName}!\nTotal poin target sekarang: *${currentTotal}*`,
+          text: `✅ Sukses nambahin *+${addAmount}* poin ke @${targetName}!\nTotal poin target sekarang: *${global.db.users[targetId].score}*`,
           mentions: [targetId]
         }, { quoted: msg });
         break;
       }
+
+      case 'claim':
+      case 'daily':
+        await claimCommand(sock, msg);
+        break;
+
+      case 'tf':
+      case 'transfer':
+        await tfCommand(sock, msg, args);
+        break;
 
       case 'nickname':
       case 'setname': {
@@ -179,7 +188,6 @@ async function handleMessage(sock, msg) {
           break;
         }
 
-        // Reset paksa tanpa validasi ketat peserta agar tidak nyangkut
         delete global.db.game[remoteJid];
         if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
@@ -310,12 +318,6 @@ async function handleMessage(sock, msg) {
         await hdCommand(sock, msg);
         break;
 
-      case 'recover':
-      case 'restore':
-        await recoverCommand(sock, msg);
-        break;
-        
-
       case 'ss':
       case 'ssweb':
         await sswebCommand(sock, msg, args);
@@ -417,6 +419,8 @@ async function handleMessage(sock, msg) {
 ┣⌬ ${prefixUsed}reme <taruhan> (Lawan Bot)
 ┣⌬ ${prefixUsed}reme @user <taruhan> (PvP)
 ┣⌬ ${prefixUsed}batal
+┣⌬ ${prefixUsed}claim (Ambil Poin Harian)
+┣⌬ ${prefixUsed}tf @user <nominal>
 ┣⌬ ${prefixUsed}score
 ┣⌬ ${prefixUsed}leaderboard
 ┣⌬ ${prefixUsed}nickname <nama>
@@ -486,6 +490,8 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}reme <taruhan> (Lawan Bot)
 ┃  • ${prefixUsed}reme @user <taruhan> (PvP)
 ┃  • ${prefixUsed}batal
+┃  • ${prefixUsed}claim (Ambil Poin Harian)
+┃  • ${prefixUsed}tf @user <nominal>
 ┃  • ${prefixUsed}score
 ┃  • ${prefixUsed}leaderboard
 ┃  • ${prefixUsed}nickname <nama>
@@ -542,4 +548,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-       
+          
