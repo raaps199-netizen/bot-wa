@@ -1,42 +1,45 @@
 function getUserData(db, userId) {
   if (!db) global.db = {};
   if (!db.users) db.users = {};
-  
-  // Normalisasi aman jika userId kosong/undefined
   if (!userId) userId = 'unknown';
 
   if (!db.users[userId]) {
     db.users[userId] = {
-      mathScore: 0,
-      triviaScore: 0,
-      score: 0,
+      score: 0,         // Dompet utama untuk taruhan (Reme, QQ, Duel) & admin add
+      mathCount: 0,     // Statistik jumlah soal math yang diselesaikan
+      triviaCount: 0,   // Statistik jumlah soal trivia yang diselesaikan
       nickname: null
     };
   }
-  return db.users[userId];
+
+  // Migrasi otomatis jika data lama masih pakai properti terpisah
+  const user = db.users[userId];
+  if (user.mathScore !== undefined || user.triviaScore !== undefined) {
+    user.score = (user.score || 0) + (user.mathScore || 0) + (user.triviaScore || 0);
+    delete user.mathScore;
+    delete user.triviaScore;
+  }
+  if (user.mathCount === undefined) user.mathCount = 0;
+  if (user.triviaCount === undefined) user.triviaCount = 0;
+
+  return user;
 }
 
 function getTotalScore(user) {
   if (!user) return 0;
-  const math = user.mathScore || 0;
-  const trivia = user.triviaScore || 0;
-  const gamblingNet = user.score || 0;
-  return math + trivia + gamblingNet;
-}
-
-function deductPoints(db, userId, amount) {
-  const user = getUserData(db, userId);
-  const total = getTotalScore(user);
-
-  if (total < amount) return false; 
-
-  user.score = (user.score || 0) - amount;
-  return true;
+  return user.score || 0;
 }
 
 function addPoints(db, userId, amount) {
   const user = getUserData(db, userId);
   user.score = (user.score || 0) + amount;
+  return true;
+}
+
+function deductPoints(db, userId, amount) {
+  const user = getUserData(db, userId);
+  if ((user.score || 0) < amount) return false;
+  user.score = (user.score || 0) - amount;
   return true;
 }
 
@@ -59,7 +62,7 @@ function parseBetAmount(arg, userTotalScore) {
 module.exports = {
   getUserData,
   getTotalScore,
-  deductPoints,
   addPoints,
+  deductPoints,
   parseBetAmount
 };
