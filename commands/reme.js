@@ -8,13 +8,14 @@ async function remeCommand(sock, msg, args) {
   
   try {
     const rawSenderId = msg.key.participant || remoteJid;
-    const senderId = rawSenderId.includes('@g.us') ? remoteJid : rawSenderId;
+    // Pastikan senderId SELALU menggunakan ID personal, bukan ID grup
+    const senderId = rawSenderId.includes('@g.us') ? (msg.key.remoteJid || rawSenderId) : rawSenderId;
 
     if (global.db.game[remoteJid]) {
       return await sock.sendMessage(remoteJid, { text: '⚠️ Chat ini sedang ada game aktif, selesaikan dulu bro! (Atau ketik .batal)' }, { quoted: msg });
     }
 
-    // 1. Ambil target mention atau reply dengan aman
+    // 1. Ambil target mention, reply, atau teks argumen dengan aman
     let targetId = null;
     const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
     const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
@@ -23,12 +24,20 @@ async function remeCommand(sock, msg, args) {
       targetId = mentioned[0];
     } else if (quotedParticipant) {
       targetId = quotedParticipant;
-    } else if (args.length > 0 && args[0].includes('@')) {
-      const cleanNum = args[0].replace(/[^0-9]/g, '');
-      if (cleanNum.length >= 5) targetId = cleanNum + '@s.whatsapp.net';
+    } else {
+      // Cari apakah ada argumen berupa nomor atau mention teks biasa
+      const argTarget = args.find(arg => arg.includes('@') || !isNaN(arg) && arg.length > 5);
+      if (argTarget) {
+        const cleanNum = argTarget.replace(/[^0-9]/g, '');
+        if (cleanNum.length >= 5) {
+          // Cari key yang cocok di database berdasarkan nomor tersebut
+          const found = Object.keys(global.db.users || {}).find(k => k.replace(/[^0-9]/g, '').includes(cleanNum));
+          targetId = found || (cleanNum + '@s.whatsapp.net');
+        }
+      }
     }
 
-    // 2. Ambil angka taruhan dari argumen
+    // 2. Ambil angka taruhan dari argumen (cari angka yang bukan bagian dari tag)
     let betAmount = 15;
     const numericArgs = args.filter(arg => !arg.includes('@') && !isNaN(arg));
     if (numericArgs.length > 0) {
@@ -36,9 +45,10 @@ async function remeCommand(sock, msg, args) {
       if (betAmount <= 0) betAmount = 15;
     }
 
-    // Helper pencari skor yang anti salah daftar ke ID Grup
-    const getScore = (userJid, fallbackId) => {
+    // Helper pencari skor yang dijamin 100% aman dari error undefined group JID
+    const getScore = (userJid) => {
       if (!global.db.users) global.db.users = {};
+      if (!userJid || userJid.includes('@g.us')) return 0;
       
       const rawDigits = userJid.replace(/[^0-9]/g, '');
       const userPhoneSuffix = rawDigits.slice(-6);
@@ -49,8 +59,8 @@ async function remeCommand(sock, msg, args) {
       });
       
       if (!foundKey) {
-        const newKey = fallbackId.includes('@g.us') ? userJid : fallbackId;
-        global.db.users[newKey] = { mathScore: 0, triviaScore: 0, score: 0 };
+        // Daftarkan user baru menggunakan JID personal yang valid
+        global.db.users[userJid] = { mathScore: 0, triviaScore: 0, score: 0 };
         return 0;
       }
       
@@ -58,7 +68,7 @@ async function remeCommand(sock, msg, args) {
       return (stats.triviaScore || 0) + (stats.mathScore || 0) + (stats.score || 0);
     };
 
-    const senderScore = getScore(senderId, senderId);
+    const senderScore = getScore(senderId);
 
     // --- KONDISI A: MAIN SENDIRI (LAWAN BOT) ---
     if (!targetId) {
@@ -93,7 +103,7 @@ async function remeCommand(sock, msg, args) {
       return await sock.sendMessage(remoteJid, { text: '⚠️ Gila ya, mau main lawan diri sendiri wkwk!' }, { quoted: msg });
     }
 
-    const targetScore = getScore(targetId, targetId);
+    const targetScore = getScore(targetId);
 
     if (senderScore < betAmount) {
       return await sock.sendMessage(remoteJid, { text: `⚠️ Total poin lo kurang, bre! Poin lu saat ini: *${senderScore}*, tapi taruhannya *${betAmount}*.` }, { quoted: msg });
@@ -125,4 +135,3 @@ async function remeCommand(sock, msg, args) {
 }
 
 module.exports = remeCommand;
-          
