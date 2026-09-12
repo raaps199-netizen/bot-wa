@@ -10,7 +10,7 @@ module.exports = async function claimCommand(sock, msg) {
   }
 
   const user = global.db.users[senderId];
-  const REWARD = 200; // Nominal poin gratis harian
+  const REWARD = Math.floor(Math.random() * (200 - 100 + 1)) + 100;
   const COOLDOWN = 24 * 60 * 60 * 1000; // 24 jam
   const now = Date.now();
 
