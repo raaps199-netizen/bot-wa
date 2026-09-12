@@ -1,6 +1,8 @@
 // File: utils/helper.js
 
 function getUserData(remoteJid, userId) {
+  if (!userId) return { mathScore: 0, triviaScore: 0, score: 0, lastClaim: 0, nickname: '' };
+
   if (!remoteJid || !remoteJid.endsWith('@g.us')) {
     global.db.users = global.db.users || {};
     if (!global.db.users[userId]) {
@@ -13,9 +15,17 @@ function getUserData(remoteJid, userId) {
   global.db.groups[remoteJid] = global.db.groups[remoteJid] || { users: {} };
   
   if (!global.db.groups[remoteJid].users[userId]) {
-    // Cari dan migrasikan poin dari database global jika user sudah punya poin sebelumnya
-    const cleanUserId = userId.split(':')[0].split('@')[0];
-    const foundGlobalKey = Object.keys(global.db.users || {}).find(k => k.includes(cleanUserId));
+    // Cari berdasarkan kecocokan digit angka nomor HP (mengatasi perbedaan format :1@s.whatsapp.net)
+    const rawDigits = userId.replace(/[^0-9]/g, '');
+    let foundGlobalKey = null;
+
+    for (const k of Object.keys(global.db.users || {})) {
+      const kDigits = k.replace(/[^0-9]/g, '');
+      if (kDigits === rawDigits || kDigits.endsWith(rawDigits) || rawDigits.endsWith(kDigits)) {
+        foundGlobalKey = k;
+        break;
+      }
+    }
     
     if (foundGlobalKey && global.db.users[foundGlobalKey]) {
       const gUser = global.db.users[foundGlobalKey];
