@@ -156,3 +156,4 @@ _Ketik langsung angka jawabannya di chat! Ketik .nyerah jika ingin menyerah._`;
 }
 
 module.exports = mathCommand;
+  
