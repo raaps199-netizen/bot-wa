@@ -1,18 +1,16 @@
-const { isPersonalJid, getSenderId } = require('../utils/jid-utils');
-
+// File: commands/tf.js
 module.exports = async function tfCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
-  const senderId = getSenderId(msg, remoteJid);
-  if (!senderId) return;
+  const senderId = msg.key.participant || remoteJid;
 
-  // 1. Ambil target dari Mention, Reply, atau Argumen teks
+  // 1. Ambil target
   let targetId = null;
   const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
   const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
 
-  if (mentioned.length > 0 && isPersonalJid(mentioned[0])) {
+  if (mentioned.length > 0) {
     targetId = mentioned[0];
-  } else if (isPersonalJid(quotedParticipant)) {
+  } else if (quotedParticipant) {
     targetId = quotedParticipant;
   } else {
     const argTarget = args.find(arg => arg.includes('@') || (!isNaN(arg) && arg.length >= 10));
@@ -24,7 +22,7 @@ module.exports = async function tfCommand(sock, msg, args) {
 
   if (!targetId || targetId === senderId) {
     return await sock.sendMessage(remoteJid, { 
-      text: `⚠️ Format salah atau lu mau transfer ke diri sendiri?\nCara pakai: *.tf @tag nominal*` 
+      text: `⚠️ Format salah atau mau transfer ke diri sendiri?\nCara pakai: *.tf @tag nominal*` 
     }, { quoted: msg });
   }
 
@@ -46,13 +44,10 @@ module.exports = async function tfCommand(sock, msg, args) {
     }, { quoted: msg });
   }
 
-  // Buat DB target jika belum ada
-  if (!global.db.users[targetId]) {
-    global.db.users[targetId] = { mathScore: 0, triviaScore: 0, score: 0 };
-  }
+  if (!global.db.users[targetId]) global.db.users[targetId] = { mathScore: 0, triviaScore: 0, score: 0 };
   const receiver = global.db.users[targetId];
 
-  // 3. Logic Sedot Poin Pengirim
+  // 3. Logic Sedot Poin
   let remaining = tfAmount;
   if (sender.triviaScore && sender.triviaScore > 0) {
     const take = Math.min(sender.triviaScore, remaining);
@@ -65,10 +60,9 @@ module.exports = async function tfCommand(sock, msg, args) {
     remaining -= take;
   }
 
-  // 4. Tambah Poin Penerima
+  // 4. Tambah Poin & Sinkronisasi
   receiver.triviaScore = (receiver.triviaScore || 0) + tfAmount;
 
-  // 5. SINKRONISASI ULANG TOTAL SCORE KEDUANYA
   sender.score = (sender.mathScore || 0) + (sender.triviaScore || 0);
   receiver.score = (receiver.mathScore || 0) + (receiver.triviaScore || 0);
 
@@ -79,4 +73,3 @@ module.exports = async function tfCommand(sock, msg, args) {
     mentions: [senderId, targetId]
   }, { quoted: msg });
 };
-
