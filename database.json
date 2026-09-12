@@ -1,1 +1,13 @@
-{}
+const fs = require('fs');
+const path = require('path');
+
+global.saveDatabase = function() {
+  const dbPath = path.join(__dirname, 'database.json');
+  const backupPath = path.join(__dirname, 'backup_db.json');
+
+  // Simpan database utama
+  fs.writeFileSync(dbPath, JSON.stringify(global.db, null, 2));
+  
+  // Otomatis bikin salinan cadangan (backup) secara bersamaan
+  fs.writeFileSync(backupPath, JSON.stringify(global.db, null, 2));
+};
