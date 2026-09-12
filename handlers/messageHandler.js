@@ -78,6 +78,8 @@ const BAD_WORDS = [
   'ngentot',
   'jancok',
   'cok',
+  'fuck',
+  'kintil',
   'pantek',
   'anjing',
   'monyet',
@@ -142,7 +144,7 @@ async function handleMessage(sock, msg) {
           // 2. Tag member & berikan peringatan
           const senderName = senderId.split('@')[0];
           await sock.sendMessage(remoteJid, {
-            text: `~pesan telah *dihapus otomatis* karena mengandung kata terlarang~`,
+            text: `_pesan telah *dihapus otomatis* karena mengandung kata terlarang_`,
             mentions: [senderId]
           });
         } catch (delErr) {
