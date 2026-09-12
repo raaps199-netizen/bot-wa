@@ -5,10 +5,11 @@ async function handleGameAnswer(sock, msg) {
   try {
     const remoteJid = msg.key.remoteJid;
     const game = global.db?.game?.[remoteJid];
-    
+
+    // 1. Jika tidak ada game aktif di room ini, lewati
     if (!game) return false;
 
-    // Unwrap pesan dari berbagai tipe (ephemeral, viewOnce, document)
+    // 2. Ekstrak pesan (dukung ephemeral, viewOnce, dokumen, dll)
     const innerMsg = msg.message?.ephemeralMessage?.message || 
                      msg.message?.viewOnceMessage?.message || 
                      msg.message?.viewOnceMessageV2?.message || 
@@ -19,29 +20,33 @@ async function handleGameAnswer(sock, msg) {
                  innerMsg?.extendedTextMessage?.text || 
                  innerMsg?.imageMessage?.caption || 
                  innerMsg?.videoMessage?.caption || '';
-                 
+
     const cleanBody = body.trim().toLowerCase();
     if (!cleanBody) return false;
 
     const senderId = getSenderId(msg, remoteJid) || msg.key.participant || remoteJid;
 
-    // 1. Logika Nyerah
+    // 3. Logika Menyerah (.nyerah / nyerah)
     if (cleanBody === '.nyerah' || cleanBody === 'nyerah') {
       if (['math', 'trivia'].includes(game.type)) {
         if (game.timer) clearTimeout(game.timer);
         delete global.db.game[remoteJid];
         if (typeof global.saveDatabase === 'function') global.saveDatabase();
-        
+
+        const answerText = game.type === 'trivia' && game.jawabanTeks
+          ? `${String(game.jawabanBenar).toUpperCase()}. ${game.jawabanTeks}`
+          : String(game.jawabanBenar).toUpperCase();
+
         await sock.sendMessage(remoteJid, { 
-          text: `🏳️ *Menyerah!* Game ${game.type.toUpperCase()} dihentikan.\nJawaban yang benar adalah: *${String(game.jawabanBenar).toUpperCase()}*` 
+          text: `🏳️ *Menyerah!* Game ${game.type.toUpperCase()} dihentikan.\nJawaban yang benar adalah: *${answerText}*` 
         }, { quoted: msg });
         return true;
       }
     }
 
-    // 2. Logika Game Math
+    // 4. Logika Game Math
     if (game.type === 'math') {
-      if (cleanBody === String(game.jawabanBenar)) {
+      if (cleanBody === String(game.jawabanBenar).toLowerCase()) {
         if (game.timer) clearTimeout(game.timer);
         delete global.db.game[remoteJid];
 
@@ -60,9 +65,8 @@ async function handleGameAnswer(sock, msg) {
       }
     }
 
-    // 3. Logika Game Trivia
+    // 5. Logika Game Trivia
     if (game.type === 'trivia') {
-      // Pengaman String() biar ga crash misal property-nya ga sengaja hilang
       const isCorrectOption = game.jawabanBenar ? cleanBody === String(game.jawabanBenar).toLowerCase() : false;
       const isCorrectText = game.jawabanTeks ? cleanBody === String(game.jawabanTeks).toLowerCase() : false;
 
@@ -83,8 +87,7 @@ async function handleGameAnswer(sock, msg) {
         }, { quoted: msg });
         return true;
       } else if (['a', 'b', 'c', 'd'].includes(cleanBody)) {
-        // [FITUR DEBUGGING]: Kasih react ❌ kalau dia ngetik a/b/c/d tapi salah
-        // Kalau pas lu ketik 'c' kaga muncul react silang ini, fix messageHandler lu ngeblokir!
+        // Kasih reaksi ❌ kalau dia jawab a/b/c/d tapi salah
         await sock.sendMessage(remoteJid, { react: { text: '❌', key: msg.key } });
       }
     }
