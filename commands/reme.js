@@ -40,7 +40,7 @@ async function remeCommand(sock, msg, args) {
 
   // --- 1. MAIN SENDIRI (LAWAN BOT) ---
   if (!targetId) {
-    const senderStats = global.db.users[senderId];
+    const senderStats = global.db.users[senderId] || {};
     const senderScore = (senderStats.triviaScore || 0) + (senderStats.mathScore || 0) + (senderStats.score || 0);
 
     if (senderScore < betAmount) {
@@ -78,10 +78,10 @@ async function remeCommand(sock, msg, args) {
     global.db.users[targetId] = { mathScore: 0, triviaScore: 0, score: 0 };
   }
 
-  const senderStats = global.db.users[senderId];
+  const senderStats = global.db.users[senderId] || {};
   const senderScore = (senderStats.triviaScore || 0) + (senderStats.mathScore || 0) + (senderStats.score || 0);
 
-  const targetStats = global.db.users[targetId];
+  const targetStats = global.db.users[targetId] || {};
   const targetScore = (targetStats.triviaScore || 0) + (targetStats.mathScore || 0) + (targetStats.score || 0);
 
   if (senderScore < betAmount) {
@@ -109,3 +109,4 @@ async function remeCommand(sock, msg, args) {
 }
 
 module.exports = remeCommand;
+      
