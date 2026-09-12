@@ -15,15 +15,17 @@ function getUserData(remoteJid, userId) {
   global.db.groups[remoteJid] = global.db.groups[remoteJid] || { users: {} };
   
   if (!global.db.groups[remoteJid].users[userId]) {
-    // Cari berdasarkan kecocokan digit angka nomor HP (mengatasi perbedaan format :1@s.whatsapp.net)
+    // Cari key di global.db.users yang mengandung angka mirip (baik @lid maupun @s.whatsapp.net)
     const rawDigits = userId.replace(/[^0-9]/g, '');
     let foundGlobalKey = null;
 
-    for (const k of Object.keys(global.db.users || {})) {
-      const kDigits = k.replace(/[^0-9]/g, '');
-      if (kDigits === rawDigits || kDigits.endsWith(rawDigits) || rawDigits.endsWith(kDigits)) {
-        foundGlobalKey = k;
-        break;
+    if (rawDigits.length >= 5) {
+      for (const k of Object.keys(global.db.users || {})) {
+        const kDigits = k.replace(/[^0-9]/g, '');
+        if (kDigits === rawDigits || kDigits.includes(rawDigits) || rawDigits.includes(kDigits)) {
+          foundGlobalKey = k;
+          break;
+        }
       }
     }
     
@@ -37,6 +39,7 @@ function getUserData(remoteJid, userId) {
         nickname: gUser.nickname || '' 
       };
     } else {
+      // Jika tetap tidak ketemu di global, buat baru dengan nilai 0
       global.db.groups[remoteJid].users[userId] = { 
         mathScore: 0, 
         triviaScore: 0, 
@@ -91,3 +94,4 @@ function parseBetAmount(args, userTotal) {
 }
 
 module.exports = { getUserData, addPoints, deductPoints, parseBetAmount };
+                                          
