@@ -1,14 +1,15 @@
+// File: handlers/gameHandler.js
 const { getUserData, addPoints } = require('../utils/helper');
 const { getSenderId } = require('../utils/jid-utils');
 
-async function handleGameAnswer(sock, msg) {
+async function handleGameAnswer(sock, msg, customText = null) {
   try {
     const remoteJid = msg.key.remoteJid;
     const game = global.db?.game?.[remoteJid];
 
     if (!game) return false;
 
-    // Unwrap pesan dari berbagai wadah (ephemeral, viewOnce, dll)
+    // Unwrap pesan jika tidak ada customText
     const innerMsg = msg.message?.ephemeralMessage?.message || 
                      msg.message?.viewOnceMessage?.message || 
                      msg.message?.viewOnceMessageV2?.message || 
@@ -20,15 +21,15 @@ async function handleGameAnswer(sock, msg) {
                  innerMsg?.imageMessage?.caption || 
                  innerMsg?.videoMessage?.caption || '';
 
-    // Konversi string eksplisit agar tipe data angka tidak bikin crash
-    const cleanBody = String(body).trim().toLowerCase();
+    // Gunakan customText jika ada (contoh dari .nyerah), jika tidak pakai body pesan
+    const cleanBody = customText ? String(customText).trim().toLowerCase() : String(body).trim().toLowerCase();
     if (!cleanBody) return false;
 
     const senderId = getSenderId(msg, remoteJid) || msg.key.participant || remoteJid;
 
     // 1. Logika Menyerah (.nyerah / nyerah)
     if (cleanBody === '.nyerah' || cleanBody === 'nyerah') {
-      if (['math', 'trivia', 'reme', 'qq'].includes(game.type)) {
+      if (['math', 'trivia', 'reme', 'qq', 'tebakbendera', 'tebakkata', 'tebakgambar'].includes(game.type)) {
         if (game.timer) clearTimeout(game.timer);
         
         const answerText = game.type === 'trivia' && game.jawabanTeks 
