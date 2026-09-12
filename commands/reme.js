@@ -7,9 +7,15 @@ async function remeCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
   
   try {
-    const rawSenderId = msg.key.participant || remoteJid;
-    // Pastikan senderId SELALU menggunakan ID personal, bukan ID grup
-    const senderId = rawSenderId.includes('@g.us') ? (msg.key.remoteJid || rawSenderId) : rawSenderId;
+    // Ambil pengirim dengan aman, pastikan tidak nyangkut ke ID grup
+    const rawSenderId = msg.key.participant || msg.participant || remoteJid;
+    const senderId = rawSenderId.includes('@g.us') 
+      ? (msg.pushName ? remoteJid : 'unknown_user@s.whatsapp.net') 
+      : rawSenderId;
+
+    if (senderId.includes('@g.us')) {
+      return await sock.sendMessage(remoteJid, { text: '⚠️ Gagal mendeteksi ID user personal. Coba ulangi dengan me-reply pesan.' }, { quoted: msg });
+    }
 
     if (global.db.game[remoteJid]) {
       return await sock.sendMessage(remoteJid, { text: '⚠️ Chat ini sedang ada game aktif, selesaikan dulu bro! (Atau ketik .batal)' }, { quoted: msg });
@@ -25,19 +31,17 @@ async function remeCommand(sock, msg, args) {
     } else if (quotedParticipant) {
       targetId = quotedParticipant;
     } else {
-      // Cari apakah ada argumen berupa nomor atau mention teks biasa
-      const argTarget = args.find(arg => arg.includes('@') || !isNaN(arg) && arg.length > 5);
+      const argTarget = args.find(arg => arg.includes('@') || (!isNaN(arg) && arg.length > 5));
       if (argTarget) {
         const cleanNum = argTarget.replace(/[^0-9]/g, '');
         if (cleanNum.length >= 5) {
-          // Cari key yang cocok di database berdasarkan nomor tersebut
           const found = Object.keys(global.db.users || {}).find(k => k.replace(/[^0-9]/g, '').includes(cleanNum));
           targetId = found || (cleanNum + '@s.whatsapp.net');
         }
       }
     }
 
-    // 2. Ambil angka taruhan dari argumen (cari angka yang bukan bagian dari tag)
+    // 2. Ambil angka taruhan dari argumen
     let betAmount = 15;
     const numericArgs = args.filter(arg => !arg.includes('@') && !isNaN(arg));
     if (numericArgs.length > 0) {
@@ -45,21 +49,22 @@ async function remeCommand(sock, msg, args) {
       if (betAmount <= 0) betAmount = 15;
     }
 
-    // Helper pencari skor yang dijamin 100% aman dari error undefined group JID
+    // Helper pencari skor yang anti error group JID dan sangat fleksibel
     const getScore = (userJid) => {
       if (!global.db.users) global.db.users = {};
       if (!userJid || userJid.includes('@g.us')) return 0;
       
       const rawDigits = userJid.replace(/[^0-9]/g, '');
+      if (rawDigits.length < 5) return 0;
+      
       const userPhoneSuffix = rawDigits.slice(-6);
 
       const foundKey = Object.keys(global.db.users).find(k => {
         const keyDigits = k.replace(/[^0-9]/g, '');
-        return keyDigits.endsWith(userPhoneSuffix) || userPhoneSuffix.endsWith(keyDigits);
+        return keyDigits.length >= 5 && (keyDigits.endsWith(userPhoneSuffix) || userPhoneSuffix.endsWith(keyDigits));
       });
       
       if (!foundKey) {
-        // Daftarkan user baru menggunakan JID personal yang valid
         global.db.users[userJid] = { mathScore: 0, triviaScore: 0, score: 0 };
         return 0;
       }
@@ -135,3 +140,4 @@ async function remeCommand(sock, msg, args) {
 }
 
 module.exports = remeCommand;
+        
