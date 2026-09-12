@@ -8,7 +8,7 @@ async function remeCommand(sock, msg, args) {
   
   try {
     const rawSenderId = msg.key.participant || remoteJid;
-    const senderId = rawSenderId.includes('@g.us') ? remoteJid : rawSenderId.split(':')[0] + '@s.whatsapp.net';
+    const senderId = rawSenderId.includes('@g.us') ? remoteJid : rawSenderId;
 
     if (global.db.game[remoteJid]) {
       return await sock.sendMessage(remoteJid, { text: '⚠️ Chat ini sedang ada game aktif, selesaikan dulu bro! (Atau ketik .batal)' }, { quoted: msg });
@@ -36,14 +36,17 @@ async function remeCommand(sock, msg, args) {
       if (betAmount <= 0) betAmount = 15;
     }
 
-    // Helper pencari skor yang aman dari ID grup
+    // Helper pencari skor yang mencocokan digit ID secara fleksibel dengan database
     const getScore = (userJid) => {
       if (!global.db.users) global.db.users = {};
       
       const rawDigits = userJid.replace(/[^0-9]/g, '');
-      const phoneDigits = rawDigits.slice(-9);
-
-      const foundKey = Object.keys(global.db.users).find(k => k.replace(/[^0-9]/g, '').includes(phoneDigits));
+      
+      const foundKey = Object.keys(global.db.users).find(k => {
+        const cleanKeyDigits = k.replace(/[^0-9]/g, '');
+        return cleanKeyDigits.length >= 7 && rawDigits.length >= 7 && 
+               (cleanKeyDigits.includes(rawDigits.slice(-7)) || rawDigits.includes(cleanKeyDigits.slice(-7)));
+      });
       
       if (!foundKey || !global.db.users[foundKey]) {
         global.db.users[userJid] = { mathScore: 0, triviaScore: 0, score: 0 };
@@ -121,4 +124,3 @@ async function remeCommand(sock, msg, args) {
 }
 
 module.exports = remeCommand;
-          
