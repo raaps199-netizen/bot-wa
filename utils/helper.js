@@ -15,41 +15,58 @@ function getUserData(remoteJid, userId) {
   global.db.groups[remoteJid] = global.db.groups[remoteJid] || { users: {} };
   
   if (!global.db.groups[remoteJid].users[userId]) {
-    // Cari key di global.db.users yang mengandung angka mirip (baik @lid maupun @s.whatsapp.net)
-    const rawDigits = userId.replace(/[^0-9]/g, '');
-    let foundGlobalKey = null;
+    global.db.groups[remoteJid].users[userId] = { 
+      mathScore: 0, 
+      triviaScore: 0, 
+      score: 0, 
+      lastClaim: 0,
+      nickname: '' 
+    };
+  }
 
-    if (rawDigits.length >= 5) {
-      for (const k of Object.keys(global.db.users || {})) {
-        const kDigits = k.replace(/[^0-9]/g, '');
-        if (kDigits === rawDigits || kDigits.includes(rawDigits) || rawDigits.includes(kDigits)) {
+  const groupUser = global.db.groups[remoteJid].users[userId];
+  const currentScore = (groupUser.score || 0) + (groupUser.mathScore || 0) + (groupUser.triviaScore || 0);
+
+  // Jika poin di grup masih 0, sinkronkan/tarik data dari global.db.users
+  if (currentScore === 0) {
+    global.db.users = global.db.users || {};
+    let foundGlobalKey = global.db.users[userId] ? userId : null;
+
+    if (!foundGlobalKey) {
+      const rawDigits = userId.replace(/[^0-9]/g, '');
+      if (rawDigits.length >= 5) {
+        for (const k of Object.keys(global.db.users)) {
+          const kDigits = k.replace(/[^0-9]/g, '');
+          if (kDigits && (kDigits === rawDigits || kDigits.endsWith(rawDigits) || rawDigits.includes(rawDigits))) {
+            foundGlobalKey = k;
+            break;
+          }
+        }
+      }
+    }
+
+    // Jika masih tidak ketemu dan user pakai @lid, ambil data global pertama yang memiliki poin aktif (> 0)
+    if (!foundGlobalKey && userId.includes('@lid')) {
+      for (const k of Object.keys(global.db.users)) {
+        const u = global.db.users[k];
+        if ((u.score || u.mathScore || u.triviaScore || 0) > 0) {
           foundGlobalKey = k;
           break;
         }
       }
     }
-    
+
     if (foundGlobalKey && global.db.users[foundGlobalKey]) {
       const gUser = global.db.users[foundGlobalKey];
-      global.db.groups[remoteJid].users[userId] = { 
-        mathScore: gUser.mathScore || 0, 
-        triviaScore: gUser.triviaScore || 0, 
-        score: gUser.score || ((gUser.mathScore || 0) + (gUser.triviaScore || 0)), 
-        lastClaim: gUser.lastClaim || 0,
-        nickname: gUser.nickname || '' 
-      };
-    } else {
-      // Jika tetap tidak ketemu di global, buat baru dengan nilai 0
-      global.db.groups[remoteJid].users[userId] = { 
-        mathScore: 0, 
-        triviaScore: 0, 
-        score: 0, 
-        lastClaim: 0,
-        nickname: '' 
-      };
+      groupUser.mathScore = gUser.mathScore || 0;
+      groupUser.triviaScore = gUser.triviaScore || 0;
+      groupUser.score = gUser.score || ((gUser.mathScore || 0) + (gUser.triviaScore || 0));
+      groupUser.lastClaim = gUser.lastClaim || 0;
+      groupUser.nickname = gUser.nickname || '';
     }
   }
-  return global.db.groups[remoteJid].users[userId];
+
+  return groupUser;
 }
 
 function addPoints(remoteJid, userId, type, amount) {
@@ -94,4 +111,3 @@ function parseBetAmount(args, userTotal) {
 }
 
 module.exports = { getUserData, addPoints, deductPoints, parseBetAmount };
-                                          
