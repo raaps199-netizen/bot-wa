@@ -1,3 +1,4 @@
+// File: commands/trivia.js
 const axios = require('axios');
 const config = require('../config');
 
@@ -17,9 +18,10 @@ async function triviaCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
 
   if (global.db.game[remoteJid]) {
-    return await sock.sendMessage(remoteJid, {
+    await sock.sendMessage(remoteJid, {
       text: '⚠️ Eh, selesaikan dulu kuis trivia yang lagi aktif di chat ini!'
     }, { quoted: msg });
+    return;
   }
 
   await sock.sendMessage(remoteJid, {
@@ -47,9 +49,10 @@ async function triviaCommand(sock, msg, args) {
   try {
     const apiKey = config.groqKey || process.env.GROQ_API_KEY;
     if (!apiKey) {
-      return await sock.sendMessage(remoteJid, {
+      await sock.sendMessage(remoteJid, {
         text: '❌ API Key Groq belum dipasang di config.js atau .env bre!'
       }, { quoted: msg });
+      return;
     }
 
     const url = 'https://api.groq.com/openai/v1/chat/completions';
@@ -131,11 +134,15 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
     const sentMsg = await sock.sendMessage(remoteJid, { text: caption }, { quoted: msg });
 
     const timer = setTimeout(async () => {
-      if (global.db.game[remoteJid] && global.db.game[remoteJid].type === 'trivia') {
-        delete global.db.game[remoteJid];
-        await sock.sendMessage(remoteJid, {
-          text: `⏰ *Waktu abis bro!* Nggak ada yang kejawab.\nJawaban yang bener tuh: *${correctOptionLabel.toUpperCase()}. ${correctOptionText}*`
-        }, { quoted: sentMsg });
+      try {
+        if (global.db.game[remoteJid] && global.db.game[remoteJid].type === 'trivia') {
+          delete global.db.game[remoteJid];
+          await sock.sendMessage(remoteJid, {
+            text: `⏰ *Waktu abis bro!* Nggak ada yang kejawab.\nJawaban yang bener tuh: *${correctOptionLabel.toUpperCase()}. ${correctOptionText}*`
+          }, { quoted: sentMsg });
+        }
+      } catch (e) {
+        console.error('Error di timer trivia:', e);
       }
     }, timeoutSec * 1000);
 
@@ -145,60 +152,6 @@ _Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
       soal: quizData.soal,
       jawabanBenar: correctOptionLabel,
       jawabanTeks: correctOptionText.toLowerCase(),
-      points: points,
-      timer: timer
-    };
-
-  } catch (err) {
-    if (global.db.game[remoteJid]) {
-      delete global.db.game[remoteJid];
-    }
-
-    const errorDetails = err?.response?.data?.error?.message || err?.message || String(err);
-    console.error('Error Groq Trivia Detail:', errorDetails);
-
-    await sock.sendMessage(remoteJid, {
-      text: `❌ Waduh error pas bikin soal trivia.\n_Detail: ${errorDetails}_`
-    }, { quoted: msg });
-  }
-}
-
-module.exports = triviaCommand;
-
-    const caption = 
-`❓ *TRIVIA (${targetTopic} - ${difficulty.toUpperCase()})*
-
-${quizData.soal}
-
-*Pilihan Jawaban:*
-A. ${formattedOptions.a}
-B. ${formattedOptions.b}
-C. ${formattedOptions.c}
-D. ${formattedOptions.d}
-
-⏱️ Waktu: *${timeoutSec} Detik*
-
-_Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
-
-    const sentMsg = await sock.sendMessage(remoteJid, { text: caption }, { quoted: msg });
-
-    const timer = setTimeout(async () => {
-      if (global.db.game[remoteJid] && global.db.game[remoteJid].type === 'trivia') {
-        delete global.db.game[remoteJid];
-        await sock.sendMessage(remoteJid, {
-          text: `⏰ *Waktu abis bro!* Nggak ada yang kejawab.\nJawaban yang bener tuh: *${correctOptionLabel.toUpperCase()}. ${correctOptionText}*`
-        }, { quoted: sentMsg });
-      }
-    }, timeoutSec * 1000);
-
-    global.db.game[remoteJid] = {
-      type: 'trivia',
-      msgId: sentMsg.key.id,
-      soal: quizData.soal,
-      jawabanBenar: correctOptionLabel,
-      jawabanOpsi: correctOptionLabel,
-      jawabanTeks: correctOptionText.toLowerCase(),
-      answer: quizData.jawabanBenar.toLowerCase(),
       points: points,
       timer: timer
     };
