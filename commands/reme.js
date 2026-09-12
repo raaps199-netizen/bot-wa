@@ -1,19 +1,19 @@
+// File: commands/reme.js
+const { getUserData, parseBetAmount } = require('../utils/helper');
 const { isPersonalJid, getSenderId } = require('../utils/jid-utils');
 
 function ensureDB() {
   if (!global.db) global.db = {};
   if (!global.db.remeChallenges) global.db.remeChallenges = {};
   if (!global.db.game) global.db.game = {};
-  if (!global.db.users) global.db.users = {};
 }
 ensureDB();
 
 async function remeCommand(sock, msg, args) {
-  ensureDB(); // jaga-jaga kalau global.db kereset dari file lain di antara load module
+  ensureDB();
   const remoteJid = msg.key.remoteJid;
 
   try {
-    // 1. AMBIL SENDER — 100% anti ID grup, gak ada jalur yang bisa lolos jadi @g.us
     const senderId = getSenderId(msg, remoteJid);
 
     if (!senderId) {
@@ -24,7 +24,13 @@ async function remeCommand(sock, msg, args) {
       return await sock.sendMessage(remoteJid, { text: '⚠️ Chat ini sedang ada game aktif, selesaikan dulu bro! (Atau ketik .batal)' }, { quoted: msg });
     }
 
-    // 2. Ambil target: mention, reply, atau argumen teks — divalidasi juga
+    const senderUser = getUserData(remoteJid, senderId);
+    const senderScore = senderUser.score || ((senderUser.mathScore || 0) + (senderUser.triviaScore || 0));
+
+    if (senderScore <= 0) {
+      return await sock.sendMessage(remoteJid, { text: '⚠️ Poin lu 0 di grup ini, gak bisa main reme!' }, { quoted: msg });
+    }
+
     let targetId = null;
     const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
     const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
@@ -38,51 +44,22 @@ async function remeCommand(sock, msg, args) {
       if (argTarget) {
         const cleanNum = argTarget.replace(/[^0-9]/g, '');
         if (cleanNum.length >= 5) {
-          const found = Object.keys(global.db.users || {}).find(k => k.replace(/[^0-9]/g, '').includes(cleanNum));
-          const candidate = found || (cleanNum + '@s.whatsapp.net');
+          const candidate = cleanNum + '@s.whatsapp.net';
           if (isPersonalJid(candidate)) targetId = candidate;
         }
       }
     }
 
-    // 3. Ambil angka taruhan dari argumen
-    let betAmount = 15;
-    const numericArgs = args.filter(arg => !arg.includes('@') && !isNaN(arg));
-    if (numericArgs.length > 0) {
-      betAmount = parseInt(numericArgs[0]);
-      if (betAmount <= 0) betAmount = 15;
+    let betAmount = parseBetAmount(args, senderScore);
+    if (!betAmount || betAmount <= 0) {
+      betAmount = 15;
     }
 
-    // Helper pencari skor — sekarang gak akan PERNAH nulis key ID grup ke DB
-    const getScore = (userJid) => {
-      ensureDB();
-      if (!isPersonalJid(userJid)) return 0; // <- pagar mutlak sebelum sentuh global.db.users
+    if (senderScore < betAmount) {
+      return await sock.sendMessage(remoteJid, { text: `⚠️ Total poin lo kurang di grup ini! Poin lu saat ini: *${senderScore}*, tapi mau taruhan *${betAmount}*.` }, { quoted: msg });
+    }
 
-      const rawDigits = userJid.replace(/[^0-9]/g, '');
-      const userPhoneSuffix = rawDigits.slice(-6);
-
-      const foundKey = Object.keys(global.db.users).find(k => {
-        const keyDigits = k.replace(/[^0-9]/g, '');
-        return keyDigits.length >= 5 && (keyDigits.endsWith(userPhoneSuffix) || userPhoneSuffix.endsWith(keyDigits));
-      });
-
-      if (!foundKey) {
-        global.db.users[userJid] = { mathScore: 0, triviaScore: 0, score: 0 };
-        return 0;
-      }
-
-      const stats = global.db.users[foundKey];
-      return (stats.triviaScore || 0) + (stats.mathScore || 0) + (stats.score || 0);
-    };
-
-    const senderScore = getScore(senderId);
-
-    // --- KONDISI A: MAIN SENDIRI (LAWAN BOT) ---
     if (!targetId) {
-      if (senderScore < betAmount) {
-        return await sock.sendMessage(remoteJid, { text: `⚠️ Poin total lu kurang, bre! Poin lu saat ini: *${senderScore}*, tapi mau taruhan *${betAmount}*.` }, { quoted: msg });
-      }
-
       const botJid = sock.user.id;
       const cleanBotId = botJid.includes(':') ? botJid.split(':')[0] + '@s.whatsapp.net' : botJid;
 
@@ -106,22 +83,17 @@ async function remeCommand(sock, msg, args) {
       }, { quoted: msg });
     }
 
-    // --- KONDISI B: PVP (LAWAN MANUSIA) ---
     if (targetId === senderId || targetId.includes(senderId.split('@')[0])) {
       return await sock.sendMessage(remoteJid, { text: '⚠️ Gila ya, mau main lawan diri sendiri wkwk!' }, { quoted: msg });
     }
 
-    const targetScore = getScore(targetId);
-
-    if (senderScore < betAmount) {
-      return await sock.sendMessage(remoteJid, { text: `⚠️ Total poin lo kurang, bre! Poin lu saat ini: *${senderScore}*, tapi taruhannya *${betAmount}*.` }, { quoted: msg });
-    }
+    const targetUser = getUserData(remoteJid, targetId);
+    const targetScore = targetUser.score || ((targetUser.mathScore || 0) + (targetUser.triviaScore || 0));
 
     if (targetScore < betAmount) {
-      return await sock.sendMessage(remoteJid, { text: `⚠️ Lawan lu total poinnya gak cukup buat taruhan *${betAmount}* poin! (Poin target: ${targetScore})` }, { quoted: msg });
+      return await sock.sendMessage(remoteJid, { text: `⚠️ Lawan lu total poinnya gak cukup buat taruhan *${betAmount}* poin di grup ini! (Poin target: ${targetScore})` }, { quoted: msg });
     }
 
-    // Simpan tantangan PvP
     ensureDB();
     global.db.remeChallenges[remoteJid] = {
       challenger: senderId,
@@ -144,3 +116,4 @@ async function remeCommand(sock, msg, args) {
 }
 
 module.exports = remeCommand;
+      
