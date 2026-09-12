@@ -7,14 +7,16 @@ async function remeCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
   
   try {
-    // Ambil pengirim dengan aman, pastikan tidak nyangkut ke ID grup
-    const rawSenderId = msg.key.participant || msg.participant || remoteJid;
-    const senderId = rawSenderId.includes('@g.us') 
-      ? (msg.pushName ? remoteJid : 'unknown_user@s.whatsapp.net') 
-      : rawSenderId;
+    // AMBIL SENDER DENGAN CARA PALING AMAN (Cegah total nyangkut ke ID Grup)
+    let senderId = msg.key.participant || msg.participant || msg.message?.extendedTextMessage?.contextInfo?.participant;
+    
+    // Jika masih tidak ketemu atau malah berupa ID grup, ambil dari sumber lain atau jadikan error handler yang bersih
+    if (!senderId || senderId.includes('@g.us')) {
+      senderId = remoteJid.includes('@g.us') ? null : remoteJid;
+    }
 
-    if (senderId.includes('@g.us')) {
-      return await sock.sendMessage(remoteJid, { text: '⚠️ Gagal mendeteksi ID user personal. Coba ulangi dengan me-reply pesan.' }, { quoted: msg });
+    if (!senderId || senderId.includes('@g.us')) {
+      return await sock.sendMessage(remoteJid, { text: '⚠️ Gagal mendeteksi akun personal lu! Coba ketik command sambil *reply* salah satu pesan lu sendiri.' }, { quoted: msg });
     }
 
     if (global.db.game[remoteJid]) {
@@ -49,7 +51,7 @@ async function remeCommand(sock, msg, args) {
       if (betAmount <= 0) betAmount = 15;
     }
 
-    // Helper pencari skor yang anti error group JID dan sangat fleksibel
+    // Helper pencari skor yang aman dari error undefined
     const getScore = (userJid) => {
       if (!global.db.users) global.db.users = {};
       if (!userJid || userJid.includes('@g.us')) return 0;
@@ -140,4 +142,3 @@ async function remeCommand(sock, msg, args) {
 }
 
 module.exports = remeCommand;
-        
