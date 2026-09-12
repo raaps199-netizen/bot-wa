@@ -3,7 +3,6 @@
 const config = require('../config');
 const handleGameAnswer = require('./gameHandler');
 const { getUserData, getTotalScore, addPoints, deductPoints } = require('../utils/helper');
-const { generateWAMessageFromContent, proto } = require('@whiskeysockets/baileys');
 
 // Command Media & Utility
 const stickerCommand = require('../commands/sticker');
@@ -533,7 +532,7 @@ async function handleMessage(sock, msg) {
       case 'menu_game':
       case 'games': {
         const gameText = 
-`┏━『 *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* 』
+`┏━I *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* I
 ┃
 ┣⌬ ${prefixUsed}bj
 ┣⌬ ${prefixUsed}math [mudah|sedang|hard|max]
@@ -567,7 +566,7 @@ async function handleMessage(sock, msg) {
       case 'menu_tools':
       case 'tools': {
         const toolsText = 
-`┏━『 *ᴍᴇɴᴜ ᴛᴏᴏʟꜱ* 』
+`┏━I *ᴍᴇɴᴜ ᴛᴏᴏʟꜱ* I
 ┃
 ┣⌬ ${prefixUsed}ping
 ┣⌬ ${prefixUsed}s
@@ -594,7 +593,7 @@ async function handleMessage(sock, msg) {
       case 'menu_group':
       case 'group': {
         const groupText = 
-`┏━『 *ᴍᴇɴᴜ ɢʀᴏᴜ𝚙* 』
+`┏━I *ᴍᴇɴᴜ ɢʀᴏᴜ𝚙* I
 ┃
 ┣⌬ ${prefixUsed}open
 ┣⌬ ${prefixUsed}close
@@ -607,9 +606,8 @@ async function handleMessage(sock, msg) {
       }
 
       case 'allmenu': {
-        try {
-          const allText = 
-`┏━『 *ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ* 』
+        const allText = 
+`┏━I *ꜱᴇᴍᴜ🇦 ᴍᴇɴᴜ* I
 ┃
 ┣⌬ *ɢᴀᴍᴇꜱ*
 ┃  • ${prefixUsed}bj
@@ -662,39 +660,38 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}promote @user
 ┃  • ${prefixUsed}demote @user
 ┗━━━━━━━◧`;
-          await sock.sendMessage(remoteJid, { text: allText }, { quoted: msg });
-        } catch (errDb) {
-          console.error('[DEBUG ERROR] Gagal mengeksekusi .allmenu:', errDb);
-          await sock.sendMessage(remoteJid, { text: `❌ Terjadi error pada .allmenu: ${errDb.message}` }, { quoted: msg });
-        }
+        await sock.sendMessage(remoteJid, { text: allText }, { quoted: msg });
         break;
       }
 
       case 'list':
       case 'menu':
       case 'help': {
-        try {
-          const menuText = `📋 *KATEGORI MENU BOT* 📋\n\n` +
-                           `Silakan pilih kategori menu di bawah ini menggunakan tombol interaktif atau ketik perintahnya secara manual.`;
+        const menuText = 
+`📋 *KATEGORI MENU BOT* 📋
 
-          const buttonsArray = [
-            {
-              name: 'quick_reply',
-              buttonParamsJson: JSON.stringify({ display_text: '🎮 Menu Games', id: `${prefixUsed}games` })
-            },
-            {
-              name: 'quick_reply',
-              buttonParamsJson: JSON.stringify({ display_text: '📥 Menu Tools', id: `${prefixUsed}tools` })
-            },
-            {
-              name: 'quick_reply',
-              buttonParamsJson: JSON.stringify({ display_text: '🛠️ Menu Group', id: `${prefixUsed}group` })
-            },
-            {
-              name: 'quick_reply',
-              buttonParamsJson: JSON.stringify({ display_text: '📜 Semua Menu', id: `${prefixUsed}allmenu` })
-            }
-          ];
+Ketik salah satu perintah di bawah ini untuk melihat menu berdasarkan kategori:
 
-          const formattedButtons = buttonsArray.map(btn => ({
-            name: btn.name
+• *${prefixUsed}games* -> Menu Game & Ekonomi
+• *${prefixUsed}tools* -> Menu Tools & Media
+• *${prefixUsed}group* -> Menu Group Management
+• *${prefixUsed}allmenu* -> Tampilkan Semua Menu Sekaligus`;
+
+        await sock.sendMessage(remoteJid, { text: menuText }, { quoted: msg });
+        break;
+      }
+
+      default:
+        await sock.sendMessage(remoteJid, {
+          text: `❌ Command *${prefixUsed}${command}* tidak ditemukan!\nKetik *${prefixUsed}menu* untuk melihat daftar menu.`
+        }, { quoted: msg });
+        break;
+    }
+
+  } catch (err) {
+    console.error('Error di handleMessage:', err);
+  }
+}
+
+module.exports = handleMessage;
+                               
