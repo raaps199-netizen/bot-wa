@@ -1,11 +1,12 @@
 // File: commands/reme.js
-const { getUserData, parseBetAmount } = require('../utils/helper');
+const { getUserData, getTotalScore, parseBetAmount } = require('../utils/helper');
 const { isPersonalJid, getSenderId } = require('../utils/jid-utils');
 
 function ensureDB() {
   if (!global.db) global.db = {};
   if (!global.db.remeChallenges) global.db.remeChallenges = {};
   if (!global.db.game) global.db.game = {};
+  if (!global.db.users) global.db.users = {};
 }
 ensureDB();
 
@@ -24,8 +25,9 @@ async function remeCommand(sock, msg, args) {
       return await sock.sendMessage(remoteJid, { text: '⚠️ Chat ini sedang ada game aktif, selesaikan dulu bro! (Atau ketik .batal)' }, { quoted: msg });
     }
 
-    const senderUser = getUserData(remoteJid, senderId);
-    const senderScore = senderUser.score || ((senderUser.mathScore || 0) + (senderUser.triviaScore || 0));
+    // Perbaikan: Menggunakan global.db sebagai argumen pertama getUserData
+    const senderUser = getUserData(global.db, senderId);
+    const senderScore = getTotalScore(senderUser);
 
     if (senderScore <= 0) {
       const globalKeys = Object.keys(global.db.users || {});
@@ -97,8 +99,9 @@ async function remeCommand(sock, msg, args) {
       return await sock.sendMessage(remoteJid, { text: '⚠️ Gila ya, mau main lawan diri sendiri wkwk!' }, { quoted: msg });
     }
 
-    const targetUser = getUserData(remoteJid, targetId);
-    const targetScore = targetUser.score || ((targetUser.mathScore || 0) + (targetUser.triviaScore || 0));
+    // Perbaikan: Menggunakan global.db untuk target user
+    const targetUser = getUserData(global.db, targetId);
+    const targetScore = getTotalScore(targetUser);
 
     if (targetScore < betAmount) {
       return await sock.sendMessage(remoteJid, { text: `⚠️ Lawan lu total poinnya gak cukup buat taruhan *${betAmount}* poin di grup ini! (Poin target: ${targetScore})` }, { quoted: msg });
@@ -126,3 +129,4 @@ async function remeCommand(sock, msg, args) {
 }
 
 module.exports = remeCommand;
+    
