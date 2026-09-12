@@ -13,13 +13,28 @@ function getUserData(remoteJid, userId) {
   global.db.groups[remoteJid] = global.db.groups[remoteJid] || { users: {} };
   
   if (!global.db.groups[remoteJid].users[userId]) {
-    global.db.groups[remoteJid].users[userId] = { 
-      mathScore: 0, 
-      triviaScore: 0, 
-      score: 0, 
-      lastClaim: 0,
-      nickname: '' 
-    };
+    // Cari dan migrasikan poin dari database global jika user sudah punya poin sebelumnya
+    const cleanUserId = userId.split(':')[0].split('@')[0];
+    const foundGlobalKey = Object.keys(global.db.users || {}).find(k => k.includes(cleanUserId));
+    
+    if (foundGlobalKey && global.db.users[foundGlobalKey]) {
+      const gUser = global.db.users[foundGlobalKey];
+      global.db.groups[remoteJid].users[userId] = { 
+        mathScore: gUser.mathScore || 0, 
+        triviaScore: gUser.triviaScore || 0, 
+        score: gUser.score || ((gUser.mathScore || 0) + (gUser.triviaScore || 0)), 
+        lastClaim: gUser.lastClaim || 0,
+        nickname: gUser.nickname || '' 
+      };
+    } else {
+      global.db.groups[remoteJid].users[userId] = { 
+        mathScore: 0, 
+        triviaScore: 0, 
+        score: 0, 
+        lastClaim: 0,
+        nickname: '' 
+      };
+    }
   }
   return global.db.groups[remoteJid].users[userId];
 }
@@ -66,4 +81,3 @@ function parseBetAmount(args, userTotal) {
 }
 
 module.exports = { getUserData, addPoints, deductPoints, parseBetAmount };
-
