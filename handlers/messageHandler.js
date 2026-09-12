@@ -49,6 +49,7 @@ const spinCommand = require('../commands/remeSpin');
 
 const qqCommand = require('../commands/qq');
 const { qqAcceptCommand, qqRejectCommand } = require('../commands/qqAcceptReject');
+const qqSpinCommand = require('../commands/qqSpin');
 
 async function handleMessage(sock, msg) {
   try {
@@ -67,16 +68,14 @@ async function handleMessage(sock, msg) {
     const remoteJid = msg.key.remoteJid;
     const senderId = msg.key.participant || remoteJid;
 
-    // Khusus command .spin waktu game Reme aktif
+    // Khusus command .spin waktu game Reme atau QQ aktif
     if (cleanText.toLowerCase() === '.spin' || cleanText.toLowerCase() === 'spin') {
-      await spinCommand(sock, msg);
-      if (global.db?.game?.[remoteJid]?.type === 'reme') return;
-    }
-
-    // Khusus command .qq waktu game QQ aktif (untuk lanjut ronde)
-    if (cleanText.toLowerCase() === '.qq' || cleanText.toLowerCase() === 'qq') {
-      if (global.db?.game?.[remoteJid]?.type === 'qq') {
-        await qqCommand(sock, msg, []);
+      const gameType = global.db?.game?.[remoteJid]?.type;
+      if (gameType === 'reme') {
+        await spinCommand(sock, msg);
+        return;
+      } else if (gameType === 'qq') {
+        await qqSpinCommand(sock, msg);
         return;
       }
     }
@@ -257,6 +256,10 @@ async function handleMessage(sock, msg) {
 
       case 'tolakqq':
         await qqRejectCommand(sock, msg);
+        break;
+
+      case 'spinqq':
+        await qqSpinCommand(sock, msg);
         break;
 
       case 's':
@@ -590,4 +593,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-          
+                               
