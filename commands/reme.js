@@ -11,12 +11,18 @@ async function remeCommand(sock, msg, args) {
     return await sock.sendMessage(remoteJid, { text: '⚠️ Chat ini sedang ada game aktif, selesaikan dulu bro! (Atau ketik .batal)' }, { quoted: msg });
   }
 
-  const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
-  
-  // Ambil angka taruhan dari args (filter keluar teks mention jika ada)
-  const nonTagArgs = args.filter(arg => !arg.includes('@'));
+  // Ambil target dari mention, pesan yang direply, atau argumen teks
+  let mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+  const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
+
+  if (mentioned.length === 0 && quotedParticipant) {
+    mentioned.push(quotedParticipant);
+  }
+
+  // Filter angka taruhan dari args
+  const nonTagArgs = args.filter(arg => !arg.includes('@') && !isNaN(arg));
   let betAmount = 15;
-  if (nonTagArgs.length > 0 && !isNaN(nonTagArgs[0])) {
+  if (nonTagArgs.length > 0) {
     betAmount = parseInt(nonTagArgs[0]);
     if (betAmount <= 0) betAmount = 15;
   }
@@ -25,12 +31,11 @@ async function remeCommand(sock, msg, args) {
     global.db.users[senderId] = { mathScore: 0, triviaScore: 0, score: 0 };
   }
 
-  // --- 1. KONDISI MAIN SENDIRI (TANPA TAG ORANG LAIN) -> OTOMATIS LAWAN BOT ---
+  // --- 1. KONDISI MAIN SENDIRI (TANPA TAG / REPLY) -> OTOMATIS LAWAN BOT ---
   if (mentioned.length === 0) {
     const senderStats = global.db.users[senderId];
     const senderScore = (senderStats.triviaScore || 0) + (senderStats.mathScore || 0) + (senderStats.score || 0);
 
-    // Cek apakah poin cukup untuk taruhan melawan bot
     if (senderScore < betAmount) {
       return await sock.sendMessage(remoteJid, { text: `⚠️ Poin total lu kurang, bre! Poin lu saat ini: *${senderScore}*, tapi mau taruhan *${betAmount}*.` }, { quoted: msg });
     }
@@ -58,7 +63,7 @@ async function remeCommand(sock, msg, args) {
     return;
   }
 
-  // --- 2. KONDISI LAWAN MANUSIA (DENGAN TAG @USER) ---
+  // --- 2. KONDISI LAWAN MANUSIA (PVP) ---
   const targetId = mentioned[0];
   if (targetId === senderId) {
     return await sock.sendMessage(remoteJid, { text: '⚠️ Gila ya, mau main lawan diri sendiri wkwk!' }, { quoted: msg });
