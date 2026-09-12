@@ -1,14 +1,21 @@
 // File: commands/duel.js
 const axios = require('axios');
 
-// Storage sementara untuk duel yang pending atau aktif
 global.db.duel = global.db.duel || {};
+
+// Database soal cadangan lokal (berjalan otomatis jika API luar down/gagal)
+const localTriviaFallback = [
+  { question: "Ibu kota negara Indonesia adalah...", options: ["Jakarta", "Bandung", "Surabaya", "Medan"], answer: "jakarta", category: "Geografi" },
+  { question: "Planet terbesar di dalam tata surya kita adalah...", options: ["Mars", "Jupiter", "Saturnus", "Venus"], answer: "jupiter", category: "Sains" },
+  { question: "Siapa penemu bola lampu pijar?", options: ["Thomas Edison", "Nikola Tesla", "Albert Einstein", "Alexander Graham Bell"], answer: "thomas edison", category: "Sejarah" },
+  { question: "Hewan mamalia terbesar di bumi adalah...", options: ["Paus Biru", "Gajah Afrika", "Hiu Putih", "Jerapah"], answer: "paus biru", category: "Biologi" },
+  { question: "Bahasa pemrograman yang paling identik dengan logo kopi/ular adalah...", options: ["JavaScript", "HTML", "CSS", "SQL"], answer: "javascript", category: "Teknologi" }
+];
 
 module.exports = async function duelCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
   const senderId = msg.key.participant || remoteJid;
 
-  // Sub-command handler untuk terima/tolak duel
   const subCmd = args[0]?.toLowerCase();
   if (subCmd === 'terima' || subCmd === 'accept') {
     return await handleAcceptDuel(sock, msg);
@@ -16,15 +23,13 @@ module.exports = async function duelCommand(sock, msg, args) {
     return await handleRejectDuel(sock, msg);
   }
 
-  // Format utama: .duel <math|trivia> @user <taruhan> [args...]
   const gameType = args[0]?.toLowerCase();
   if (!gameType || !['math', 'matematika', 'trivia', 'kuis'].includes(gameType)) {
     return await sock.sendMessage(remoteJid, { 
-      text: `⚠️ Pilih jenis game duel yang valid!\n\nContoh Math: *.duel math @user 100 sedang*\nContoh Trivia: *.duel trivia @user 100 sejarah mudah*` 
+      text: `⚠️ Pilih jenis game duel yang valid!\n\nContoh Math: *.duel math @user 100 sedang*\nContoh Trivia: *.duel trivia @user 100 mudah*` 
     }, { quoted: msg });
   }
 
-  // Ambil Target (@user)
   let targetId = null;
   const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
   const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
@@ -39,7 +44,6 @@ module.exports = async function duelCommand(sock, msg, args) {
     return await sock.sendMessage(remoteJid, { text: `⚠️ Tag teman yang bener buat diajak duel, bre!` }, { quoted: msg });
   }
 
-  // Ambil Nominal Taruhan
   const numericArgs = args.filter(arg => !arg.includes('@') && !isNaN(arg));
   const taruhan = parseInt(numericArgs[0]);
 
@@ -47,7 +51,6 @@ module.exports = async function duelCommand(sock, msg, args) {
     return await sock.sendMessage(remoteJid, { text: `⚠️ Masukkan nominal taruhan poin yang valid!` }, { quoted: msg });
   }
 
-  // Cek Saldo Poin Challenger
   if (!global.db.users[senderId]) global.db.users[senderId] = { mathScore: 0, triviaScore: 0, score: 0 };
   const senderTotal = (global.db.users[senderId].mathScore || 0) + (global.db.users[senderId].triviaScore || 0);
 
@@ -55,7 +58,6 @@ module.exports = async function duelCommand(sock, msg, args) {
     return await sock.sendMessage(remoteJid, { text: `⚠️ Poin lu gak cukup buat pasang taruhan *${taruhan}*!` }, { quoted: msg });
   }
 
-  // Cek Saldo Poin Target
   if (!global.db.users[targetId]) global.db.users[targetId] = { mathScore: 0, triviaScore: 0, score: 0 };
   const targetTotal = (global.db.users[targetId].mathScore || 0) + (global.db.users[targetId].triviaScore || 0);
 
@@ -63,9 +65,6 @@ module.exports = async function duelCommand(sock, msg, args) {
     return await sock.sendMessage(remoteJid, { text: `⚠️ Lawan lu (@${targetId.split('@')[0]}) poinnya gak cukup buat bayar taruhan segitu!` }, { quoted: msg });
   }
 
-  // Parsing sisa argumen untuk Diff / Kategori
-  // Math: .duel math @user 100 [mudah/sedang/hard/max]
-  // Trivia: .duel trivia @user 100 [kategori] [mudah/sedang/hard]
   const isMath = gameType.startsWith('math');
   let difficulty = 'mudah';
   let category = '';
@@ -73,7 +72,6 @@ module.exports = async function duelCommand(sock, msg, args) {
   if (isMath) {
     difficulty = args.find(arg => ['mudah', 'sedang', 'hard', 'max'].includes(arg.toLowerCase())) || 'mudah';
   } else {
-    // Trivia args filtering
     const cleanArgs = args.filter(arg => !arg.includes('@') && isNaN(arg) && arg.toLowerCase() !== 'trivia' && arg.toLowerCase() !== 'kuis');
     difficulty = cleanArgs.pop()?.toLowerCase() || 'mudah';
     if (!['mudah', 'sedang', 'hard'].includes(difficulty)) {
@@ -83,7 +81,6 @@ module.exports = async function duelCommand(sock, msg, args) {
     category = cleanArgs.join(' ').toLowerCase();
   }
 
-  // Simpan Sesi Challenge
   global.db.duel[remoteJid] = {
     challenger: senderId,
     target: targetId,
@@ -118,7 +115,6 @@ async function handleAcceptDuel(sock, msg) {
 
   duel.status = 'active';
 
-  // Generate Soal Berdasarkan Tipe
   if (duel.type === 'math') {
     const qData = generateMathQuestion(duel.difficulty);
     duel.question = qData.question;
@@ -130,7 +126,11 @@ async function handleAcceptDuel(sock, msg) {
     }, { quoted: msg });
 
   } else {
-    // Fetch Trivia Question
+    let questionText = '';
+    let correctAnswer = '';
+    let options = [];
+    let qCategory = 'General Knowledge';
+
     try {
       let url = `https://opentdb.com/api.php?amount=1&type=multiple`;
       if (duel.difficulty) {
@@ -138,28 +138,36 @@ async function handleAcceptDuel(sock, msg) {
         url += `&difficulty=${diffMap[duel.difficulty] || 'easy'}`;
       }
       
-      const res = await axios.get(url);
-      const data = res.data.results[0];
-      if (!data) throw new Error('Gagal ambil soal trivia');
+      const response = await axios.get(url, { timeout: 5000 });
+      const data = response.data?.results?.[0];
 
-      const correctAnswer = decodeHtml(data.correct_answer);
-      const options = [...data.incorrect_answers.map(decodeHtml), correctAnswer].sort(() => Math.random() - 0.5);
-      
-      duel.question = decodeHtml(data.question);
-      duel.answer = correctAnswer.toLowerCase();
-      duel.options = options;
-
-      let optionText = options.map((opt, i) => `${['A', 'B', 'C', 'D'][i]}. ${opt}`).join('\n');
-
-      await sock.sendMessage(remoteJid, { 
-        text: `🔥 *DUEL TRIVIA DIMULAI!*\n\nKategori: *${data.category}* (${duel.difficulty.toUpperCase()})\n\n*${duel.question}*\n\n${optionText}\n\n*(Balas dengan pilihan huruf A/B/C/D atau jawabannya langsung!)*`,
-        mentions: [duel.challenger, duel.target]
-      }, { quoted: msg });
-
+      if (data) {
+        correctAnswer = decodeHtml(data.correct_answer);
+        options = [...data.incorrect_answers.map(decodeHtml), correctAnswer].sort(() => Math.random() - 0.5);
+        questionText = decodeHtml(data.question);
+        qCategory = data.category;
+      } else {
+        throw new Error('Data kosong dari API');
+      }
     } catch (err) {
-      delete global.db.duel[remoteJid];
-      await sock.sendMessage(remoteJid, { text: `❌ Gagal mengambil soal Trivia, sesi duel dibatalkan.` }, { quoted: msg });
+      // AMBIL DARI CADANGAN LOKAL JIKA API GAGAL
+      const fallback = localTriviaFallback[Math.floor(Math.random() * localTriviaFallback.length)];
+      correctAnswer = fallback.answer;
+      options = [...fallback.options].sort(() => Math.random() - 0.5);
+      questionText = fallback.question;
+      qCategory = fallback.category;
     }
+
+    duel.question = questionText;
+    duel.answer = correctAnswer.toLowerCase();
+    duel.options = options;
+
+    let optionText = options.map((opt, i) => `${['A', 'B', 'C', 'D'][i]}. ${opt}`).join('\n');
+
+    await sock.sendMessage(remoteJid, { 
+      text: `🔥 *DUEL TRIVIA DIMULAI!*\n\nKategori: *${qCategory}* (${duel.difficulty.toUpperCase()})\n\n*${duel.question}*\n\n${optionText}\n\n*(Balas dengan pilihan huruf A/B/C/D atau jawabannya langsung!)*`,
+      mentions: [duel.challenger, duel.target]
+    }, { quoted: msg });
   }
 }
 
@@ -175,7 +183,6 @@ async function handleRejectDuel(sock, msg) {
   await sock.sendMessage(remoteJid, { text: `🏳️ Duel ditolak. Cupu lu wkwk!` }, { quoted: msg });
 }
 
-// Fungsi bantu jawab duel (dipanggil dari gameHandler / messageHandler)
 async function handleDuelAnswer(sock, msg, userAnswer) {
   const remoteJid = msg.key.remoteJid;
   const senderId = msg.key.participant || remoteJid;
@@ -190,7 +197,6 @@ async function handleDuelAnswer(sock, msg, userAnswer) {
   if (duel.type === 'math') {
     isCorrect = cleanAns === String(duel.answer);
   } else {
-    // Cek jawaban trivia (bisa teks langsung atau opsi A/B/C/D)
     const optIndex = ['a', 'b', 'c', 'd'].indexOf(cleanAns);
     if (optIndex !== -1 && duel.options[optIndex]) {
       isCorrect = duel.options[optIndex].toLowerCase() === duel.answer;
@@ -204,7 +210,6 @@ async function handleDuelAnswer(sock, msg, userAnswer) {
     const loserId = (winnerId === duel.challenger) ? duel.target : duel.challenger;
     const taruhan = duel.taruhan;
 
-    // Potong Poin Loser & Tambah Poin Winner
     deductPoints(loserId, taruhan);
     addPoints(winnerId, taruhan);
 
@@ -273,4 +278,4 @@ function decodeHtml(html) {
 
 module.exports.duelCommand = duelCommand;
 module.exports.handleDuelAnswer = handleDuelAnswer;
-
+  
