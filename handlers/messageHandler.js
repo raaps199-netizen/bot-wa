@@ -42,10 +42,13 @@ const claimCommand = require('../commands/claim');
 const tfCommand = require('../commands/tf');
 const { duelCommand, handleDuelAnswer } = require('../commands/duel');
 
-// Command Reme Kasino
+// Command Reme & QQ Kasino
 const remeCommand = require('../commands/reme');
 const { terimaCommand, tolakCommand } = require('../commands/remeAcceptReject');
 const spinCommand = require('../commands/remeSpin');
+
+const qqCommand = require('../commands/qq');
+const { qqAcceptCommand, qqRejectCommand } = require('../commands/qqAcceptReject');
 
 async function handleMessage(sock, msg) {
   try {
@@ -68,6 +71,14 @@ async function handleMessage(sock, msg) {
     if (cleanText.toLowerCase() === '.spin' || cleanText.toLowerCase() === 'spin') {
       await spinCommand(sock, msg);
       if (global.db?.game?.[remoteJid]?.type === 'reme') return;
+    }
+
+    // Khusus command .qq waktu game QQ aktif (untuk lanjut ronde)
+    if (cleanText.toLowerCase() === '.qq' || cleanText.toLowerCase() === 'qq') {
+      if (global.db?.game?.[remoteJid]?.type === 'qq') {
+        await qqCommand(sock, msg, []);
+        return;
+      }
     }
 
     // 1. CEK JAWABAN GAME (Langsung ditangkap tanpa prefix/perintah apa pun)
@@ -195,15 +206,15 @@ async function handleMessage(sock, msg) {
       case 'cancel': {
         const currentGame = global.db.game?.[remoteJid];
         
-        if (!currentGame || currentGame.type !== 'reme') {
-          await sock.sendMessage(remoteJid, { text: `⚠️ Lagi tidak ada sesi game Reme yang aktif di chat ini.` }, { quoted: msg });
+        if (!currentGame || (currentGame.type !== 'reme' && currentGame.type !== 'qq')) {
+          await sock.sendMessage(remoteJid, { text: `⚠️ Lagi tidak ada sesi game aktif yang bisa dibatalkan di chat ini.` }, { quoted: msg });
           break;
         }
 
         delete global.db.game[remoteJid];
         if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
-        await sock.sendMessage(remoteJid, { text: `✅ Sesi game Reme berhasil dibatalkan secara paksa.` }, { quoted: msg });
+        await sock.sendMessage(remoteJid, { text: `✅ Sesi game aktif berhasil dibatalkan secara paksa.` }, { quoted: msg });
         break;
       }
 
@@ -234,6 +245,18 @@ async function handleMessage(sock, msg) {
 
       case 'spin':
         await spinCommand(sock, msg);
+        break;
+
+      case 'qq':
+        await qqCommand(sock, msg, args);
+        break;
+
+      case 'terimaqq':
+        await qqAcceptCommand(sock, msg);
+        break;
+
+      case 'tolakqq':
+        await qqRejectCommand(sock, msg);
         break;
 
       case 's':
@@ -432,6 +455,8 @@ async function handleMessage(sock, msg) {
 ┣⌬ ${prefixUsed}duel trivia @user <taruhan> [kategori] [diff]
 ┣⌬ ${prefixUsed}reme <taruhan> (Lawan Bot)
 ┣⌬ ${prefixUsed}reme @user <taruhan> (PvP)
+┣⌬ ${prefixUsed}qq <taruhan> (Lawan Bot)
+┣⌬ ${prefixUsed}qq @user <taruhan> (PvP)
 ┣⌬ ${prefixUsed}batal
 ┣⌬ ${prefixUsed}claim (Ambil Poin Harian)
 ┣⌬ ${prefixUsed}tf @user <nominal>
@@ -504,6 +529,8 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}duel math/trivia @user <taruhan>
 ┃  • ${prefixUsed}reme <taruhan> (Lawan Bot)
 ┃  • ${prefixUsed}reme @user <taruhan> (PvP)
+┃  • ${prefixUsed}qq <taruhan> (Lawan Bot)
+┃  • ${prefixUsed}qq @user <taruhan> (PvP)
 ┃  • ${prefixUsed}batal
 ┃  • ${prefixUsed}claim (Ambil Poin Harian)
 ┃  • ${prefixUsed}tf @user <nominal>
@@ -563,4 +590,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-                               
+          
