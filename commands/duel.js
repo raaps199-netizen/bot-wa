@@ -1,6 +1,15 @@
 // File: commands/duel.js
 const axios = require('axios');
 
+let helper = {};
+let jidUtils = {};
+
+try { helper = require('../utils/helper'); } catch (e) {}
+try { jidUtils = require('../utils/jid-utils'); } catch (e) {}
+
+const { getUserData, getTotalScore, addPoints, deductPoints } = helper;
+const { getSenderId } = jidUtils;
+
 const localTriviaFallback = [
   { question: "Ibu kota negara Indonesia adalah...", options: ["Jakarta", "Bandung", "Surabaya", "Medan"], answer: "jakarta", category: "Geografi" },
   { question: "Planet terbesar di dalam tata surya kita adalah...", options: ["Mars", "Jupiter", "Saturnus", "Venus"], answer: "jupiter", category: "Sains" },
@@ -9,12 +18,47 @@ const localTriviaFallback = [
   { question: "Bahasa pemrograman yang paling identik dengan logo kopi/ular adalah...", options: ["JavaScript", "HTML", "CSS", "SQL"], answer: "javascript", category: "Teknologi" }
 ];
 
+// Helper internal untuk membaca & mengolah poin secara akurat
+function getPoints(userId) {
+  if (typeof getTotalScore === 'function' && typeof getUserData === 'function') {
+    const u = getUserData(global.db, userId);
+    return getTotalScore(u);
+  }
+  const u = global.db?.users?.[userId] || {};
+  return u.points || u.score || 0;
+}
+
+function givePoints(userId, amount) {
+  if (typeof addPoints === 'function') {
+    return addPoints(global.db, userId, amount);
+  }
+  global.db.users = global.db.users || {};
+  global.db.users[userId] = global.db.users[userId] || {};
+  global.db.users[userId].score = (global.db.users[userId].score || 0) + amount;
+}
+
+function takePoints(userId, amount) {
+  if (typeof deductPoints === 'function') {
+    return deductPoints(global.db, userId, amount);
+  }
+  global.db.users = global.db.users || {};
+  global.db.users[userId] = global.db.users[userId] || {};
+  global.db.users[userId].score = Math.max(0, (global.db.users[userId].score || 0) - amount);
+}
+
+function resolveSender(msg, remoteJid) {
+  if (typeof getSenderId === 'function') {
+    return getSenderId(msg, remoteJid);
+  }
+  return msg.key.participant || remoteJid;
+}
+
 async function duelCommand(sock, msg, args) {
   global.db = global.db || {};
   global.db.duel = global.db.duel || {};
 
   const remoteJid = msg.key.remoteJid;
-  const senderId = msg.key.participant || remoteJid;
+  const senderId = resolveSender(msg, remoteJid);
 
   const subCmd = args[0]?.toLowerCase();
   if (subCmd === 'terima' || subCmd === 'accept') {
@@ -30,6 +74,7 @@ async function duelCommand(sock, msg, args) {
     }, { quoted: msg });
   }
 
+  // Tangkap JID target (bisa dari mention native, reply pesan, atau tag biasa)
   let targetId = null;
   const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
   const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
@@ -38,9 +83,16 @@ async function duelCommand(sock, msg, args) {
     targetId = mentioned[0];
   } else if (quotedParticipant) {
     targetId = quotedParticipant;
+  } else {
+    const targetArg = args.find(a => a.includes('@'));
+    if (targetArg) {
+      const cleanNum = targetArg.replace(/[^0-9]/g, '');
+      if (cleanNum) targetId = `${cleanNum}@s.whatsapp.net`;
+    }
   }
 
-  if (!targetId || targetId === senderId || targetId === sock.user.id) {
+  const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+  if (!targetId || targetId === senderId || targetId.includes(botId.split('@')[0])) {
     return await sock.sendMessage(remoteJid, { text: `⚠️ Tag teman yang bener buat diajak duel, bre!` }, { quoted: msg });
   }
 
@@ -51,19 +103,21 @@ async function duelCommand(sock, msg, args) {
     return await sock.sendMessage(remoteJid, { text: `⚠️ Masukkan nominal taruhan poin yang valid!` }, { quoted: msg });
   }
 
-  global.db.users = global.db.users || {};
-  if (!global.db.users[senderId]) global.db.users[senderId] = { mathScore: 0, triviaScore: 0, score: 0 };
-  const senderTotal = (global.db.users[senderId].mathScore || 0) + (global.db.users[senderId].triviaScore || 0);
-
+  // 1. Cek Poin Pengirim Tantangan
+  const senderTotal = getPoints(senderId);
   if (senderTotal < taruhan) {
-    return await sock.sendMessage(remoteJid, { text: `⚠️ Poin lu gak cukup buat pasang taruhan *${taruhan}*!` }, { quoted: msg });
+    return await sock.sendMessage(remoteJid, { 
+      text: `⚠️ Poin lu gak cukup buat pasang taruhan *${taruhan}*!\n• Total Poin Lu: *${senderTotal}*` 
+    }, { quoted: msg });
   }
 
-  if (!global.db.users[targetId]) global.db.users[targetId] = { mathScore: 0, triviaScore: 0, score: 0 };
-  const targetTotal = (global.db.users[targetId].mathScore || 0) + (global.db.users[targetId].triviaScore || 0);
-
+  // 2. Cek Poin Target Duel
+  const targetTotal = getPoints(targetId);
   if (targetTotal < taruhan) {
-    return await sock.sendMessage(remoteJid, { text: `⚠️ Lawan lu (@${targetId.split('@')[0]}) poinnya gak cukup buat bayar taruhan segitu!` }, { quoted: msg });
+    return await sock.sendMessage(remoteJid, { 
+      text: `⚠️ Lawan lu (@${targetId.split('@')[0]}) poinnya gak cukup buat bayar taruhan segitu!\n• Total Poin Lawan: *${targetTotal}*`,
+      mentions: [targetId]
+    }, { quoted: msg });
   }
 
   const isMath = gameType.startsWith('math');
@@ -106,7 +160,7 @@ async function handleAcceptDuel(sock, msg) {
   global.db.duel = global.db.duel || {};
 
   const remoteJid = msg.key.remoteJid;
-  const senderId = msg.key.participant || remoteJid;
+  const senderId = resolveSender(msg, remoteJid);
   const duel = global.db.duel[remoteJid];
 
   if (!duel || duel.status !== 'pending') {
@@ -179,7 +233,7 @@ async function handleRejectDuel(sock, msg) {
   global.db.duel = global.db.duel || {};
 
   const remoteJid = msg.key.remoteJid;
-  const senderId = msg.key.participant || remoteJid;
+  const senderId = resolveSender(msg, remoteJid);
   const duel = global.db.duel[remoteJid];
 
   if (!duel || duel.status !== 'pending') return;
@@ -194,7 +248,7 @@ async function handleDuelAnswer(sock, msg, userAnswer) {
   global.db.duel = global.db.duel || {};
 
   const remoteJid = msg.key.remoteJid;
-  const senderId = msg.key.participant || remoteJid;
+  const senderId = resolveSender(msg, remoteJid);
   const duel = global.db.duel?.[remoteJid];
 
   if (!duel || duel.status !== 'active') return false;
@@ -219,8 +273,8 @@ async function handleDuelAnswer(sock, msg, userAnswer) {
     const loserId = (winnerId === duel.challenger) ? duel.target : duel.challenger;
     const taruhan = duel.taruhan;
 
-    deductPoints(loserId, taruhan);
-    addPoints(winnerId, taruhan);
+    takePoints(loserId, taruhan);
+    givePoints(winnerId, taruhan);
 
     delete global.db.duel[remoteJid];
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
@@ -259,30 +313,6 @@ function generateMathQuestion(diff) {
   return { question: `${num1} ${operator} ${num2}`, answer };
 }
 
-function addPoints(userId, amount) {
-  global.db.users = global.db.users || {};
-  const user = global.db.users[userId];
-  user.triviaScore = (user.triviaScore || 0) + amount;
-  user.score = (user.mathScore || 0) + (user.triviaScore || 0);
-}
-
-function deductPoints(userId, amount) {
-  global.db.users = global.db.users || {};
-  const user = global.db.users[userId];
-  let remaining = amount;
-  if (user.triviaScore && user.triviaScore > 0) {
-    const take = Math.min(user.triviaScore, remaining);
-    user.triviaScore -= take;
-    remaining -= take;
-  }
-  if (remaining > 0 && user.mathScore && user.mathScore > 0) {
-    const take = Math.min(user.mathScore, remaining);
-    user.mathScore -= take;
-    remaining -= take;
-  }
-  user.score = (user.mathScore || 0) + (user.triviaScore || 0);
-}
-
 function decodeHtml(html) {
   return html.replace(/&quot;/g, '"').replace(/&#039;/g, "'").replace(/&amp;/g, '&').replace(/&eacute;/g, 'é');
 }
@@ -291,4 +321,4 @@ module.exports = {
   duelCommand,
   handleDuelAnswer
 };
-        
+          
