@@ -1,7 +1,6 @@
 // File: handlers/messageHandler.js
 
 const config = require('../config');
-// PERBAIKAN IMPORT (TIDAK PAKAI DESTRUKTURISASI):
 const handleGameAnswer = require('./gameHandler');
 const { getUserData, getTotalScore, addPoints, deductPoints } = require('../utils/helper');
 
@@ -55,6 +54,50 @@ const qqCommand = require('../commands/qq');
 const { qqAcceptCommand, qqRejectCommand } = require('../commands/qqAcceptReject');
 const qqSpinCommand = require('../commands/qqSpin');
 
+// ==========================================
+// 🚨 DAFTAR KATA TERLARANG (FULL LIST)
+// ==========================================
+const BAD_WORDS = [
+  'g0bl0k',
+  'b3g0',
+  't0l0l',
+  'k0nt0l',
+  'm3m3k',
+  'ng3nt0t',
+  'j4nc0k',
+  'b4ngs4t',
+  't4i',
+  'p4nt3k',
+  'asuuu',
+  'kontooool',
+  'memekk',
+  'jancokkktai',
+  'kontol',
+  'memek',
+  'ngentot',
+  'jancok',
+  'cok',
+  'pantek',
+  'anjing',
+  'monyet',
+  'kimak',
+  'lonte',
+  'sundal',
+  'nekopoi',
+  'porno',
+  'porn',
+  'pornografi',
+  'ph',
+  'pornhub',
+  'porn hub',
+  'brutal sez',
+  'brutal sex',
+  'gay porn',
+  'nhentai',
+  'xvideos',
+  'xnxx'
+];
+
 async function handleMessage(sock, msg) {
   try {
     const messageContent = msg.message;
@@ -72,6 +115,43 @@ async function handleMessage(sock, msg) {
     const remoteJid = msg.key.remoteJid;
     const senderId = msg.key.participant || remoteJid;
 
+    // ===================================================
+    // 🔥 AUTO FILTER & AUTO DELETE KATA TERLARANG 🔥
+    // ===================================================
+    const ownerPhone = '6289531307627';
+    const ownerLid = '66477638029541';
+    const isOwner = senderId.includes(ownerPhone) || senderId.includes(ownerLid);
+
+    // Kalau bukan owner, lakukan pengecekan kata terlarang
+    if (!isOwner) {
+      const lowerText = cleanText.toLowerCase();
+      // Normalisasi teks (hapus simbol/spasi/titik) untuk cegah akal-akalan (contoh: a.n.j.i.n.g -> anjing)
+      const normalizedText = lowerText.replace(/[^a-z0-9]/g, '');
+
+      const isBadWordDetected = BAD_WORDS.some(word => {
+        const cleanWord = word.toLowerCase().replace(/[^a-z0-9]/g, '');
+        return lowerText.includes(word) || normalizedText.includes(cleanWord);
+      });
+
+      if (isBadWordDetected) {
+        try {
+          // 1. Delete pesan (HANYA BISA JIKA BOT ADMIN)
+          await sock.sendMessage(remoteJid, { delete: msg.key });
+
+          // 2. Tag member & berikan peringatan
+          const senderName = senderId.split('@')[0];
+          await sock.sendMessage(remoteJid, {
+            text: `⚠️ Pesan dari @${senderName} telah **dihapus otomatis** karena mengandung kata terlarang!`,
+            mentions: [senderId]
+          });
+        } catch (delErr) {
+          console.error('Gagal auto delete pesan (Pastikan bot sudah jadi ADMIN!):', delErr);
+        }
+        return; // Hentikan proses, jangan lanjut ke game/command
+      }
+    }
+    // ===================================================
+
     // Khusus command .spin waktu game Reme atau QQ aktif
     if (cleanText.toLowerCase() === '.spin' || cleanText.toLowerCase() === 'spin') {
       const gameType = global.db?.game?.[remoteJid]?.type;
@@ -84,7 +164,7 @@ async function handleMessage(sock, msg) {
       }
     }
 
-    // 1. CEK JAWABAN GAME (Langsung ditangkap tanpa prefix/perintah apa pun)
+    // 1. CEK JAWABAN GAME
     try {
       const isGameAnswered = await handleGameAnswer(sock, msg, cleanText);
       if (isGameAnswered) return;
@@ -112,11 +192,8 @@ async function handleMessage(sock, msg) {
 
     // 4. SWITCH CASE COMMAND
     switch (command) {
-      case 'add': {
-        const ownerPhone = '6289531307627';
-        const ownerLid = '66477638029541';
-        
-        if (!senderId.includes(ownerPhone) && !senderId.includes(ownerLid)) {
+      case 'add': {        
+        if (!isOwner) {
           await sock.sendMessage(remoteJid, { text: `❌ Lu bukan owner, gak usah sok asik mau nambah poin sendiri wkwk!\n(ID terdeteksi: ${senderId})` }, { quoted: msg });
           break;
         }
@@ -601,4 +678,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-                                           
+                                 
