@@ -1,5 +1,8 @@
+// File: handlers/messageHandler.js
+
 const config = require('../config');
-const { handleGameAnswer } = require('./gameHandler');
+// PERBAIKAN IMPORT (TIDAK PAKAI DESTRUKTURISASI):
+const handleGameAnswer = require('./gameHandler');
 const { getUserData, getTotalScore, addPoints, deductPoints } = require('../utils/helper');
 
 // Command Media & Utility
@@ -209,15 +212,16 @@ async function handleMessage(sock, msg) {
       case 'cancel': {
         const currentGame = global.db.game?.[remoteJid];
         
-        if (!currentGame || (currentGame.type !== 'reme' && currentGame.type !== 'qq')) {
+        if (!currentGame) {
           await sock.sendMessage(remoteJid, { text: `⚠️ Lagi tidak ada sesi game aktif yang bisa dibatalkan di chat ini.` }, { quoted: msg });
           break;
         }
 
+        if (currentGame.timer) clearTimeout(currentGame.timer);
         delete global.db.game[remoteJid];
         if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
-        await sock.sendMessage(remoteJid, { text: `✅ Sesi game aktif berhasil dibatalkan secara paksa.` }, { quoted: msg });
+        await sock.sendMessage(remoteJid, { text: `✅ Sesi game aktif (${currentGame.type.toUpperCase()}) berhasil dibatalkan secara paksa.` }, { quoted: msg });
         break;
       }
 
@@ -597,4 +601,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-                                 
+                                           
