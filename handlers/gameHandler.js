@@ -6,8 +6,13 @@ async function handleGameAnswer(sock, msg, userText) {
 
   const cleanAnswer = userText.trim().toLowerCase();
 
+  // JIKA PESAN DIAWALI PREFIX (.) ATAU (/), JANGAN ANGGAP SEBAGAI JAWABAN GAME!
+  if (cleanAnswer.startsWith('.') || cleanAnswer.startsWith('/')) {
+    return false;
+  }
+
   // 1. Deteksi Menyerah
-  if (['.nyerah', 'nyerah', 'menyerah', '/nyerah'].includes(cleanAnswer)) {
+  if (['nyerah', 'menyerah'].includes(cleanAnswer)) {
     clearTimeout(session.timer);
     const correctAns = session.jawabanTeks || session.jawabanBenar || session.answer || session.jawabanOpsi || 'Tidak diketahui';
     delete global.db.game[remoteJid];
@@ -40,7 +45,6 @@ async function handleGameAnswer(sock, msg, userText) {
       global.db.users[senderId] = { mathScore: 0, triviaScore: 0, name: pushName };
     }
 
-    // Mengambil poin dari reward math atau default 15 jika game lain
     const earnedPoints = session.reward || session.points || 15;
 
     if (session.type === 'math') {
@@ -51,7 +55,6 @@ async function handleGameAnswer(sock, msg, userText) {
     
     global.db.users[senderId].name = pushName;
     
-    // Simpan permanen ke database.json
     if (typeof global.saveDatabase === 'function') {
       global.saveDatabase();
     }
