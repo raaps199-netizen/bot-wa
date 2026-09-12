@@ -1,15 +1,17 @@
+// File: commands/qq.js
+const { getUserData, getTotalScore } = require('../utils/helper');
+const { getSenderId } = require('../utils/jid-utils');
+
 async function qqCommand(sock, msg, args) {
   try {
     const remoteJid = msg.key.remoteJid;
-    const senderId = msg.key.participant || remoteJid;
+    const senderId = getSenderId(msg, remoteJid) || msg.key.participant || remoteJid;
 
-    if (!global.db.users[senderId]) {
-      global.db.users[senderId] = { score: 0 };
-    }
+    const senderUser = getUserData(global.db, senderId);
+    let userScore = getTotalScore(senderUser);
 
     const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
     
-    // Ambil angka dari argumen (biasanya argumen terakhir adalah jumlah taruhan)
     let taruhan = 0;
     for (let arg of args) {
       let parsed = parseInt(arg);
@@ -17,8 +19,6 @@ async function qqCommand(sock, msg, args) {
         taruhan = parsed;
       }
     }
-
-    let userScore = global.db.users[senderId].score || 0;
     
     if (args.includes('all') || args.includes('semua')) {
       taruhan = userScore;
@@ -32,7 +32,7 @@ async function qqCommand(sock, msg, args) {
     }
 
     if (userScore < taruhan) {
-      await sock.sendMessage(remoteJid, { text: `❌ Poin kamu tidak cukup! Poin kamu saat ini: *${userScore}*` }, { quoted: msg });
+      await sock.sendMessage(remoteJid, { text: `❌ Poin kamu tidak cukup! Poin kamu saat herat: *${userScore}*` }, { quoted: msg });
       return;
     }
 
@@ -45,7 +45,7 @@ async function qqCommand(sock, msg, args) {
 
     // Mode Lawan Bot
     if (mentioned.length === 0) {
-      global.db.users[senderId].score -= taruhan;
+      senderUser.score -= taruhan;
       if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
       global.db.game[remoteJid] = {
@@ -76,13 +76,11 @@ async function qqCommand(sock, msg, args) {
         return;
       }
 
-      if (!global.db.users[targetId]) {
-        global.db.users[targetId] = { score: 0 };
-      }
+      const targetUser = getUserData(global.db, targetId);
+      const targetScore = getTotalScore(targetUser);
 
-      const targetScore = global.db.users[targetId].score || 0;
       if (targetScore < taruhan) {
-        await sock.sendMessage(remoteJid, { text: `❌ Poin @${targetId.split('@')[0]} tidak cukup untuk menandingi taruhan ini!` }, { quoted: msg });
+        await sock.sendMessage(remoteJid, { text: `❌ Poin @${targetId.split('@')[0]} tidak cukup untuk menandingi taruhan ini! (Poin: ${targetScore})` }, { quoted: msg });
         return;
       }
 
@@ -110,4 +108,3 @@ async function qqCommand(sock, msg, args) {
 }
 
 module.exports = qqCommand;
-          
