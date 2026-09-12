@@ -195,6 +195,17 @@ async function handleMessage(sock, msg) {
 
     // 4. SWITCH CASE COMMAND
     switch (command) {
+      case 'ping': {
+        const start = Date.now();
+        const sentMsg = await sock.sendMessage(remoteJid, { text: 'Pong! 🏓' }, { quoted: msg });
+        const latency = Date.now() - start;
+        
+        await sock.sendMessage(remoteJid, { 
+          text: `Pong! 🏓\nKecepatan respon: *${latency} ms*` 
+        }, { quoted: sentMsg });
+        break;
+      }
+
       case 'add': {        
         if (!isOwner) {
           await sock.sendMessage(remoteJid, { text: `❌ Lu bukan owner, gak usah sok asik mau nambah poin sendiri wkwk!\n(ID terdeteksi: ${senderId})` }, { quoted: msg });
@@ -568,6 +579,7 @@ async function handleMessage(sock, msg) {
         const toolsText = 
 `┏━『 *ᴍᴇɴᴜ ᴛᴏᴏʟꜱ* 』
 ┃
+┣⌬ ${prefixUsed}ping
 ┣⌬ ${prefixUsed}s
 ┣⌬ ${prefixUsed}wm <pack|author>
 ┣⌬ ${prefixUsed}toimg
@@ -634,6 +646,7 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}dare
 ┃
 ┣⌬ *ᴛᴏᴏʟꜱ*
+┃  • ${prefixUsed}ping
 ┃  • ${prefixUsed}s
 ┃  • ${prefixUsed}wm <pack|author>
 ┃  • ${prefixUsed}toimg
@@ -681,4 +694,3 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-                                 
