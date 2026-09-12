@@ -128,7 +128,6 @@ async function handleMessage(sock, msg) {
     // Kalau bukan owner, lakukan pengecekan kata terlarang
     if (!isOwner) {
       const lowerText = cleanText.toLowerCase();
-      // Normalisasi teks (hapus simbol/spasi/titik) untuk cegah akal-akalan (contoh: a.n.j.i.n.g -> anjing)
       const normalizedText = lowerText.replace(/[^a-z0-9]/g, '');
 
       const isBadWordDetected = BAD_WORDS.some(word => {
@@ -138,11 +137,7 @@ async function handleMessage(sock, msg) {
 
       if (isBadWordDetected) {
         try {
-          // 1. Delete pesan (HANYA BISA JIKA BOT ADMIN)
           await sock.sendMessage(remoteJid, { delete: msg.key });
-
-          // 2. Tag member & berikan peringatan
-          const senderName = senderId.split('@')[0];
           await sock.sendMessage(remoteJid, {
             text: `_pesan telah *dihapus otomatis* karena mengandung kata terlarang_`,
             mentions: [senderId]
@@ -150,12 +145,11 @@ async function handleMessage(sock, msg) {
         } catch (delErr) {
           console.error('Gagal auto delete pesan (Pastikan bot sudah jadi ADMIN!):', delErr);
         }
-        return; // Hentikan proses, jangan lanjut ke game/command
+        return;
       }
     }
     // ===================================================
 
-    // Khusus command .spin waktu game Reme atau QQ aktif
     if (cleanText.toLowerCase() === '.spin' || cleanText.toLowerCase() === 'spin') {
       const gameType = global.db?.game?.[remoteJid]?.type;
       if (gameType === 'reme') {
@@ -167,7 +161,6 @@ async function handleMessage(sock, msg) {
       }
     }
 
-    // 1. CEK JAWABAN GAME
     try {
       const isGameAnswered = await handleGameAnswer(sock, msg, cleanText);
       if (isGameAnswered) return;
@@ -175,7 +168,6 @@ async function handleMessage(sock, msg) {
       console.error('Error saat handleGameAnswer:', gameErr);
     }
 
-    // 2. CEK JAWABAN DUEL AKTIF
     try {
       const isDuelAnswered = await handleDuelAnswer(sock, msg, cleanText);
       if (isDuelAnswered) return;
@@ -183,7 +175,6 @@ async function handleMessage(sock, msg) {
       console.error('Error saat handleDuelAnswer:', duelErr);
     }
 
-    // 3. CEK PREFIX
     let prefixUsed = '';
     if (cleanText.startsWith(config.prefix)) prefixUsed = config.prefix;
     else if (cleanText.startsWith('/')) prefixUsed = '/';
@@ -193,7 +184,6 @@ async function handleMessage(sock, msg) {
     const args = cleanText.slice(prefixUsed.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
-    // 4. SWITCH CASE COMMAND
     switch (command) {
       case 'ping': {
         const start = Date.now();
@@ -543,7 +533,7 @@ async function handleMessage(sock, msg) {
       case 'menu_game':
       case 'games': {
         const gameText = 
-`┏━I *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* I
+`┏━『 *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* 』
 ┃
 ┣⌬ ${prefixUsed}bj
 ┣⌬ ${prefixUsed}math [mudah|sedang|hard|max]
@@ -577,7 +567,7 @@ async function handleMessage(sock, msg) {
       case 'menu_tools':
       case 'tools': {
         const toolsText = 
-`┏━I *ᴍᴇɴᴜ ᴛᴏᴏʟꜱ* I
+`┏━『 *ᴍᴇɴᴜ ᴛᴏᴏʟꜱ* 』
 ┃
 ┣⌬ ${prefixUsed}ping
 ┣⌬ ${prefixUsed}s
@@ -604,7 +594,7 @@ async function handleMessage(sock, msg) {
       case 'menu_group':
       case 'group': {
         const groupText = 
-`┏━I *ᴍᴇɴᴜ ɢʀᴏᴜ𝚙* I
+`┏━『 *ᴍᴇɴᴜ ɢʀᴏᴜ𝚙* 』
 ┃
 ┣⌬ ${prefixUsed}open
 ┣⌬ ${prefixUsed}close
@@ -618,7 +608,7 @@ async function handleMessage(sock, msg) {
 
       case 'allmenu': {
         const allText = 
-`┏━I *ꜱᴇᴍᴜ🇦 ᴍᴇɴᴜ* I
+`┏━『 *ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ* 』
 ┃
 ┣⌬ *ɢᴀᴍᴇꜱ*
 ┃  • ${prefixUsed}bj
@@ -695,4 +685,23 @@ async function handleMessage(sock, msg) {
                 {
                   name: "quick_reply",
                   buttonParamsJson: JSON.stringify({
-                    display_text: "📂 All Menu"
+                    display_text: "📂 All Menu",
+                    id: `${prefixUsed}allmenu`
+                  })
+                }
+              ]
+            }
+          }
+        }, { quoted: msg });
+        break;
+      }
+
+      default:
+        await sock.sendMessage(remoteJid, {
+          text: `❌ Command *${prefixUsed}${command}* tidak ditemukan!\nKetik *${prefixUsed}menu* untuk melihat daftar menu.`
+        }, { quoted: msg });
+        break;
+    }
+
+  } catch (err) {
+    console.error('Error di handleMessage:', err?.st
