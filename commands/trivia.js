@@ -22,7 +22,6 @@ async function triviaCommand(sock, msg, args) {
     }, { quoted: msg });
   }
 
-  // Berikan reaksi emoji jam pasir ke pesan user tanpa mengirim teks proses
   await sock.sendMessage(remoteJid, {
     react: {
       text: '⏳',
@@ -67,7 +66,7 @@ Keluarkan hasil WAJIB dalam bentuk objek JSON valid dengan struktur persis seper
 }`;
 
     const response = await axios.post(url, {
-      model: 'openai/gpt-oss-20b', // Menggunakan model aktif Groq pengganti model lama yang deprecated
+      model: 'openai/gpt-oss-20b',
       messages: [
         { role: 'system', content: 'Kamu adalah pembuat kuis trivia yang wajib merespon hanya dalam format JSON valid.' },
         { role: 'user', content: promptText }
@@ -112,6 +111,59 @@ Keluarkan hasil WAJIB dalam bentuk objek JSON valid dengan struktur persis seper
     });
 
     const timeoutSec = 60;
+
+    const caption = 
+`❓ *TRIVIA (${targetTopic} - ${difficulty.toUpperCase()})*
+🎁 Hadiah Poin: *+${points} Poin*
+
+${quizData.soal}
+
+*Pilihan Jawaban:*
+A. ${formattedOptions.a}
+B. ${formattedOptions.b}
+C. ${formattedOptions.c}
+D. ${formattedOptions.d}
+
+⏱️ Waktu: *${timeoutSec} Detik*
+
+_Ketik pilihan jawaban kamu (contoh: a, b, c, atau d)_`;
+
+    const sentMsg = await sock.sendMessage(remoteJid, { text: caption }, { quoted: msg });
+
+    const timer = setTimeout(async () => {
+      if (global.db.game[remoteJid] && global.db.game[remoteJid].type === 'trivia') {
+        delete global.db.game[remoteJid];
+        await sock.sendMessage(remoteJid, {
+          text: `⏰ *Waktu abis bro!* Nggak ada yang kejawab.\nJawaban yang bener tuh: *${correctOptionLabel.toUpperCase()}. ${correctOptionText}*`
+        }, { quoted: sentMsg });
+      }
+    }, timeoutSec * 1000);
+
+    global.db.game[remoteJid] = {
+      type: 'trivia',
+      msgId: sentMsg.key.id,
+      soal: quizData.soal,
+      jawabanBenar: correctOptionLabel,
+      jawabanTeks: correctOptionText.toLowerCase(),
+      points: points,
+      timer: timer
+    };
+
+  } catch (err) {
+    if (global.db.game[remoteJid]) {
+      delete global.db.game[remoteJid];
+    }
+
+    const errorDetails = err?.response?.data?.error?.message || err?.message || String(err);
+    console.error('Error Groq Trivia Detail:', errorDetails);
+
+    await sock.sendMessage(remoteJid, {
+      text: `❌ Waduh error pas bikin soal trivia.\n_Detail: ${errorDetails}_`
+    }, { quoted: msg });
+  }
+}
+
+module.exports = triviaCommand;
 
     const caption = 
 `❓ *TRIVIA (${targetTopic} - ${difficulty.toUpperCase()})*
