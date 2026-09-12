@@ -69,7 +69,6 @@ function generateMathProblem(level) {
       problemStr = `(${a}³ + ${b}²) - ${c}`;
       answer = (Math.pow(a, 3) + Math.pow(b, 2)) - c;
     } else {
-      // Max / Extreme Max
       const a = getRandomInt(3, 6);
       const b = getRandomInt(2, 5);
       const c = getRandomInt(15, 35);
@@ -94,7 +93,7 @@ async function mathCommand(sock, msg, args) {
   let levelInput = (args[0] || 'mudah').toLowerCase();
   let levelName = 'MUDAH';
   let timeoutSec = 45;
-  let rewardPoints = 15; // Default mudah
+  let rewardPoints = 15;
 
   if (['sedang', 'medium'].includes(levelInput)) {
     levelInput = 'sedang';
@@ -150,10 +149,9 @@ _Ketik langsung angka jawabannya di chat! Ketik .nyerah jika ingin menyerah._`;
     msgId: sentMsg.key.id,
     soal: problemStr,
     jawabanBenar: answer.toString(),
-    reward: rewardPoints, // Menyimpan jumlah poin hadiah di objek game
+    reward: rewardPoints,
     timer: timer
   };
 }
 
 module.exports = mathCommand;
-  
