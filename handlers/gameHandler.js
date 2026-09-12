@@ -1,74 +1,81 @@
-async function handleGameAnswer(sock, msg, userText) {
-  const remoteJid = msg.key.remoteJid;
-  const session = global.db?.game?.[remoteJid];
+const { getUserData, addPoints } = require('../utils/helper');
+const { getSenderId } = require('../utils/jid-utils');
 
-  if (!session) return false;
+async function handleGameAnswer(sock, msg) {
+  try {
+    const remoteJid = msg.key.remoteJid;
+    const game = global.db?.game?.[remoteJid];
+    
+    if (!game) return false;
 
-  const cleanAnswer = userText.trim().toLowerCase();
+    const body = msg.message?.conversation || 
+                 msg.message?.extendedTextMessage?.text || 
+                 msg.message?.imageMessage?.caption || '';
+                 
+    const cleanBody = body.trim().toLowerCase();
+    const senderId = getSenderId(msg, remoteJid) || msg.key.participant || remoteJid;
 
-  // JIKA PESAN DIAWALI PREFIX (.) ATAU (/), JANGAN ANGGAP SEBAGAI JAWABAN GAME!
-  if (cleanAnswer.startsWith('.') || cleanAnswer.startsWith('/')) {
+    if (cleanBody === '.nyerah' || cleanBody === 'nyerah') {
+      if (['math', 'trivia'].includes(game.type)) {
+        if (game.timer) clearTimeout(game.timer);
+        delete global.db.game[remoteJid];
+        if (typeof global.saveDatabase === 'function') global.saveDatabase();
+        
+        await sock.sendMessage(remoteJid, { 
+          text: `🏳️ *Menyerah!* Game ${game.type.toUpperCase()} dihentikan.\nJawaban yang benar adalah: *${game.jawabanBenar}*` 
+        }, { quoted: msg });
+        return true;
+      }
+    }
+
+    if (game.type === 'math') {
+      if (cleanBody === game.jawabanBenar) {
+        if (game.timer) clearTimeout(game.timer);
+        delete global.db.game[remoteJid];
+
+        const user = getUserData(global.db, senderId);
+        addPoints(global.db, senderId, game.reward);
+        user.mathCount = (user.mathCount || 0) + 1;
+
+        if (typeof global.saveDatabase === 'function') global.saveDatabase();
+
+        const senderName = senderId.split('@')[0];
+        await sock.sendMessage(remoteJid, {
+          text: `🎉 *SELAMAT @${senderName}!* Jawaban kamu benar.\n💰 Poin Bertambah: *+${game.reward} Poin*\n🧮 Total Math Selesai: *${user.mathCount} soal*`,
+          mentions: [senderId]
+        }, { quoted: msg });
+        return true;
+      }
+    }
+
+    if (game.type === 'trivia') {
+      const isCorrectOption = cleanBody === game.jawabanBenar.toLowerCase();
+      const isCorrectText = cleanBody === game.jawabanTeks;
+
+      if (isCorrectOption || isCorrectText) {
+        if (game.timer) clearTimeout(game.timer);
+        delete global.db.game[remoteJid];
+
+        const user = getUserData(global.db, senderId);
+        addPoints(global.db, senderId, game.points);
+        user.triviaCount = (user.triviaCount || 0) + 1;
+
+        if (typeof global.saveDatabase === 'function') global.saveDatabase();
+
+        const senderName = senderId.split('@')[0];
+        await sock.sendMessage(remoteJid, {
+          text: `🎉 *BENAR @${senderName}!* Jawaban yang tepat.\n💰 Poin Bertambah: *+${game.points} Poin*\n🧠 Total Trivia Selesai: *${user.triviaCount} soal*`,
+          mentions: [senderId]
+        }, { quoted: msg });
+        return true;
+      }
+    }
+
+    return false;
+  } catch (err) {
+    console.error('Error di handleGameAnswer:', err);
     return false;
   }
-
-  // 1. Deteksi Menyerah
-  if (['nyerah', 'menyerah'].includes(cleanAnswer)) {
-    clearTimeout(session.timer);
-    const correctAns = session.jawabanTeks || session.jawabanBenar || session.answer || session.jawabanOpsi || 'Tidak diketahui';
-    delete global.db.game[remoteJid];
-    if (typeof global.saveDatabase === 'function') global.saveDatabase();
-    await sock.sendMessage(remoteJid, {
-      text: `🏳️ *Menyerah!*\nJawaban yang benar adalah: *${correctAns}*`
-    }, { quoted: msg });
-    return true;
-  }
-
-  // 2. Ambil kunci jawaban yang mungkin disimpan oleh berbagai jenis game
-  const possibleAnswers = [
-    session.jawabanBenar,
-    session.jawabanTeks,
-    session.answer,
-    session.jawabanOpsi
-  ].filter(Boolean).map(ans => String(ans).trim().toLowerCase());
-
-  // Cek apakah jawaban user cocok
-  if (possibleAnswers.includes(cleanAnswer)) {
-    clearTimeout(session.timer);
-    delete global.db.game[remoteJid];
-
-    // --- SISTEM SKOR OTOMATIS (SUPAYA GA HILANG) ---
-    const senderId = msg.key.participant || remoteJid;
-    const pushName = msg.pushName || 'User';
-
-    if (!global.db.users) global.db.users = {};
-    if (!global.db.users[senderId]) {
-      global.db.users[senderId] = { mathScore: 0, triviaScore: 0, name: pushName };
-    }
-
-    const earnedPoints = session.reward || session.points || 15;
-
-    if (session.type === 'math') {
-      global.db.users[senderId].mathScore = (global.db.users[senderId].mathScore || 0) + earnedPoints;
-    } else {
-      global.db.users[senderId].triviaScore = (global.db.users[senderId].triviaScore || 0) + earnedPoints;
-    }
-    
-    global.db.users[senderId].name = pushName;
-    
-    if (typeof global.saveDatabase === 'function') {
-      global.saveDatabase();
-    }
-    // ----------------------------------------------
-
-    const displayAnswer = session.jawabanTeks || session.jawabanBenar || session.jawabanOpsi;
-
-    await sock.sendMessage(remoteJid, {
-      text: `🎉 *Benar sekali, ${pushName}!*\nJawaban yang benar adalah: *${displayAnswer}*\n✨ Poin didapat: *+${earnedPoints}*`
-    }, { quoted: msg });
-    return true;
-  }
-
-  return false;
 }
 
-module.exports = { handleGameAnswer };
+module.exports = handleGameAnswer;
