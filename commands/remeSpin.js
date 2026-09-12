@@ -47,10 +47,14 @@ async function processBotRoundEnd(sock, remoteJid, game, playerRoll, botRoll) {
 
   await sock.sendMessage(remoteJid, { text: summaryText, mentions: [p1] });
 
-  if (game.round >= game.maxRound) {
-    const scoreP1 = game.scores[p1];
-    const scoreP2 = game.scores[p2];
+  // Tentukan batas kemenangan (misal: siapa yang duluan menang 2 ronde, atau jika sudah mencapai maxRound)
+  const scoreP1 = game.scores[p1];
+  const scoreP2 = game.scores[p2];
+  const winningTarget = Math.ceil(game.maxRound / 2);
 
+  const isGameOver = scoreP1 >= winningTarget || scoreP2 >= winningTarget || game.round >= game.maxRound;
+
+  if (isGameOver) {
     let finalMsg = `🏁 *PERMAINAN REME SELESAI!*\n\nSkor Akhir:\n• @${p1.split('@')[0]} : ${scoreP1} Win\n• Bot : ${scoreP2} Win\n\n`;
 
     if (!global.db.users[p1]) global.db.users[p1] = { mathScore: 0, triviaScore: 0, score: 0 };
@@ -87,7 +91,7 @@ async function processBotRoundEnd(sock, remoteJid, game, playerRoll, botRoll) {
 async function spinCommand(sock, msg) {
   const remoteJid = msg.key.remoteJid;
   const rawSenderId = msg.key.participant || remoteJid;
-  const senderNumber = rawSenderId.split('@')[0].split(':')[0]; // Ambil nomor bersihnya saja tanpa embel-embel device
+  const senderNumber = rawSenderId.split('@')[0].split(':')[0]; 
   
   const game = global.db?.game?.[remoteJid];
 
@@ -100,7 +104,6 @@ async function spinCommand(sock, msg) {
     const targetPlayer = game.players.find(p => p !== botNumber);
     const targetNumber = targetPlayer.split('@')[0].split(':')[0];
 
-    // Cocokkan berdasarkan nomor bersihnya agar tidak error gara-gara beda format JID device
     if (senderNumber !== targetNumber) return;
 
     const playerRaw = Math.floor(Math.random() * 37);
