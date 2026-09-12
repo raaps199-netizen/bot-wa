@@ -63,6 +63,7 @@ const BAD_WORDS = [
   't0l0l',
   'k0nt0l',
   'm3m3k',
+  'rule34',
   'ng3nt0t',
   'j4nc0k',
   'b4ngs4t',
