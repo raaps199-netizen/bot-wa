@@ -1,21 +1,22 @@
-if (!global.db) global.db = {};
-if (!global.db.remeChallenges) global.db.remeChallenges = {};
-if (!global.db.game) global.db.game = {};
-if (!global.db.users) global.db.users = {};
+const { isPersonalJid, getSenderId } = require('../utils/jid-utils');
+
+function ensureDB() {
+  if (!global.db) global.db = {};
+  if (!global.db.remeChallenges) global.db.remeChallenges = {};
+  if (!global.db.game) global.db.game = {};
+  if (!global.db.users) global.db.users = {};
+}
+ensureDB();
 
 async function remeCommand(sock, msg, args) {
+  ensureDB(); // jaga-jaga kalau global.db kereset dari file lain di antara load module
   const remoteJid = msg.key.remoteJid;
-  
-  try {
-    // AMBIL SENDER DENGAN CARA PALING AMAN (Cegah total nyangkut ke ID Grup)
-    let senderId = msg.key.participant || msg.participant || msg.message?.extendedTextMessage?.contextInfo?.participant;
-    
-    // Jika masih tidak ketemu atau malah berupa ID grup, ambil dari sumber lain atau jadikan error handler yang bersih
-    if (!senderId || senderId.includes('@g.us')) {
-      senderId = remoteJid.includes('@g.us') ? null : remoteJid;
-    }
 
-    if (!senderId || senderId.includes('@g.us')) {
+  try {
+    // 1. AMBIL SENDER — 100% anti ID grup, gak ada jalur yang bisa lolos jadi @g.us
+    const senderId = getSenderId(msg, remoteJid);
+
+    if (!senderId) {
       return await sock.sendMessage(remoteJid, { text: '⚠️ Gagal mendeteksi akun personal lu! Coba ketik command sambil *reply* salah satu pesan lu sendiri.' }, { quoted: msg });
     }
 
@@ -23,14 +24,14 @@ async function remeCommand(sock, msg, args) {
       return await sock.sendMessage(remoteJid, { text: '⚠️ Chat ini sedang ada game aktif, selesaikan dulu bro! (Atau ketik .batal)' }, { quoted: msg });
     }
 
-    // 1. Ambil target mention, reply, atau teks argumen dengan aman
+    // 2. Ambil target: mention, reply, atau argumen teks — divalidasi juga
     let targetId = null;
     const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
     const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
 
-    if (mentioned.length > 0) {
+    if (mentioned.length > 0 && isPersonalJid(mentioned[0])) {
       targetId = mentioned[0];
-    } else if (quotedParticipant) {
+    } else if (isPersonalJid(quotedParticipant)) {
       targetId = quotedParticipant;
     } else {
       const argTarget = args.find(arg => arg.includes('@') || (!isNaN(arg) && arg.length > 5));
@@ -38,12 +39,13 @@ async function remeCommand(sock, msg, args) {
         const cleanNum = argTarget.replace(/[^0-9]/g, '');
         if (cleanNum.length >= 5) {
           const found = Object.keys(global.db.users || {}).find(k => k.replace(/[^0-9]/g, '').includes(cleanNum));
-          targetId = found || (cleanNum + '@s.whatsapp.net');
+          const candidate = found || (cleanNum + '@s.whatsapp.net');
+          if (isPersonalJid(candidate)) targetId = candidate;
         }
       }
     }
 
-    // 2. Ambil angka taruhan dari argumen
+    // 3. Ambil angka taruhan dari argumen
     let betAmount = 15;
     const numericArgs = args.filter(arg => !arg.includes('@') && !isNaN(arg));
     if (numericArgs.length > 0) {
@@ -51,26 +53,24 @@ async function remeCommand(sock, msg, args) {
       if (betAmount <= 0) betAmount = 15;
     }
 
-    // Helper pencari skor yang aman dari error undefined
+    // Helper pencari skor — sekarang gak akan PERNAH nulis key ID grup ke DB
     const getScore = (userJid) => {
-      if (!global.db.users) global.db.users = {};
-      if (!userJid || userJid.includes('@g.us')) return 0;
-      
+      ensureDB();
+      if (!isPersonalJid(userJid)) return 0; // <- pagar mutlak sebelum sentuh global.db.users
+
       const rawDigits = userJid.replace(/[^0-9]/g, '');
-      if (rawDigits.length < 5) return 0;
-      
       const userPhoneSuffix = rawDigits.slice(-6);
 
       const foundKey = Object.keys(global.db.users).find(k => {
         const keyDigits = k.replace(/[^0-9]/g, '');
         return keyDigits.length >= 5 && (keyDigits.endsWith(userPhoneSuffix) || userPhoneSuffix.endsWith(keyDigits));
       });
-      
+
       if (!foundKey) {
         global.db.users[userJid] = { mathScore: 0, triviaScore: 0, score: 0 };
         return 0;
       }
-      
+
       const stats = global.db.users[foundKey];
       return (stats.triviaScore || 0) + (stats.mathScore || 0) + (stats.score || 0);
     };
@@ -86,6 +86,7 @@ async function remeCommand(sock, msg, args) {
       const botJid = sock.user.id;
       const cleanBotId = botJid.includes(':') ? botJid.split(':')[0] + '@s.whatsapp.net' : botJid;
 
+      ensureDB();
       global.db.game[remoteJid] = {
         type: 'reme',
         players: [senderId, cleanBotId],
@@ -121,6 +122,7 @@ async function remeCommand(sock, msg, args) {
     }
 
     // Simpan tantangan PvP
+    ensureDB();
     global.db.remeChallenges[remoteJid] = {
       challenger: senderId,
       challenged: targetId,
