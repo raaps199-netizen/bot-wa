@@ -8,11 +8,20 @@ async function handleGameAnswer(sock, msg) {
     
     if (!game) return false;
 
-    const body = msg.message?.conversation || 
-                 msg.message?.extendedTextMessage?.text || 
-                 msg.message?.imageMessage?.caption || '';
+    // Unwrap pesan jika terbungkus ephemeral atau viewOnce
+    const innerMsg = msg.message?.ephemeralMessage?.message || 
+                     msg.message?.viewOnceMessage?.message || 
+                     msg.message?.viewOnceMessageV2?.message || 
+                     msg.message;
+
+    const body = innerMsg?.conversation || 
+                 innerMsg?.extendedTextMessage?.text || 
+                 innerMsg?.imageMessage?.caption || 
+                 innerMsg?.videoMessage?.caption || '';
                  
     const cleanBody = body.trim().toLowerCase();
+    if (!cleanBody) return false;
+
     const senderId = getSenderId(msg, remoteJid) || msg.key.participant || remoteJid;
 
     if (cleanBody === '.nyerah' || cleanBody === 'nyerah') {
