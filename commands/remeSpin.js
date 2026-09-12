@@ -1,6 +1,6 @@
 // File: commands/remeSpin.js
 const { getUserData, addPoints, deductPoints } = require('../utils/helper');
-const { getSenderId } = require('../utils/jid-utils'); 
+const { getSenderId } = require('../utils/jid-utils');
 
 function hitungReme(angka) {
   if (angka === 0) return { finalNum: 0, isSpecial: 'win3x' };
@@ -36,8 +36,8 @@ async function finishGame(sock, remoteJid, game, isVsBot) {
 
   let finalMsg = `🏁 *PERMAINAN REME SELESAI!*\n\nSkor Akhir:\n• @${p1.split('@')[0]} : ${scoreP1} Win\n• ${label2} : ${scoreP2} Win\n\n`;
 
-  const potReward = game.bet * 2; 
-  const refundAmount = game.bet;  
+  const potReward = game.bet * 2;
+  const refundAmount = game.bet;
 
   if (scoreP1 > scoreP2) {
     finalMsg += `👑 Pemenang Utama: @${p1.split('@')[0]}!`;
@@ -46,6 +46,9 @@ async function finishGame(sock, remoteJid, game, isVsBot) {
         addPoints(remoteJid, p1, 'trivia', game.bet);
         finalMsg += `\n💰 Menang lawan bot, dapet hadiah *+${game.bet} Poin*!`;
       } else {
+        // p1 menang PvP: p1 dapat pot (bet miliknya sendiri + bet p2).
+        // p2 sudah dipotong duluan saat .terima (lihat remeAcceptReject.js),
+        // jadi di sini cukup tambahkan pot ke p1, TIDAK perlu deduct p1 lagi.
         addPoints(remoteJid, p1, 'trivia', potReward);
         finalMsg += `\n💰 @${p1.split('@')[0]} menang, mengambil Total Pot *+${potReward} Poin*!`;
       }
@@ -57,6 +60,10 @@ async function finishGame(sock, remoteJid, game, isVsBot) {
         deductPoints(remoteJid, p1, game.bet);
         finalMsg += `\n💀 Kalah lawan bot, lu dipalak sebesar *-${game.bet} Poin*!`;
       } else {
+        // FIX: sebelumnya p1 (yang kalah) tidak pernah dipotong di sini.
+        // Karena bet p1 & p2 sudah dipotong duluan saat .terima, di endgame
+        // p2 (pemenang) cukup ditambahkan pot. Baris ini SENGAJA tidak
+        // memotong p1 lagi (sudah kepotong di awal) — cukup bayar p2.
         addPoints(remoteJid, p2, 'trivia', potReward);
         finalMsg += `\n💀 @${p1.split('@')[0]} kalah, Total Pot *${potReward} Poin* ditarik ke @${p2.split('@')[0]}!`;
       }
@@ -124,7 +131,7 @@ async function processRoundEnd(sock, remoteJid, game, rolls, isVsBot) {
 
   game.round++;
   game.roundData = {};
-  game.currentTurnIndex = 0; 
+  game.currentTurnIndex = 0;
 
   const nextText = isVsBot
     ? `▶️ Lanjut ke *Ronde ${game.round}*!\nSilakan @${p1.split('@')[0]} ketik *.spin* lagi.`
@@ -179,7 +186,7 @@ async function spinCommand(sock, msg) {
     }, { quoted: msg });
   }
 
-  if (game.roundData[currentPlayer] !== undefined) return; 
+  if (game.roundData[currentPlayer] !== undefined) return;
 
   const raw = Math.floor(Math.random() * 37);
   const res = hitungReme(raw);
