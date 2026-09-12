@@ -1,4 +1,4 @@
-const axios = require('axios');
+// File: commands/math.js
 
 if (!global.db) global.db = {};
 if (!global.db.game) global.db.game = {};
@@ -8,150 +8,116 @@ function getRandomInt(min, max) {
 }
 
 function generateMathProblem(level) {
-  let problemStr = '';
-  let answer = 0;
-  let attempts = 0;
+  let num1, num2, num3, operator, expression, answer, reward;
 
-  do {
-    attempts++;
-    if (level === 'mudah') {
-      const a = getRandomInt(5, 30);
-      const b = getRandomInt(5, 30);
-      const isAdd = Math.random() > 0.5;
-      if (isAdd) {
-        problemStr = `${a} + ${b}`;
-        answer = a + b;
-      } else {
-        const maxVal = Math.max(a, b);
-        const minVal = Math.min(a, b);
-        problemStr = `${maxVal} - ${minVal}`;
-        answer = maxVal - minVal;
+  switch (level) {
+    case 'sedang':
+    case 'medium':
+      num1 = getRandomInt(10, 50);
+      num2 = getRandomInt(10, 50);
+      operator = ['+', '-', '*'][getRandomInt(0, 2)];
+      if (operator === '*') {
+        num1 = getRandomInt(5, 15);
+        num2 = getRandomInt(5, 15);
       }
-    } else if (level === 'sedang') {
-      const type = getRandomInt(1, 3);
-      if (type === 1) {
-        const a = getRandomInt(3, 10);
-        const b = getRandomInt(3, 10);
-        const c = getRandomInt(5, 20);
-        problemStr = `${a} × ${b} + ${c}`;
-        answer = (a * b) + c;
-      } else if (type === 2) {
-        const a = getRandomInt(20, 60);
-        const b = getRandomInt(2, 6);
-        const c = getRandomInt(5, 15);
-        problemStr = `${a} - ${b} × ${b} + ${c}`;
-        answer = a - (b * b) + c;
-      } else {
-        const a = getRandomInt(12, 40);
-        const b = getRandomInt(5, 25);
-        const c = getRandomInt(2, 8);
-        problemStr = `${a} + ${b} - ${c}`;
-        answer = a + b - c;
-      }
-    } else if (level === 'hard') {
-      const pattern = getRandomInt(1, 2);
-      if (pattern === 1) {
-        const base = getRandomInt(2, 6);
-        const addNum = getRandomInt(10, 30);
-        problemStr = `${base}² + ${addNum}`;
-        answer = Math.pow(base, 2) + addNum;
-      } else {
-        const a = getRandomInt(3, 9);
-        const b = getRandomInt(2, 5);
-        const c = getRandomInt(5, 15);
-        problemStr = `(${a} + ${b}) × ${c}`;
-        answer = (a + b) * c;
-      }
-    } else if (level === 'extreme') {
-      const a = getRandomInt(2, 5);
-      const b = getRandomInt(2, 4);
-      const c = getRandomInt(10, 25);
-      problemStr = `(${a}³ + ${b}²) - ${c}`;
-      answer = (Math.pow(a, 3) + Math.pow(b, 2)) - c;
-    } else {
-      const a = getRandomInt(3, 6);
-      const b = getRandomInt(2, 5);
-      const c = getRandomInt(15, 35);
-      problemStr = `(${a}³ × ${b}) - ${c}`;
-      answer = (Math.pow(a, 3) * b) - c;
-    }
-    if (!isNaN(answer) && Number.isInteger(answer)) break;
-  } while (attempts < 10);
+      expression = `${num1} ${operator} ${num2}`;
+      answer = eval(expression);
+      reward = 25;
+      break;
 
-  return { problemStr, answer: Math.round(answer) };
+    case 'hard':
+    case 'sulit':
+    case 'susah':
+      num1 = getRandomInt(20, 100);
+      num2 = getRandomInt(10, 50);
+      num3 = getRandomInt(5, 20);
+      operator = ['+', '-', '*'][getRandomInt(0, 2)];
+      expression = `${num1} ${operator} ${num2} + ${num3}`;
+      answer = eval(expression);
+      reward = 50;
+      break;
+
+    case 'extreme':
+      num1 = getRandomInt(50, 200);
+      num2 = getRandomInt(10, 30);
+      num3 = getRandomInt(2, 10);
+      expression = `${num1} + ${num2} * ${num3}`;
+      answer = eval(expression);
+      reward = 100;
+      break;
+
+    case 'max':
+      num1 = getRandomInt(100, 500);
+      num2 = getRandomInt(20, 50);
+      num3 = getRandomInt(10, 30);
+      expression = `(${num1} + ${num2}) * ${num3}`;
+      answer = eval(expression);
+      reward = 200;
+      break;
+
+    case 'mudah':
+    default:
+      num1 = getRandomInt(1, 20);
+      num2 = getRandomInt(1, 20);
+      operator = ['+', '-'][getRandomInt(0, 1)];
+      expression = `${num1} ${operator} ${num2}`;
+      answer = eval(expression);
+      reward = 10;
+      break;
+  }
+
+  return { expression, answer: String(answer), reward, level: level || 'mudah' };
 }
 
 async function mathCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
 
-  if (global.db.game[remoteJid]) {
-    return await sock.sendMessage(remoteJid, {
-      text: '⚠️ Masih ada kuis yang aktif di chat ini!\nKetik jawabannya atau ketik *.nyerah* untuk menyerah.'
+  // Validasi ketat pengecekan game aktif
+  if (global.db.game && global.db.game[remoteJid] && global.db.game[remoteJid].type) {
+    await sock.sendMessage(remoteJid, {
+      text: '⚠️ Eh, selesaikan dulu game yang lagi aktif di chat ini!'
     }, { quoted: msg });
+    return;
   }
 
-  let levelInput = (args[0] || 'mudah').toLowerCase();
-  let levelName = 'MUDAH';
-  let timeoutSec = 45;
-  let rewardPoints = 15;
-
-  if (['sedang', 'medium'].includes(levelInput)) {
-    levelInput = 'sedang';
-    levelName = 'MEDIUM';
-    timeoutSec = 60;
-    rewardPoints = 30;
-  } else if (['hard', 'susah'].includes(levelInput)) {
-    levelInput = 'hard';
-    levelName = 'HARD';
-    timeoutSec = 90;
-    rewardPoints = 45;
-  } else if (['extreme', 'ekstrem'].includes(levelInput)) {
-    levelInput = 'extreme';
-    levelName = 'EXTREME';
-    timeoutSec = 105;
-    rewardPoints = 60;
-  } else if (['max', 'extreme max'].includes(levelInput)) {
-    levelInput = 'max';
-    levelName = 'EXTREME MAX 💥';
-    timeoutSec = 120;
-    rewardPoints = 70;
-  } else {
-    levelInput = 'mudah';
-  }
-
-  const { problemStr, answer } = generateMathProblem(levelInput);
+  const levelInput = (args[0] || 'mudah').toLowerCase().trim();
+  const mathData = generateMathProblem(levelInput);
+  const timeoutSec = 60;
 
   const caption = 
-`🧮 *KUIS MATEMATIKA (${levelName})*
-🎁 Hadiah Poin: *+${rewardPoints} Poin*
+`🧮 *MATEMATIKA (${mathData.level.toUpperCase()})*
+🎁 Hadiah Poin: *+${mathData.reward} Poin*
 
-Berapa hasil dari:
-*${problemStr}*
+Soal: *${mathData.expression} = ?*
 
 ⏱️ Waktu: *${timeoutSec} Detik*
 
-_Ketik langsung angka jawabannya di chat! Ketik .nyerah jika ingin menyerah._`;
+_Ketik angka jawaban kamu!_`;
 
   const sentMsg = await sock.sendMessage(remoteJid, { text: caption }, { quoted: msg });
 
   const timer = setTimeout(async () => {
-    if (global.db.game[remoteJid]) {
-      delete global.db.game[remoteJid];
-      if (typeof global.saveDatabase === 'function') global.saveDatabase();
-      await sock.sendMessage(remoteJid, {
-        text: `⏳ *Waktu habis!*\nJawaban yang benar adalah: *${answer}*`
-      }, { quoted: sentMsg });
+    try {
+      if (global.db.game && global.db.game[remoteJid] && global.db.game[remoteJid].type === 'math') {
+        delete global.db.game[remoteJid];
+        await sock.sendMessage(remoteJid, {
+          text: `⏰ *Waktu habis bro!* Nggak ada yang kejawab.\nJawaban yang benar: *${mathData.answer}*`
+        }, { quoted: sentMsg });
+      }
+    } catch (e) {
+      console.error('Error di timer math:', e);
     }
   }, timeoutSec * 1000);
 
   global.db.game[remoteJid] = {
     type: 'math',
     msgId: sentMsg.key.id,
-    soal: problemStr,
-    jawabanBenar: answer.toString(),
-    reward: rewardPoints,
+    soal: mathData.expression,
+    jawabanBenar: mathData.answer,
+    reward: mathData.reward,
     timer: timer
   };
 }
 
 module.exports = mathCommand;
+          
