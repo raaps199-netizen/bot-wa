@@ -40,6 +40,7 @@ const scoreCommand = require('../commands/score');
 const leaderboardCommand = require('../commands/leaderboard');
 const claimCommand = require('../commands/claim');
 const tfCommand = require('../commands/tf');
+const { duelCommand, handleDuelAnswer } = require('../commands/duel');
 
 // Command Reme Kasino
 const remeCommand = require('../commands/reme');
@@ -77,7 +78,15 @@ async function handleMessage(sock, msg) {
       console.error('Error saat handleGameAnswer:', gameErr);
     }
 
-    // 2. CEK PREFIX
+    // 2. CEK JAWABAN DUEL AKTIF
+    try {
+      const isDuelAnswered = await handleDuelAnswer(sock, msg, cleanText);
+      if (isDuelAnswered) return;
+    } catch (duelErr) {
+      console.error('Error saat handleDuelAnswer:', duelErr);
+    }
+
+    // 3. CEK PREFIX
     let prefixUsed = '';
     if (cleanText.startsWith(config.prefix)) prefixUsed = config.prefix;
     else if (cleanText.startsWith('/')) prefixUsed = '/';
@@ -87,7 +96,7 @@ async function handleMessage(sock, msg) {
     const args = cleanText.slice(prefixUsed.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
-    // 3. SWITCH CASE COMMAND
+    // 4. SWITCH CASE COMMAND
     switch (command) {
       case 'add': {
         const ownerPhone = '6289531307627';
@@ -122,7 +131,6 @@ async function handleMessage(sock, msg) {
         }
 
         global.db.users[targetId].triviaScore += addAmount;
-        // Sinkronisasi total score
         global.db.users[targetId].score = (global.db.users[targetId].mathScore || 0) + (global.db.users[targetId].triviaScore || 0);
 
         if (typeof global.saveDatabase === 'function') {
@@ -145,6 +153,10 @@ async function handleMessage(sock, msg) {
       case 'tf':
       case 'transfer':
         await tfCommand(sock, msg, args);
+        break;
+
+      case 'duel':
+        await duelCommand(sock, msg, args);
         break;
 
       case 'nickname':
@@ -416,6 +428,8 @@ async function handleMessage(sock, msg) {
 ┣⌬ ${prefixUsed}trivia <kategori> <level>
 ┣⌬ ${prefixUsed}tetris
 ┣⌬ ${prefixUsed}claimtetris <kode>
+┣⌬ ${prefixUsed}duel math @user <taruhan> [diff]
+┣⌬ ${prefixUsed}duel trivia @user <taruhan> [kategori] [diff]
 ┣⌬ ${prefixUsed}reme <taruhan> (Lawan Bot)
 ┣⌬ ${prefixUsed}reme @user <taruhan> (PvP)
 ┣⌬ ${prefixUsed}batal
@@ -487,6 +501,7 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}trivia <kategori> <level>
 ┃  • ${prefixUsed}tetris
 ┃  • ${prefixUsed}claimtetris <kode>
+┃  • ${prefixUsed}duel math/trivia @user <taruhan>
 ┃  • ${prefixUsed}reme <taruhan> (Lawan Bot)
 ┃  • ${prefixUsed}reme @user <taruhan> (PvP)
 ┃  • ${prefixUsed}batal
@@ -548,4 +563,4 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
-          
+                               
