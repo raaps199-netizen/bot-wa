@@ -1,4 +1,5 @@
-const { resolveUserKey } = require('../utils/helper');
+const { getSenderId } = require('../utils/jid-utils');
+const { getUserData } = require('../utils/helper');
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -10,24 +11,12 @@ function hitungQQ(angka) {
   return { remeVal, desc };
 }
 
-/**
- * classify: nentuin "kelas" hasil QQ.
- * - 'win'    -> remeVal 0 (dari 10,20,...,100). Ngalahin semua kelas lain,
- *               KECUALI ketemu 'win' lagi -> seri.
- * - 'lose'   -> remeVal 1 (dari 1,11,...,91). Kalah dari semua kelas lain,
- *               KECUALI ketemu 'lose' lagi -> seri.
- * - 'normal' -> remeVal 2-9, dibandingin angka biasa.
- * ("3x" di teks cuma istilah/nama, TIDAK ngali-in poin/pot.)
- */
 function classify(remeVal) {
   if (remeVal === 0) return 'win';
   if (remeVal === 1) return 'lose';
   return 'normal';
 }
 
-/**
- * compareQQ: bandingin dua remeVal, return 'a' | 'b' | 'tie'.
- */
 function compareQQ(remeValA, remeValB) {
   const ca = classify(remeValA);
   const cb = classify(remeValB);
@@ -47,8 +36,12 @@ function compareQQ(remeValA, remeValB) {
 async function qqSpinCommand(sock, msg) {
   try {
     const remoteJid = msg.key.remoteJid;
-    const rawSenderId = msg.key.participant || remoteJid;
-    const senderId = resolveUserKey(global.db, rawSenderId);
+    const senderId = getSenderId(msg, remoteJid);
+
+    if (!senderId) {
+      console.error('[DEBUG qqSpin] Gagal mendeteksi senderId dari msg:', msg);
+      return;
+    }
 
     const game = global.db.game?.[remoteJid];
 
@@ -119,16 +112,15 @@ async function qqSpinCommand(sock, msg) {
         let finalSummary = `🏁 *PERMAINAN QQ SELESAI!*\n\nSkor Akhir:\n• @${pName} : ${pWins} Win\n• Bot : ${bWins} Win`;
 
         let totalPot = game.taruhan * 2;
-
-        if (!global.db.users[senderId]) global.db.users[senderId] = { score: 0 };
+        const userDb = getUserData(global.db, senderId);
 
         if (pWins > bWins) {
-          global.db.users[senderId].score += totalPot;
+          userDb.score = (userDb.score || 0) + totalPot;
           finalSummary += `\n\n👑 Pemenang Utama: @${pName}!\n🎉 Selamat! Total Pot *${totalPot} Poin* masuk ke akun kamu!`;
         } else if (bWins > pWins) {
           finalSummary += `\n\n👑 Pemenang Utama: Bot!\n💀 @${pName} kalah, Total Pot *${totalPot} Poin* melayang ke Bot!`;
         } else {
-          global.db.users[senderId].score += game.taruhan;
+          userDb.score = (userDb.score || 0) + game.taruhan;
           finalSummary += `\n\n🤝 Hasil Seri! Taruhan *${game.taruhan} Poin* dikembalikan ke kamu.`;
         }
 
@@ -213,27 +205,25 @@ async function qqSpinCommand(sock, msg) {
 
       const p1Wins = game.scores[p1].wins || 0;
       const p2Wins = game.scores[p2].wins || 0;
-      const winningTarget = 2; // best of 3
+      const winningTarget = 2;
       const isGameOver = p1Wins >= winningTarget || p2Wins >= winningTarget || game.round >= 3;
 
       if (isGameOver) {
         let finalSummary = `🏁 *PERMAINAN QQ SELESAI!*\n\nSkor Akhir:\n• @${p1Name} : ${p1Wins} Win\n• @${p2Name} : ${p2Wins} Win`;
         const totalPot = game.taruhan * 2;
 
-        if (!global.db.users[p1]) global.db.users[p1] = { score: 0 };
-        if (!global.db.users[p2]) global.db.users[p2] = { score: 0 };
+        const p1Db = getUserData(global.db, p1);
+        const p2Db = getUserData(global.db, p2);
 
-        // Taruhan kedua pemain sudah dipotong di depan saat .terimaqq
-        // (lihat qqAcceptReject.js), jadi di sini cukup bayar pot ke pemenang.
         if (p1Wins > p2Wins) {
-          global.db.users[p1].score += totalPot;
+          p1Db.score = (p1Db.score || 0) + totalPot;
           finalSummary += `\n\n👑 Pemenang Utama: @${p1Name}!\n🎉 Total Pot *${totalPot} Poin* masuk ke akun @${p1Name}!`;
         } else if (p2Wins > p1Wins) {
-          global.db.users[p2].score += totalPot;
+          p2Db.score = (p2Db.score || 0) + totalPot;
           finalSummary += `\n\n👑 Pemenang Utama: @${p2Name}!\n🎉 Total Pot *${totalPot} Poin* masuk ke akun @${p2Name}!`;
         } else {
-          global.db.users[p1].score += game.taruhan;
-          global.db.users[p2].score += game.taruhan;
+          p1Db.score = (p1Db.score || 0) + game.taruhan;
+          p2Db.score = (p2Db.score || 0) + game.taruhan;
           finalSummary += `\n\n🤝 Hasil Seri! Taruhan *${game.taruhan} Poin* masing-masing dikembalikan.`;
         }
 
@@ -255,7 +245,8 @@ async function qqSpinCommand(sock, msg) {
     }
 
   } catch (err) {
-    console.error('Error di qqSpinCommand:', err);
+    console.error('❌ Error di qqSpinCommand:', err);
+    await sock.sendMessage(msg.key.remoteJid, { text: `❌ Terjadi kesalahan internal saat memproses spin QQ:\n${err.message}` }, { quoted: msg });
   }
 }
 
