@@ -1,22 +1,18 @@
 // File: commands/fishing.js
-const { getRandomCatch, rarityEmoji, baits, potions } = require('../utils/fishingData');
+const { getRandomCatch, rarityEmoji, baits, potions, rods } = require('../utils/fishingData');
 const {
   addItem, getInventory, getInventorySummary, sellItem, sellAllItems, getUserStats,
   getActiveBuff, usePotion, getBaitCount, consumeBait
 } = require('../utils/inventoryManager');
 const { getUserData, getTotalScore, addPoints, deductPoints } = require('../utils/helper');
 
-// ⏱️ TAMBAHKAN BARIS INI DI SINI:
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function handleFishingCommand(sock, msg, primaryCommand, args, sender) {
-  // ... lanjut ke bawah sesuai kode aslimu ...
-
   let subCmd = args[0]?.toLowerCase();
   let subArgs = args.slice(1);
 
   try {
-    // Jika user mengetik .mancing <nama_umpan> (misal: .mancing pelet)
     if (primaryCommand === 'mancing') {
       if (!subCmd) {
         return await sock.sendMessage(msg.key.remoteJid, { 
@@ -24,18 +20,16 @@ async function handleFishingCommand(sock, msg, primaryCommand, args, sender) {
         }, { quoted: msg });
       }
 
-      if (['lnj', 'lanjut', 'tas', 'inv', 'inventory', 'sell', 'sellall', 'stats', 'pakai', 'help'].includes(subCmd)) {
+      if (['lnj', 'lanjut', 'tas', 'inv', 'inventory', 'sell', 'sellall', 'stats', 'pakai', 'rod', 'joran', 'pakaijoran', 'help'].includes(subCmd)) {
         primaryCommand = 'fish';
       } else {
         return await fishCommand(sock, msg, sender, false, subCmd);
       }
     }
 
-    // Penanganan untuk .fish <subcommand> atau perintah lanjutan
     if (primaryCommand === 'fish') {
       if (!subCmd) subCmd = 'help';
       
-      // Jika user ngetik .fish pelet (shorthand langsung pakai umpan)
       if (baits[subCmd]) {
         return await fishCommand(sock, msg, sender, false, subCmd);
       }
@@ -65,6 +59,14 @@ async function handleFishingCommand(sock, msg, primaryCommand, args, sender) {
 
         case 'pakai':
           return await pakaiPotionCommand(sock, msg, sender, subArgs);
+
+        case 'rod':
+        case 'joran':
+          return await rodCommand(sock, msg, sender);
+
+        case 'pakaijoran':
+        case 'setrod':
+          return await switchRodCommand(sock, msg, sender, subArgs);
         
         case 'help':
         case 'bantuan':
@@ -78,25 +80,26 @@ async function handleFishingCommand(sock, msg, primaryCommand, args, sender) {
   }
 }
 
-
 async function fishCommand(sock, msg, sender, isLnj = false, inputBait = null) {
   const remoteJid = msg.key.remoteJid;
-  const user = global.db.users[sender];
+  const user = global.db.users[sender] || {};
 
-  // Tentukan umpan yang dipakai
+  // 1. Cek Joran Aktif User (Default: Training Rod)
+  const activeRodId = user.activeRod || 'training';
+  const currentRod = rods[activeRodId] || rods['training'];
+
+  // 2. Tentukan umpan yang dipakai
   let baitId = inputBait?.toLowerCase();
-  if (!baitId && isLnj && user && user.lastBait) {
+  if (!baitId && isLnj && user.lastBait) {
     baitId = user.lastBait;
   }
 
-  // WAJIB PAKAI BAIT: Jika tidak ada input umpan atau tidak valid, tolak langsung!
   if (!baitId || !baits[baitId]) {
     return await sock.sendMessage(remoteJid, { 
-      text: `⚠️ *KAMU HARUS PAKAI UMPAN BARU BISA MANCING!*\n\nFormat: *.mancing <nama_umpan>*\nContoh: *.mancing roti* atau *.mancing cacing*\n\nCek stok umpan di *.fish tas* atau beli di *.shop*` 
+      text: `⚠️ *KAMU HARUS PAKAI UMPAN BARU BISA MANCING!*\n\nFormat: *.mancing <nama_umpan>*\nContoh: *.mancing roti* atau *.mancing cacing*` 
     }, { quoted: msg });
   }
 
-  // Cek stok umpan user
   const stock = getBaitCount(sender, baitId);
   if (stock < 1) {
     return await sock.sendMessage(remoteJid, { 
@@ -104,19 +107,20 @@ async function fishCommand(sock, msg, sender, isLnj = false, inputBait = null) {
     }, { quoted: msg });
   }
 
-  // Kurangi 1 umpan
   consumeBait(sender, baitId);
 
   let editKey = null;
-  if (isLnj && user && user.lastFishKey) {
+  if (isLnj && user.lastFishKey) {
     editKey = user.lastFishKey;
   }
 
   const activeBuffId = getActiveBuff(sender);
   const buffText = activeBuffId ? `\n🧪 *Potion:* ${potions[activeBuffId].name}` : '';
-  const timerDuration = baits[baitId].timer;
+  
+  // Gunakan Timer dari Joran Aktif!
+  const timerDuration = currentRod.timer;
 
-  const startingText = `🎣 *Melempar kail (${baits[baitId].name})...*${buffText}\n⏱️ Menunggu ikan menyambar: *${timerDuration} detik*`;
+  const startingText = `🎣 *Melempar kail dengan ${currentRod.name}* (${baits[baitId].name})...${buffText}\n⏱️ Menunggu ikan menyambar: *${timerDuration} detik*`;
   let sentMsg;
   
   if (editKey) {
@@ -133,22 +137,26 @@ async function fishCommand(sock, msg, sender, isLnj = false, inputBait = null) {
   for (let i = timerDuration - 1; i >= 1; i--) {
     await delay(1000);
     await sock.sendMessage(remoteJid, {
-      text: `🎣 *Melempar kail (${baits[baitId].name})...*${buffText}\n⏱️ Menunggu ikan menyambar: *${i} detik*`,
+      text: `🎣 *Melempar kail dengan ${currentRod.name}* (${baits[baitId].name})...${buffText}\n⏱️ Menunggu ikan menyambar: *${i} detik*`,
       edit: sentMsg.key
     });
   }
   await delay(1000);
   
-  const catch_item = getRandomCatch(activeBuffId || 'normal');
+  // 3. Tangkap Ikan Berdasarkan Potion & Joran Aktif (Luck & Mutasi)
+  const catch_item = getRandomCatch(activeBuffId || 'normal', activeRodId);
   addItem(sender, catch_item);
   
   const rarityEmoji_map = rarityEmoji[catch_item.rarity] || '⚪';
+  const mutationText = catch_item.mutation ? `\n✨ *Mutasi:* ${catch_item.name.split(' ')[0]} (Bonus Harga!)` : '';
+  
   const resultText = `
 ╭─ 🎣 *FISHING SUCCESS* 🎣 ─╮
 │
 │ ${rarityEmoji_map} *${catch_item.rarity}* Catch
-│ 🐟 Item: ${catch_item.name}
+│ 🐟 Item: ${catch_item.name} ${mutationText}
 │ 💰 Harga: ${catch_item.price} Poin
+│ 🔱 Joran: ${currentRod.name}
 │ 🪱 Sisa Umpan: ${getBaitCount(sender, baitId)}x
 │
 ╰────────────────────────╯
@@ -156,11 +164,53 @@ _Ketik *.lnj* untuk lanjut mancing cepat!_`;
 
   await sock.sendMessage(remoteJid, { text: resultText, edit: sentMsg.key });
   
-  if (user) {
-    user.lastFishKey = sentMsg.key;
-    user.lastBait = baitId;
-    if (typeof global.saveDatabase === 'function') global.saveDatabase();
+  user.lastFishKey = sentMsg.key;
+  user.lastBait = baitId;
+  if (typeof global.saveDatabase === 'function') global.saveDatabase();
+}
+
+async function rodCommand(sock, msg, sender) {
+  const remoteJid = msg.key.remoteJid;
+  const user = global.db.users[sender] || {};
+  
+  const activeRodId = user.activeRod || 'training';
+  const ownedRods = user.ownedRods || ['training'];
+  
+  let text = `🎣 *KOLEKSI JORAN ANDA* 🎣\n\n`;
+  text += `🔱 Joran Aktif Saat Ini: *${rods[activeRodId]?.name || 'Training Rod'}*\n\n`;
+  text += `📦 *Daftar Joran yang Dimiliki:*\n`;
+  
+  for (const rodId of ownedRods) {
+    const rData = rods[rodId];
+    if (rData) {
+      const activeMark = rodId === activeRodId ? ' ⭐ [AKTIF]' : '';
+      text += `• ${rData.name}${activeMark}\n  🍀 Luck: ${rData.luck}x | ⏱️ Timer: ${rData.timer}s\n`;
+    }
   }
+  
+  text += `\n💡 *Cara Ganti Joran:* Ketik *.fish pakaijoran <id_joran>*\nContoh: *.fish pakaijoran crystal*`;
+  await sock.sendMessage(remoteJid, { text }, { quoted: msg });
+}
+
+async function switchRodCommand(sock, msg, sender, args) {
+  const remoteJid = msg.key.remoteJid;
+  const rodId = args[0]?.toLowerCase();
+  const user = global.db.users[sender] || {};
+  
+  const ownedRods = user.ownedRods || ['training'];
+
+  if (!rodId || !rods[rodId]) {
+    return await sock.sendMessage(remoteJid, { text: `⚠️ Masukkan ID joran yang valid!\nCek joran yang kamu miliki dengan mengetik *.fish rod*` }, { quoted: msg });
+  }
+
+  if (!ownedRods.includes(rodId)) {
+    return await sock.sendMessage(remoteJid, { text: `❌ Kamu belum memiliki joran *${rods[rodId].name}*!\nBeli terlebih dahulu di *.shop joran*` }, { quoted: msg });
+  }
+
+  user.activeRod = rodId;
+  if (typeof global.saveDatabase === 'function') global.saveDatabase();
+
+  await sock.sendMessage(remoteJid, { text: `✅ Berhasil mengganti joran utama menjadi *${rods[rodId].name}*! 🎣` }, { quoted: msg });
 }
 
 async function pakaiPotionCommand(sock, msg, sender, args) {
@@ -193,7 +243,7 @@ async function inventoryCommand(sock, msg, sender) {
   
   let baitList = `🪱 *STOK UMPAN ANDA:*\n`;
   for (const [id, data] of Object.entries(baits)) {
-    baitList += `• ${data.name}: *${getBaitCount(sender, id)}x* (${data.timer}s)\n`;
+    baitList += `• ${data.name}: *${getBaitCount(sender, id)}x*\n`;
   }
 
   if (inventory.length === 0) {
@@ -206,7 +256,7 @@ async function inventoryCommand(sock, msg, sender) {
 │ 💰 Total Nilai: ${summary.totalValue} Poin
 │
 │ ⚪ Common: ${summary.byRarity.COMMON || 0}
-│ 🟢 Uncommon: ${summary.byRanimy || summary.byRarity.UNCOMMON || 0}
+│ 🟢 Uncommon: ${summary.byRarity.UNCOMMON || 0}
 │ 🔵 Rare: ${summary.byRarity.RARE || 0}
 │ 🟣 Epic: ${summary.byRarity.EPIC || 0}
 │ 🟡 Legendary: ${summary.byRarity.LEGENDARY || 0}
@@ -272,19 +322,13 @@ async function fishingHelpCommand(sock, msg) {
 │ *Wajib pakai umpan baru bisa mancing!*
 │
 │ 📌 *COMMANDS:*
-│ *.mancing <umpan>* - Mulai (cth: .mancing roti)
-│ *.lnj* - Lanjut mancing cepat (edit pesan)
-│ *.fish tas* - Lihat isi tas & stok umpan
+│ *.mancing <umpan>* - Mulai mancing
+│ *.lnj* - Lanjut mancing cepat
+│ *.fish rod* - Cek & ganti joran aktif
+│ *.shop joran* - Beli joran baru
+│ *.fish tas* - Lihat isi tas
 │ *.fish sellall* - Jual semua ikan
-│ *.fish pakai <id_potion>* - Minum potion luck
-│ *.shop* - Beli Umpan & Potion
-│
-│ 🪱 *DAFTAR UMPAN (Kecepatan Timer):*
-│ • Roti: 5 Detik (Dasar)
-│ • Cacing: 4 Detik (100 Poin)
-│ • Pelet: 3 Detik (300 Poin)
-│ • Udang: 2 Detik (800 Poin)
-│ • Legenda: 1 Detik (2000 Poin)
+│ *.shop* - Buka pusat toko
 │
 ╰────────────────────────╯`;
   await sock.sendMessage(msg.key.remoteJid, { text: helpText }, { quoted: msg });
@@ -292,6 +336,6 @@ async function fishingHelpCommand(sock, msg) {
 
 module.exports = {
   handleFishingCommand, fishCommand, inventoryCommand, sellCommand,
-  sellAllCommand, statsCommand, fishingHelpCommand, pakaiPotionCommand
+  sellAllCommand, statsCommand, fishingHelpCommand, pakaiPotionCommand, rodCommand, switchRodCommand
 };
-    
+  
