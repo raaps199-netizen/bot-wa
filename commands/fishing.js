@@ -209,6 +209,8 @@ async function statsCommand(sock, msg, sender) {
   await sock.sendMessage(remoteJid, { text: message }, { quoted: msg });
 }
 
+// ... di dalam file commands/fishing.js ...
+
 async function fishingHelpCommand(sock, msg) {
   const remoteJid = msg.key.remoteJid;
   const helpText = `
@@ -226,21 +228,22 @@ async function fishingHelpCommand(sock, msg) {
 │
 │ 📊 *RARITY LEVELS:*
 │
-│ ⚪ Common (50%) - Rp 40-60
-│ 🟢 Uncommon (30%) - Rp 140-200
-│ 🔵 Rare (12%) - Rp 450-600
-│ 🟣 Epic (6%) - Rp 1500-2000
-│ 🟡 Legendary (2%) - Rp 5000-8000
+│ ⚪ Common (50%) - 10-30 Poin
+│ 🟢 Uncommon (30%) - 40-70 Poin
+│ 🔵 Rare (12%) - 80-120 Poin
+│ 🟣 Epic (6%) - 130-160 Poin
+│ 🟡 Legendary (2%) - 170-220 Poin
 │
 │ 💡 *TIPS:*
 │ • Tunggu 5 detik saat kail dilempar!
 │ • Semakin langka, semakin besar harga jualnya
-│ • Jual item untuk menambah Total Points kamu
+│ • Jual item untuk menambah Poin Global kamu
 │
 ╰────────────────────────╯`;
 
   await sock.sendMessage(remoteJid, { text: helpText }, { quoted: msg });
 }
+
 
 module.exports = {
   handleFishingCommand,
