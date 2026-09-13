@@ -52,11 +52,11 @@ const rarityEmoji = {
 // 🎣 DAFTAR BAIT (PENGURANG TIMER / KECEPATAN)
 // ==========================================
 const baits = {
-  'roti':    { id: 'roti', name: '🍞 Umpan Roti', price: 30, timer: 5, desc: 'Umpan dasar. Kecepatan: 5 Detik.' },
-  'cacing':  { id: 'cacing', name: '🪱 Cacing Tanah', price: 100, timer: 4, desc: 'Kecepatan mancing naik: 4 Detik.' },
-  'pelet':   { id: 'pelet', name: '🍘 Pelet Premium', price: 300, timer: 3, desc: 'Kecepatan mancing naik: 3 Detik.' },
-  'udang':   { id: 'udang', name: '🦐 Udang Segar', price: 800, timer: 2, desc: 'Mancing super ngebut: 2 Detik.' },
-  'legenda': { id: 'legenda', name: '✨ Umpan Legendaris', price: 2000, timer: 1, desc: 'Kecepatan kilat maksimal: 1 Detik!' }
+  'roti':    { id: 'roti', name: '🍞 Umpan Roti', price: 10, timer: 5, desc: 'Umpan dasar. Kecepatan: 5 Detik.' },
+  'cacing':  { id: 'cacing', name: '🪱 Cacing Tanah', price: 50, timer: 4, desc: 'Kecepatan mancing naik: 4 Detik.' },
+  'pelet':   { id: 'pelet', name: '🍘 Pelet Premium', price: 100, timer: 3, desc: 'Kecepatan mancing naik: 3 Detik.' },
+  'udang':   { id: 'udang', name: '🦐 Udang Segar', price: 500, timer: 2, desc: 'Mancing super ngebut: 2 Detik.' },
+  'legenda': { id: 'legenda', name: '✨ Umpan Legendaris', price: 1000, timer: 1, desc: 'Kecepatan kilat maksimal: 1 Detik!' }
 };
 
 // ==========================================
