@@ -18,32 +18,24 @@ async function remeCommand(sock, msg, args) {
     const senderId = getSenderId(msg, remoteJid);
 
     if (!senderId) {
-      return await sock.sendMessage(remoteJid, { text: '⚠️ Gagal mendeteksi akun personal lu! Coba ketik command sambil *reply* salah satu pesan lu sendiri.' }, { quoted: msg });
+      return await sock.sendMessage(remoteJid, { 
+        text: '⚠️ Gagal mendeteksi akun personal lu! Coba ketik command sambil *reply* salah satu pesan lu sendiri.' 
+      }, { quoted: msg });
     }
 
     if (global.db.game[remoteJid]) {
-      return await sock.sendMessage(remoteJid, { text: '⚠️ Chat ini sedang ada game aktif, selesaikan dulu bro! (Atau ketik .batal)' }, { quoted: msg });
+      return await sock.sendMessage(remoteJid, { 
+        text: '⚠️ Chat ini sedang ada game aktif, selesaikan dulu bro! (Atau ketik .batal)' 
+      }, { quoted: msg });
     }
 
-    // Perbaikan: Menggunakan global.db sebagai argumen pertama getUserData
+    // 1. Ambil data sender & poin
     const senderUser = getUserData(global.db, senderId);
     const senderScore = getTotalScore(senderUser);
 
-    if (senderScore <= 0) {
-      const globalKeys = Object.keys(global.db.users || {});
-      const groupDataKeys = Object.keys(global.db.groups?.[remoteJid]?.users || {});
-      const debugMsg = `⚠️ [DEBUG ERROR]\n` +
-        `- remoteJid: ${remoteJid}\n` +
-        `- senderId terdeteksi: ${senderId}\n` +
-        `- senderUser object: ${JSON.stringify(senderUser)}\n` +
-        `- Total key di global.db.users: ${globalKeys.length}\n` +
-        `- Contoh key global: ${globalKeys.slice(0, 3).join(', ')}\n` +
-        `- Key grup saat ini: ${groupDataKeys.join(', ')}`;
-      
-      return await sock.sendMessage(remoteJid, { text: debugMsg }, { quoted: msg });
-    }
-
+    // 2. Deteksi Target (Mentions / Reply / Nomor)
     let targetId = null;
+    let targetArgStr = null;
     const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
     const quotedParticipant = msg.message?.extendedTextMessage?.contextInfo?.participant;
 
@@ -52,8 +44,9 @@ async function remeCommand(sock, msg, args) {
     } else if (isPersonalJid(quotedParticipant)) {
       targetId = quotedParticipant;
     } else {
-      const argTarget = args.find(arg => arg.includes('@') || (!isNaN(arg) && arg.length > 5));
+      const argTarget = args.find(arg => arg.includes('@') || (!isNaN(arg.replace(/[^0-9]/g, '')) && arg.replace(/[^0-9]/g, '').length >= 10));
       if (argTarget) {
+        targetArgStr = argTarget;
         const cleanNum = argTarget.replace(/[^0-9]/g, '');
         if (cleanNum.length >= 5) {
           const candidate = cleanNum + '@s.whatsapp.net';
@@ -62,20 +55,41 @@ async function remeCommand(sock, msg, args) {
       }
     }
 
-    let betAmount = parseBetAmount(args, senderScore);
-    if (!betAmount || betAmount <= 0) {
-      betAmount = 15;
+    // 3. Parsing Nominal Taruhan (Memisahkan angka dari tag @user)
+    const filteredArgs = args.filter(a => a !== targetArgStr && !a.includes('@'));
+    
+    let betAmount = 0;
+    const rawBet = filteredArgs.find(a => {
+      const lower = a.toLowerCase();
+      return lower === 'all' || lower === 'max' || (!isNaN(lower) && parseInt(lower) > 0);
+    });
+
+    if (rawBet) {
+      if (rawBet.toLowerCase() === 'all' || rawBet.toLowerCase() === 'max') {
+        betAmount = senderScore;
+      } else {
+        betAmount = parseInt(rawBet);
+      }
+    } else if (typeof parseBetAmount === 'function') {
+      betAmount = parseBetAmount(filteredArgs, senderScore);
     }
 
+    if (isNaN(betAmount) || !betAmount || betAmount <= 0) {
+      betAmount = 15; // default fallback jika tidak memasukkan nominal
+    }
+
+    // 4. Validasi Poin Sender
     if (senderScore < betAmount) {
-      return await sock.sendMessage(remoteJid, { text: `⚠️ Total poin lo kurang di grup ini! Poin lu saat ini: *${senderScore}*, tapi mau taruhan *${betAmount}*.` }, { quoted: msg });
+      return await sock.sendMessage(remoteJid, { 
+        text: `⚠️ Poin lu gak cukup buat taruhan! Poin lu saat ini: *${senderScore}*, tapi mau taruhan *${betAmount}*.` 
+      }, { quoted: msg });
     }
 
+    // 5. Mode SOLO (Lawan Bot)
     if (!targetId) {
       const botJid = sock.user.id;
       const cleanBotId = botJid.includes(':') ? botJid.split(':')[0] + '@s.whatsapp.net' : botJid;
 
-      ensureDB();
       global.db.game[remoteJid] = {
         type: 'reme',
         players: [senderId, cleanBotId],
@@ -95,19 +109,20 @@ async function remeCommand(sock, msg, args) {
       }, { quoted: msg });
     }
 
+    // 6. Mode PvP (Lawan Member Lain)
     if (targetId === senderId || targetId.includes(senderId.split('@')[0])) {
       return await sock.sendMessage(remoteJid, { text: '⚠️ Gila ya, mau main lawan diri sendiri wkwk!' }, { quoted: msg });
     }
 
-    // Perbaikan: Menggunakan global.db untuk target user
     const targetUser = getUserData(global.db, targetId);
     const targetScore = getTotalScore(targetUser);
 
     if (targetScore < betAmount) {
-      return await sock.sendMessage(remoteJid, { text: `⚠️ Lawan lu total poinnya gak cukup buat taruhan *${betAmount}* poin di grup ini! (Poin target: ${targetScore})` }, { quoted: msg });
+      return await sock.sendMessage(remoteJid, { 
+        text: `⚠️ Lawan lu total poinnya gak cukup buat taruhan *${betAmount}* poin! (Poin target: ${targetScore})` 
+      }, { quoted: msg });
     }
 
-    ensureDB();
     global.db.remeChallenges[remoteJid] = {
       challenger: senderId,
       challenged: targetId,
@@ -129,4 +144,3 @@ async function remeCommand(sock, msg, args) {
 }
 
 module.exports = remeCommand;
-    
