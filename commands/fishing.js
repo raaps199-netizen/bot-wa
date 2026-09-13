@@ -6,7 +6,12 @@ const {
 } = require('../utils/inventoryManager');
 const { getUserData, getTotalScore, addPoints, deductPoints } = require('../utils/helper');
 
+// ⏱️ TAMBAHKAN BARIS INI DI SINI:
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 async function handleFishingCommand(sock, msg, primaryCommand, args, sender) {
+  // ... lanjut ke bawah sesuai kode aslimu ...
+
   let subCmd = args[0]?.toLowerCase();
   let subArgs = args.slice(1);
 
