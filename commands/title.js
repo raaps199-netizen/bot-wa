@@ -2,55 +2,88 @@
 const { getUserData, getTotalScore } = require('../utils/helper');
 const { getSenderId, resolveUserKey } = require('../utils/jid-utils');
 
-// Config Daftar Gelar per Kategori
+// Config Daftar Gelar per Kategori (diurutkan dari syarat terkecil ke terbesar)
 const TITLES_CONFIG = {
-  poin: [
-    { min: 100000, name: '👑 [Penguasa Server]' },
-    { min: 50000,  name: '👑 [Sultan Kasino]' },
-    { min: 10000,  name: '🏛️ [Konglomerat]' },
-    { min: 5000,   name: '💎 [Orang Kaya]' },
-    { min: 3000,   name: '🎩 [Jutawan Lokal]' },
-    { min: 1000,   name: '💼 [Kelas Menengah]' },
-    { min: 500,    name: '🪙 [Punya Tabungan]' },
-    { min: 0,      name: '🪵 [Pemula]' }
-  ],
-  reme: [
-    { min: 100, name: '🔱 [Dewa Reme]' },
-    { min: 50,  name: '🎰 [Raja Spin]' },
-    { min: 20,  name: '🔥 [Master Reme]' },
-    { min: 10,  name: '🃏 [Jago Reme]' },
-    { min: 5,   name: '🎲 [Pemain Reme]' },
-    { min: 0,   name: '🪵 [Pemula]' }
-  ],
-  qq: [
-    { min: 50, name: '🐲 [Dewa QiuQiu]' },
-    { min: 20, name: '💥 [Jago Domino]' },
-    { min: 10, name: '🎴 [Pemain QQ]' },
-    { min: 0,  name: '🪵 [Pemula]' }
-  ],
-  trivia: [
-    { min: 100, name: '🧙‍♂️ [Mbah Cerdas]' },
-    { min: 50,  name: '🧠 [Profesor Kuis]' },
-    { min: 30,  name: '📚 [Si Pintar]' },
-    { min: 10,  name: '💡 [Penjawab Kuis]' },
-    { min: 0,   name: '🪵 [Pemula]' }
-  ],
-  math: [
-    { min: 100, name: '⚡ [Albert Einstein]' },
-    { min: 50,  name: '🧮 [Kalkulator Berjalan]' },
-    { min: 30,  name: '📊 [Jago Aljabar]' },
-    { min: 10,  name: '📐 [Tukang Hitung]' },
-    { min: 0,   name: '🪵 [Pemula]' }
-  ]
+  poin: {
+    label: '💰 EKONOMI (Poin)',
+    unit: 'Poin',
+    list: [
+      { min: 0,      name: '🪵 [Pemula]' },
+      { min: 500,    name: '🪙 [Punya Tabungan]' },
+      { min: 1000,   name: '💼 [Kelas Menengah]' },
+      { min: 3000,   name: '🎩 [Jutawan Lokal]' },
+      { min: 5000,   name: '💎 [Orang Kaya]' },
+      { min: 10000,  name: '🏛️ [Konglomerat]' },
+      { min: 50000,  name: '👑 [Sultan Kasino]' },
+      { min: 100000, name: '👑 [Penguasa Server]' }
+    ]
+  },
+  reme: {
+    label: '🎰 KASINO (Reme)',
+    unit: 'Win',
+    list: [
+      { min: 0,   name: '🪵 [Pemula]' },
+      { min: 5,   name: '🎲 [Pemain Reme]' },
+      { min: 10,  name: '🃏 [Jago Reme]' },
+      { min: 20,  name: '🔥 [Master Reme]' },
+      { min: 50,  name: '🎰 [Raja Spin]' },
+      { min: 100, name: '🔱 [Dewa Reme]' }
+    ]
+  },
+  qq: {
+    label: '🎴 KASINO (QiuQiu)',
+    unit: 'Win',
+    list: [
+      { min: 0,  name: '🪵 [Pemula]' },
+      { min: 10, name: '🎴 [Pemain QQ]' },
+      { min: 20, name: '💥 [Jago Domino]' },
+      { min: 50, name: '🐲 [Dewa QiuQiu]' }
+    ]
+  },
+  trivia: {
+    label: '🧠 KUIS (Trivia)',
+    unit: 'Soal',
+    list: [
+      { min: 0,   name: '🪵 [Pemula]' },
+      { min: 10,  name: '💡 [Penjawab Kuis]' },
+      { min: 30,  name: '📚 [Si Pintar]' },
+      { min: 50,  name: '🧠 [Profesor Kuis]' },
+      { min: 100, name: '🧙‍♂️ [Mbah Cerdas]' }
+    ]
+  },
+  math: {
+    label: '📐 KUIS (Matematika)',
+    unit: 'Soal',
+    list: [
+      { min: 0,   name: '🪵 [Pemula]' },
+      { min: 10,  name: '📐 [Tukang Hitung]' },
+      { min: 30,  name: '📊 [Jago Aljabar]' },
+      { min: 50,  name: '🧮 [Kalkulator Berjalan]' },
+      { min: 100, name: '⚡ [Albert Einstein]' }
+    ]
+  }
 };
 
-// Helper untuk mengecek gelar tertinggi yang didapat berdasarkan angka
-function getTitleForValue(categoryList, val) {
-  const currentVal = val || 0;
-  for (const t of categoryList) {
-    if (currentVal >= t.min) return t.name;
+// Helper untuk mengambil info progress
+function getCategoryProgress(categoryData, currentVal) {
+  const list = categoryData.list;
+  let currentTitle = list[0].name;
+  let nextTarget = null;
+
+  for (let i = 0; i < list.length; i++) {
+    if (currentVal >= list[i].min) {
+      currentTitle = list[i].name;
+      nextTarget = list[i + 1] || null;
+    }
   }
-  return '🪵 [Pemula]';
+
+  return {
+    currentTitle,
+    currentVal,
+    nextMin: nextTarget ? nextTarget.min : null,
+    nextTitle: nextTarget ? nextTarget.name : null,
+    isMax: !nextTarget
+  };
 }
 
 module.exports = async function titleCommand(sock, msg, args) {
@@ -64,46 +97,72 @@ module.exports = async function titleCommand(sock, msg, args) {
 
     const user = getUserData(global.db, senderId);
 
-    // Ambil statistik user dari DB (dengan fallback default 0)
-    const score = getTotalScore(user);
-    const remeWin = user.remeWin || 0;
-    const qqWin = user.qqWin || 0;
-    const triviaCount = user.triviaCount || 0;
-    const mathCount = user.mathCount || 0;
+    // Ambil statistik user dari DB
+    const stats = {
+      poin: getTotalScore(user),
+      reme: user.remeWin || 0,
+      qq: user.qqWin || 0,
+      trivia: user.triviaCount || 0,
+      math: user.mathCount || 0
+    };
 
-    // Hitung Gelar Aktif Tiap Kategori
-    const titlePoin = getTitleForValue(TITLES_CONFIG.poin, score);
-    const titleReme = getTitleForValue(TITLES_CONFIG.reme, remeWin);
-    const titleQq = getTitleForValue(TITLES_CONFIG.qq, qqWin);
-    const titleTrivia = getTitleForValue(TITLES_CONFIG.trivia, triviaCount);
-    const titleMath = getTitleForValue(TITLES_CONFIG.math, mathCount);
+    const subCommand = args[0] ? args[0].toLowerCase() : null;
 
-    let caption = `🎖️ *STATUS GELAR / TITLE PENGGUNA*\n`;
-    caption += `👤 User: @${senderId.split('@')[0]}\n`;
-    caption += `═════════════════════════\n\n`;
+    // ===================================================
+    // MODE 1: RICIAN PER KATEGORI (misal: .title trivia)
+    // ===================================================
+    if (subCommand && TITLES_CONFIG[subCommand]) {
+      const catConfig = TITLES_CONFIG[subCommand];
+      const val = stats[subCommand];
+      const userNum = senderId.split('@')[0];
 
-    caption += `💰 *EKONOMI (Poin)*\n`;
-    caption += `• Total Poin: *${score}*\n`;
-    caption += `• Gelar: ${titlePoin}\n\n`;
+      let caption = `🎖️ *RINCIAN GELAR — ${catConfig.label.toUpperCase()}*\n`;
+      caption += `👤 User: @${userNum}\n`;
+      caption += `📊 Capaian Kamu: *${val} ${catConfig.unit}*\n`;
+      caption += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
-    caption += `🎰 *KASINO (Reme)*\n`;
-    caption += `• Kemenangan: *${remeWin} Win*\n`;
-    caption += `• Gelar: ${titleReme}\n\n`;
+      catConfig.list.forEach((t) => {
+        if (val >= t.min) {
+          caption += `✅ *${t.name}* — (${t.min} ${catConfig.unit})\n`;
+        } else {
+          caption += `🔒 *${t.name}* — Progress: *${val}/${t.min} ${catConfig.unit}*\n`;
+        }
+      });
 
-    caption += `🎴 *KASINO (QiuQiu)*\n`;
-    caption += `• Kemenangan: *${qqWin} Win*\n`;
-    caption += `• Gelar: ${titleQq}\n\n`;
+      caption += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+      caption += `💡 *Petunjuk:* Selesaikan misi atau tingkatkan win rate untuk membuka gelar bertanda 🔒!`;
 
-    caption += `🧠 *KUIS (Trivia)*\n`;
-    caption += `• Dikerjakan: *${triviaCount} Soal*\n`;
-    caption += `• Gelar: ${titleTrivia}\n\n`;
+      return await sock.sendMessage(remoteJid, {
+        text: caption,
+        mentions: [senderId]
+      }, { quoted: msg });
+    }
 
-    caption += `📐 *KUIS (Matematika)*\n`;
-    caption += `• Dikerjakan: *${mathCount} Soal*\n`;
-    caption += `• Gelar: ${titleMath}\n\n`;
+    // ===================================================
+    // MODE 2: MENU UTAMA (Ringkasan Semua Kategori)
+    // ===================================================
+    const userNum = senderId.split('@')[0];
+    let caption = `🎖️ *MENU KATEGORI & PROGRESS GELAR*\n`;
+    caption += `👤 User: @${userNum}\n`;
+    caption += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
-    caption += `═════════════════════════\n`;
-    caption += `💡 *Tips:* Tingkatkan poin, win game, dan kerjakan soal kuis untuk membuka Gelar tingkat tinggi!`;
+    for (const key in TITLES_CONFIG) {
+      const cat = TITLES_CONFIG[key];
+      const prog = getCategoryProgress(cat, stats[key]);
+
+      caption += `${cat.label}\n`;
+      caption += `├ Gelar: *${prog.currentTitle}*\n`;
+
+      if (prog.isMax) {
+        caption += `└ Progress: *MAX LEVEL (Tercapai)* 👑\n\n`;
+      } else {
+        caption += `└ Progress: *${prog.currentVal}/${prog.nextMin} ${cat.unit}* (Menuju ${prog.nextTitle})\n\n`;
+      }
+    }
+
+    caption += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+    caption += `💡 *Rincian Lengkap:* Ketik *.title <kategori>*\n`;
+    caption += `📌 Contoh: *.title trivia*, *.title reme*, *.title poin*`;
 
     await sock.sendMessage(remoteJid, {
       text: caption,
@@ -117,4 +176,4 @@ module.exports = async function titleCommand(sock, msg, args) {
     }, { quoted: msg });
   }
 };
-  
+    
