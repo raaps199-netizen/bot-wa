@@ -416,6 +416,15 @@ async function handleMessage(sock, msg) {
         break;
       }
 
+        case 'aurora': {
+        if (!isOwner) {
+          await sock.sendMessage(remoteJid, { text: `❌ Lu bukan owner, gak usah sok asik mau aktifin event Aurora wkwk!\n(ID terdeteksi: ${senderId})` }, { quoted: msg });
+          break;
+        }
+        await auroraCommand(sock, msg, args);
+        break;
+        }
+
       case 'claim':
       case 'daily':
         await claimCommand(sock, msg);
