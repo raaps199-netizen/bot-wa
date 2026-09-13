@@ -40,7 +40,6 @@ const TITLES_CONFIG = {
 { min: 50,  name: '[The Luck Hand]' },
 { min: 100, name: '[The God of QQ]' }
     ]
-    ]
   },
   trivia: {
     label: '🧠 KUIS (Trivia)',
