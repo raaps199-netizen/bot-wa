@@ -55,6 +55,35 @@ const { qqAcceptCommand, qqRejectCommand } = require('../commands/qqAcceptReject
 const qqSpinCommand = require('../commands/qqSpin');
 
 // ==========================================
+// 📅 DATA JADWAL PELAJARAN & PIKET KELAS
+// ==========================================
+const jadwalPelajaran = {
+  jsn: { hari: "Senin", mapel: ["MTK TL", "Inggris", "Fisika"] },
+  jsl: { hari: "Selasa", mapel: ["Fisika", "Sunda", "Informatika", "PAI"] },
+  jrb: { hari: "Rabu", mapel: ["PKN", "PKWU", "Kimia", "B. Indo", "SBK"] },
+  jkm: { hari: "Kamis", mapel: ["Kimia", "Penjas", "Sejarah", "MTK U"] },
+  jjt: { hari: "Jumat", mapel: ["MTK TL", "MTK U", "BK", "B. Indo", "Informatika"] }
+};
+
+const daftarPiket = {
+  jsn: ["Khafi", "Arjasena", "Orlen", "Avisha", "Fareal", "Andrian", "Sadam", "Wisnu", "Tania", "Jauharah"],
+  jsl: ["Keyla", "Mikaela", "Ridho", "Rizky", "Zyella", "Nishar", "Alvian", "Brella", "Fathian", "Reno"],
+  jrb: ["Lutfan", "Rafif", "Kevin", "Arya", "Al Mira", "Elang", "Dzaki N.", "Aisahra", "Satria P", "Putri"],
+  jkm: ["Fahri", "Rifqi", "Fadhil", "Yusuf", "Kirana", "Effan", "Dzaki", "Aura", "Reva", "Surya"],
+  jjt: ["Dhirgam", "Yoga", "Dude", "Daffa", "Irfan", "Ara", "Anissa", "Meli", "Gibran", "Salsabila"]
+};
+
+// Fungsi Acak Array (Mengecek & Mengocok Ulang Nama Setiap Kali Dipanggil)
+function acakArray(array) {
+  let arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ==========================================
 // 🚨 DAFTAR KATA TERLARANG (FULL LIST)
 // ==========================================
 const BAD_WORDS = [
@@ -184,6 +213,115 @@ async function handleMessage(sock, msg) {
     const command = args.shift().toLowerCase();
 
     switch (command) {
+      // ==========================================
+      // 📅 COMMAND JADWAL & PIKET KELAS
+      // ==========================================
+      case 'jadwal':
+      case 'jsn':
+      case 'jsl':
+      case 'jrb':
+      case 'jkm':
+      case 'jjt':
+      case 'senin':
+      case 'selasa':
+      case 'rabu':
+      case 'kamis':
+      case 'jumat': {
+        const aliasHari = {
+          senin: 'jsn', jsn: 'jsn',
+          selasa: 'jsl', jsl: 'jsl',
+          rabu: 'jrb', jrb: 'jrb',
+          kamis: 'jkm', jkm: 'jkm',
+          jumat: 'jjt', jjt: 'jjt', 'jum\'at': 'jjt'
+        };
+
+        let rawKey = (command === 'jadwal' ? args[0] : command) || '';
+        let key = aliasHari[rawKey.toLowerCase()];
+
+        // Jika hanya ngetik .jadwal tanpa argumen, otomatis deteksi hari ini
+        if (!key) {
+          const todayIdx = new Date().getDay(); // 1: Senin, 2: Selasa, dst.
+          const dayMap = { 1: 'jsn', 2: 'jsl', 3: 'jrb', 4: 'jkm', 5: 'jjt' };
+          key = dayMap[todayIdx] || 'jsn';
+        }
+
+        const dataMapel = jadwalPelajaran[key];
+        const anggotaPiket = daftarPiket[key] || [];
+
+        if (dataMapel) {
+          let pesan = `📅 *JADWAL PELAJARAN — HARI ${dataMapel.hari.toUpperCase()}*\n`;
+          pesan += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+          
+          dataMapel.mapel.forEach((mapel, index) => {
+            pesan += `📖 *Jam ke-${index + 1}:* ${mapel}\n`;
+          });
+
+          if (anggotaPiket.length >= 10) {
+            // Pengocokan piket segar tiap kali command dijalankan
+            const piketKelas = acakArray(anggotaPiket);
+
+            pesan += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+            pesan += `🧹 *PEMBAGIAN PIKET KELAS (${dataMapel.hari.toUpperCase()})*\n`;
+            pesan += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            
+            pesan += `🧹 *Menyapu (2 Orang):*\n  1. ${piketKelas[0]}\n  2. ${piketKelas[1]}\n\n`;
+            pesan += `🧽 *Mengepel (2 Orang):*\n  1. ${piketKelas[2]}\n  2. ${piketKelas[3]}\n\n`;
+            pesan += `🪟 *Mengelap Kaca (2 Orang):*\n  1. ${piketKelas[4]}\n  2. ${piketKelas[5]}\n\n`;
+            pesan += `🪑 *Mengangkat Bangku (2 Orang):*\n  1. ${piketKelas[6]}\n  2. ${piketKelas[7]}\n\n`;
+            pesan += `🗑️ *Cek Kolong & Buang Sampah (1 Orang):*\n  1. ${piketKelas[8]}\n\n`;
+            pesan += `🖊️ *Isi Spidol & Hapus Papan (1 Orang):*\n  1. ${piketKelas[9]}\n`;
+
+            const piketMbg = acakArray(anggotaPiket);
+            const pengambilMbg = piketMbg.slice(0, 5);
+            const pengembaliMbg = piketMbg.slice(5, 10);
+
+            const piketHp = acakArray(anggotaPiket);
+            const petugasHp = piketHp.slice(0, 2);
+
+            pesan += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+            pesan += `🍱 *PEMBAGIAN TUGAS KHUSUS (${dataMapel.hari.toUpperCase()})*\n`;
+            pesan += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+            pesan += `🚚 *Tim Pengambil MBG (5 Orang):*\n`;
+            pengambilMbg.forEach((nama, idx) => {
+              pesan += `  ${idx + 1}. ${nama}\n`;
+            });
+
+            pesan += `\n🔄 *Tim Pengembali MBG (5 Orang):*\n`;
+            pengembaliMbg.forEach((nama, idx) => {
+              pesan += `  ${idx + 1}. ${nama}\n`;
+            });
+
+            pesan += `\n📱 *Tim Kumpul HP ke Ruang Guru (2 Orang):*\n`;
+            petugasHp.forEach((nama, idx) => {
+              pesan += `  ${idx + 1}. ${nama}\n`;
+            });
+
+            pesan += `\n✨ *Catatan:* Diharapkan teman-teman yang bertugas bisa menjalankan kewajibannya tepat waktu ya. Semangat belajar! 🤝`;
+          }
+
+          let mentions = [];
+          if (remoteJid.endsWith('@g.us')) {
+            try {
+              const groupMetadata = await sock.groupMetadata(remoteJid);
+              mentions = groupMetadata.participants.map(p => p.id);
+            } catch (e) {
+              console.error('Gagal mengambil metadata grup:', e);
+            }
+          }
+
+          await sock.sendMessage(remoteJid, {
+            text: pesan,
+            mentions: mentions,
+            contextInfo: {
+              isForwarded: true,
+              forwardingScore: 999
+            }
+          }, { quoted: msg });
+        }
+        break;
+      }
+
       case 'ping': {
         const start = Date.now();
         const sentMsg = await sock.sendMessage(remoteJid, { text: 'Pong! 🏓' }, { quoted: msg });
@@ -504,196 +642,4 @@ async function handleMessage(sock, msg) {
         break;
 
       case 'tebakbendera':
-        await tebakbenderaCommand(sock, msg);
-        break;
-
-      case 'tebakkata':
-        await tebakkataCommand(sock, msg);
-        break;
-
-      case 'tebakgambar':
-        await tebakgambarCommand(sock, msg);
-        break;
-
-      case 'trivia':
-      case 'kuis':
-        await triviaCommand(sock, msg, args);
-        break;
-
-      case 'tetris':
-        await tetrisCommand(sock, msg, args);
-        break;
-
-      case 'claimtetris':
-      case 'klaimtetris':
-        await claimTetrisCommand(sock, msg, args);
-        break;
-
-      case 'menu_game':
-      case 'games': {
-        const gameText = 
-`┏━I *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* I
-┃
-┣⌬ ${prefixUsed}bj
-┣⌬ ${prefixUsed}math [mudah|sedang|hard|max]
-┣⌬ ${prefixUsed}tebakbendera
-┣⌬ ${prefixUsed}tebakkata
-┣⌬ ${prefixUsed}tebakgambar
-┣⌬ ${prefixUsed}trivia <kategori> <level>
-┣⌬ ${prefixUsed}tetris
-┣⌬ ${prefixUsed}claimtetris <kode>
-┣⌬ ${prefixUsed}duel math @user <taruhan> [diff]
-┣⌬ ${prefixUsed}duel trivia @user <taruhan> [kategori] [diff]
-┣⌬ ${prefixUsed}reme <taruhan> (Lawan Bot)
-┣⌬ ${prefixUsed}reme @user <taruhan> (PvP)
-┣⌬ ${prefixUsed}qq <taruhan> (Lawan Bot)
-┣⌬ ${prefixUsed}qq @user <taruhan> (PvP)
-┣⌬ ${prefixUsed}batal
-┣⌬ ${prefixUsed}claim (Ambil Poin Harian)
-┣⌬ ${prefixUsed}tf @user <nominal>
-┣⌬ ${prefixUsed}score
-┣⌬ ${prefixUsed}leaderboard
-┣⌬ ${prefixUsed}nickname <nama>
-┣⌬ ${prefixUsed}cekkhodam <nama>
-┣⌬ ${prefixUsed}bucin <nama>
-┣⌬ ${prefixUsed}truth
-┣⌬ ${prefixUsed}dare
-┗━━━━━━━◧`;
-        await sock.sendMessage(remoteJid, { text: gameText }, { quoted: msg });
-        break;
-      }
-
-      case 'menu_tools':
-      case 'tools': {
-        const toolsText = 
-`┏━I *ᴍᴇɴᴜ ᴛᴏᴏʟꜱ* I
-┃
-┣⌬ ${prefixUsed}ping
-┣⌬ ${prefixUsed}s
-┣⌬ ${prefixUsed}wm <pack|author>
-┣⌬ ${prefixUsed}toimg
-┣⌬ ${prefixUsed}tovid
-┣⌬ ${prefixUsed}tt <link>
-┣⌬ ${prefixUsed}ig <link>
-┣⌬ ${prefixUsed}play <judul>
-┣⌬ ${prefixUsed}ytmp3 <link>
-┣⌬ ${prefixUsed}hd
-┣⌬ ${prefixUsed}ssweb <url>
-┣⌬ ${prefixUsed}ai <teks>
-┣⌬ ${prefixUsed}brat <teks>
-┣⌬ ${prefixUsed}bratvid <teks>
-┣⌬ ${prefixUsed}quote <teks>
-┣⌬ ${prefixUsed}rvo
-┣⌬ ${prefixUsed}ncode
-┗━━━━━━━◧`;
-        await sock.sendMessage(remoteJid, { text: toolsText }, { quoted: msg });
-        break;
-      }
-
-      case 'menu_group':
-      case 'group': {
-        const groupText = 
-`┏━I *ᴍᴇɴᴜ ɢʀᴏᴜ𝚙* I
-┃
-┣⌬ ${prefixUsed}open
-┣⌬ ${prefixUsed}close
-┣⌬ ${prefixUsed}online
-┣⌬ ${prefixUsed}promote @user
-┣⌬ ${prefixUsed}demote @user
-┗━━━━━━━◧`;
-        await sock.sendMessage(remoteJid, { text: groupText }, { quoted: msg });
-        break;
-      }
-
-      case 'allmenu': {
-        const allText = 
-`┏━I *ꜱᴇᴍᴜ🇦 ᴍᴇɴᴜ* I
-┃
-┣⌬ *ɢᴀᴍᴇꜱ*
-┃  • ${prefixUsed}bj
-┃  • ${prefixUsed}math [mudah|sedang|hard|max]
-┃  • ${prefixUsed}tebakbendera
-┃  • ${prefixUsed}tebakkata
-┃  • ${prefixUsed}tebakgambar
-┃  • ${prefixUsed}trivia <kategori> <level>
-┃  • ${prefixUsed}tetris
-┃  • ${prefixUsed}claimtetris <kode>
-┃  • ${prefixUsed}duel math/trivia @user <taruhan>
-┃  • ${prefixUsed}reme <taruhan> (Lawan Bot)
-┃  • ${prefixUsed}reme @user <taruhan> (PvP)
-┃  • ${prefixUsed}qq <taruhan> (Lawan Bot)
-┃  • ${prefixUsed}qq @user <taruhan> (PvP)
-┃  • ${prefixUsed}batal
-┃  • ${prefixUsed}claim (Ambil Poin Harian)
-┃  • ${prefixUsed}tf @user <nominal>
-┃  • ${prefixUsed}score
-┃  • ${prefixUsed}leaderboard
-┃  • ${prefixUsed}nickname <nama>
-┃  • ${prefixUsed}cekkhodam <nama>
-┃  • ${prefixUsed}bucin <nama>
-┃  • ${prefixUsed}truth
-┃  • ${prefixUsed}dare
-┃
-┣⌬ *ᴛᴏᴏʟꜱ*
-┃  • ${prefixUsed}ping
-┃  • ${prefixUsed}s
-┃  • ${prefixUsed}wm <pack|author>
-┃  • ${prefixUsed}toimg
-┃  • ${prefixUsed}tovid
-┃  • ${prefixUsed}tt <link>
-┃  • ${prefixUsed}ig <link>
-┃  • ${prefixUsed}play <judul>
-┃  • ${prefixUsed}ytmp3 <link>
-┃  • ${prefixUsed}hd
-┃  • ${prefixUsed}ssweb <url>
-┃  • ${prefixUsed}ai <teks>
-┃  • ${prefixUsed}brat <teks>
-┃  • ${prefixUsed}bratvid <teks>
-┃  • ${prefixUsed}quote <teks>
-┃  • ${prefixUsed}rvo
-┃  • ${prefixUsed}ncode
-┃
-┣⌬ *ɢʀᴏᴜ𝚙*
-┃  • ${prefixUsed}open
-┃  • ${prefixUsed}close
-┃  • ${prefixUsed}online
-┃  • ${prefixUsed}promote @user
-┃  • ${prefixUsed}demote @user
-┗━━━━━━━◧`;
-        await sock.sendMessage(remoteJid, { text: allText }, { quoted: msg });
-        break;
-      }
-
-      case 'list':
-      case 'menu':
-      case 'help': {
-        const menuText = 
-`┏━『 *ᴍᴇɴᴜ ᴜᴛᴀᴍᴀ* 』
-┃
-┣⌬ ɢᴀᴍᴇꜱ
-┣⌬ ᴛᴏᴏʟꜱ
-┣⌬ ɢʀᴏᴜᴘ
-┣⌬ ᴀʟʟᴍᴇɴᴜ
-┗━━━━━━━◧
-
-_ᴋᴇᴛɪᴋ ɴᴀᴍᴀ ᴋᴀᴛᴇɢᴏʀɪ ᴜɴᴛᴜᴋ ᴍᴇʟɪʜᴀᴛ ɪꜱɪɴʏᴀ._
-_ᴄᴏɴᴛᴏʜ: *.menu_game* ᴀᴛᴀᴜ *.allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍpilkan ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ_`;
-
-        await sock.sendMessage(remoteJid, { text: menuText }, { quoted: msg });
-        break;
-      }
-
-      default:
-        await sock.sendMessage(remoteJid, {
-          text: `❌ Command *${prefixUsed}${command}* tidak ditemukan!\nKetik *${prefixUsed}menu* untuk melihat daftar menu.`
-        }, { quoted: msg });
-        break;
-    }
-
-  } catch (err) {
-    console.error('Error di handleMessage:', err);
-  }
-}
-
-module.exports = handleMessage;
-        
+        await tebakbenderaComm
