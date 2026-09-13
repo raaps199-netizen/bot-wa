@@ -1,31 +1,31 @@
 // File: commands/fishing.js
 
-const { getRandomCatch, rarityEmoji, baits, potions } = require('../utils/fishingData');
-const {
-  addItem, getInventory, getInventorySummary, sellItem, sellAllItems, getUserStats,
-  getActiveBuff, usePotion, getBaitCount, consumeBait
-} = require('../utils/inventoryManager');
-
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-
 async function handleFishingCommand(sock, msg, args, sender) {
   let command = args[0]?.toLowerCase();
   let subArgs = args.slice(1);
 
-  if (command === 'fish' || command === 'mancing') {
+  // Jika user mengetik .fish cast, .mancing roti, dll.
+  if (command === 'fish') {
     command = args[1]?.toLowerCase() || 'cast';
     subArgs = args.slice(2);
+  } else if (command === 'mancing') {
+    // Jika user ketik .mancing roti, maka command tetap 'mancing' dan umpan ada di args[0] (subArgs[0])
+    command = 'mancing';
   }
   
   try {
     switch (command) {
       case 'cast':
       case 'mancing':
-        return await fishCommand(sock, msg, sender, false, subArgs[0]);
+        // Ambil umpan dari argumen pertama setelah .mancing (misal: .mancing roti -> subArgs[0] adalah 'roti')
+        // Atau jika kosong, cek apakah user nulis .fish cast <umpan> (args[2])
+        const baitArg = subArgs[0] || args[2];
+        return await fishCommand(sock, msg, sender, false, baitArg);
       
       case 'lnj':
       case 'lanjut':
-        return await fishCommand(sock, msg, sender, true, subArgs[0]);
+        const lnjBaitArg = subArgs[0];
+        return await fishCommand(sock, msg, sender, true, lnjBaitArg);
         
       case 'inv':
       case 'inventory':
