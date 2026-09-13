@@ -65,11 +65,12 @@ module.exports = async function tfCommand(sock, msg, args) {
   } catch (err) {
     // DEBUG: sebelumnya error di sini ke-telen diem-diem sama try/catch di
     // handleMessage.js (cuma nongol di console log server, gak pernah nyampe
-    // ke WhatsApp). Sekarang errornya dikirim balik ke chat biar langsung
-    // ketauan apa yang salah tanpa perlu buka log Railway.
+    // ke WhatsApp). Sekarang errornya (+ potongan stack trace) dikirim balik
+    // ke chat biar langsung ketauan file & baris mana yang crash.
     console.error('Error di tfCommand:', err);
+    const shortStack = (err.stack || '').split('\n').slice(0, 5).join('\n');
     await sock.sendMessage(remoteJid, {
-      text: `❌ [DEBUG] Error di .tf: ${err.message}`
+      text: `❌ [DEBUG] Error di .tf: ${err.message}\n\n📍 Lokasi:\n${shortStack}`
     }, { quoted: msg });
   }
 };
