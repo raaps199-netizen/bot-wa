@@ -1,8 +1,7 @@
 // File: commands/shop.js
-const { deductPoints, getTotalScore, getUserData } = require('../utils/helper'); // BENAR
-
-const { baits, potions } = require('./fishingData');
-const { addBait, addPotion } = require('./inventoryManager');
+const { deductPoints, getTotalScore, getUserData } = require('../utils/helper');
+const { baits, potions } = require('../utils/fishingData');
+const { addBait, addPotion } = require('../utils/inventoryManager');
 
 async function handleShopCommand(sock, msg, args, senderId) {
   const remoteJid = msg.key.remoteJid;
