@@ -46,6 +46,9 @@ const tfCommand = require('../commands/tf');
 const { duelCommand, handleDuelAnswer } = require('../commands/duel');
 const titleCommand = require('../commands/title');
 
+// 🎣 Import Command Fishing
+const { handleFishingCommand } = require('../commands/fishing');
+
 // Command Reme & QQ Kasino
 const remeCommand = require('../commands/reme');
 const { terimaCommand, tolakCommand } = require('../commands/remeAcceptReject');
@@ -216,6 +219,20 @@ async function handleMessage(sock, msg) {
     const command = args.shift().toLowerCase();
 
     switch (command) {
+      // ==========================================
+      // 🎣 COMMAND FISHING / MANCING
+      // ==========================================
+      case 'fish':
+      case 'mancing':
+        // Jika user hanya ngetik .mancing, langsung cast (lempar kail)
+        if (command === 'mancing' && args.length === 0) {
+          await handleFishingCommand(sock, msg, ['cast'], senderId);
+        } else {
+          // Teruskan argumen ke handler utama
+          await handleFishingCommand(sock, msg, args, senderId);
+        }
+        break;
+
       // ==========================================
       // 📅 COMMAND JADWAL & PIKET KELAS
       // ==========================================
@@ -546,7 +563,7 @@ async function handleMessage(sock, msg) {
         await handleGameAnswer(sock, msg, '.nyerah');
         break;
 
-      case 'promote':
+       case 'promote':
       case 'pm':
         await groupCommand(sock, msg, args, 'promote');
         break;
@@ -682,6 +699,8 @@ async function handleMessage(sock, msg) {
 `┏━I *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* I
 ┃
 ┣⌬ ${prefixUsed}bj
+┣⌬ ${prefixUsed}mancing
+┣⌬ ${prefixUsed}fish [cast|inv|sell|stats|help]
 ┣⌬ ${prefixUsed}math [mudah|sedang|hard|max]
 ┣⌬ ${prefixUsed}tebakbendera
 ┣⌬ ${prefixUsed}tebakkata
@@ -760,6 +779,8 @@ async function handleMessage(sock, msg) {
 ┃
 ┣⌬ *ɢᴀᴍᴇꜱ*
 ┃  • ${prefixUsed}bj
+┃  • ${prefixUsed}mancing
+┃  • ${prefixUsed}fish [cast|inv|sell|stats|help]
 ┃  • ${prefixUsed}math [mudah|sedang|hard|max]
 ┃  • ${prefixUsed}tebakbendera
 ┃  • ${prefixUsed}tebakkata
@@ -844,5 +865,3 @@ _ᴄᴏɴᴛᴏʜ: *.menu_game* ᴀᴛᴀᴜ *.allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴ�
 }
 
 module.exports = handleMessage;
-
-  
