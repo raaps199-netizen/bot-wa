@@ -1,46 +1,38 @@
 // File: commands/shop.js
 const { deductPoints, getTotalScore, getUserData } = require('../utils/helper');
-const { baits } = require('../utils/fishingData');
-const { addBait } = require('../utils/inventoryManager');
+const { potions } = require('../utils/fishingData');
+const { addPotion } = require('../utils/inventoryManager');
 
 async function handleShopCommand(sock, msg, args, senderId) {
   const remoteJid = msg.key.remoteJid;
-  const command = args[0]?.toLowerCase();
-
-  // 1. Tampilkan Katalog Shop
-  if (!command || command === 'list') {
-    let shopText = `🛒 *FISHING SHOP* 🛒\n\n`;
-    shopText += `Beli umpan untuk memancing ikan langka!\nCara Beli: *.beli <id_umpan> <jumlah>*\nContoh: *.beli cacing 5*\n\n`;
-    
-    for (const [id, data] of Object.entries(baits)) {
-      shopText += `🔖 *${data.name}* (ID: ${id})\n`;
-      shopText += `   💰 Harga: ${data.price} Poin\n`;
-      shopText += `   ✨ Efek: ${data.desc}\n\n`;
-    }
-    
-    return await sock.sendMessage(remoteJid, { text: shopText }, { quoted: msg });
+  
+  let shopText = `🛒 *FISHING BLACK MARKET* 🛒\n\n`;
+  shopText += `Beli Potion untuk memperbesar peluang tangkapan langka!\nCara Beli: *.beli <id_potion> <jumlah>*\nContoh: *.beli minor 1*\n\n`;
+  
+  for (const [id, data] of Object.entries(potions)) {
+    shopText += `🧪 *${data.name}* (ID: ${id})\n`;
+    shopText += `   💰 Harga: ${data.price} Poin\n`;
+    shopText += `   ✨ Efek: ${data.desc}\n\n`;
   }
-
-  // 2. Logika Pembelian (bisa dipanggil dari .beli umpan 1)
+  
+  await sock.sendMessage(remoteJid, { text: shopText }, { quoted: msg });
 }
 
 async function handleBeliCommand(sock, msg, args, senderId) {
   const remoteJid = msg.key.remoteJid;
-  const baitId = args[0]?.toLowerCase();
+  const potionId = args[0]?.toLowerCase();
   let amount = parseInt(args[1]);
 
-  if (!baitId || !baits[baitId]) {
+  if (!potionId || !potions[potionId]) {
     return await sock.sendMessage(remoteJid, { 
-      text: `⚠️ Umpan tidak ditemukan! Ketik *.shop* untuk melihat daftar ID umpan yang benar.` 
+      text: `⚠️ Barang tidak ditemukan! Ketik *.shop* untuk melihat ID yang benar.` 
     }, { quoted: msg });
   }
 
   if (isNaN(amount) || amount < 1) amount = 1;
 
-  const item = baits[baitId];
+  const item = potions[potionId];
   const totalPrice = item.price * amount;
-
-  // Cek Poin User
   const user = getUserData(global.db, senderId);
   const currentScore = getTotalScore(user);
 
@@ -50,12 +42,11 @@ async function handleBeliCommand(sock, msg, args, senderId) {
     }, { quoted: msg });
   }
 
-  // Potong Poin dan Tambah Umpan
   deductPoints(global.db, senderId, totalPrice);
-  addBait(senderId, baitId, amount);
+  addPotion(senderId, potionId, amount);
 
   await sock.sendMessage(remoteJid, { 
-    text: `✅ *PEMBELIAN BERHASIL!*\n\nKamu membeli ${amount}x *${item.name}* seharga ${totalPrice} Poin.\n\nSisa Poin: *${getTotalScore(user)}*\nKetik *.mancing ${baitId}* untuk langsung menggunakannya!` 
+    text: `✅ *PEMBELIAN BERHASIL!*\n\nKamu membeli ${amount}x *${item.name}* seharga ${totalPrice} Poin.\n\nKetik *.fish pakai ${potionId}* sebelum mancing untuk mengaktifkannya!` 
   }, { quoted: msg });
 }
 
@@ -63,4 +54,3 @@ module.exports = {
   handleShopCommand,
   handleBeliCommand
 };
-      
