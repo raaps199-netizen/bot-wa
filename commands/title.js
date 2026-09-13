@@ -8,58 +8,60 @@ const TITLES_CONFIG = {
     label: '💰 EKONOMI (Poin)',
     unit: 'Poin',
     list: [
-      { min: 0,      name: '🪵 [Pemula]' },
-      { min: 500,    name: '🪙 [Punya Tabungan]' },
-      { min: 1000,   name: '💼 [Kelas Menengah]' },
-      { min: 3000,   name: '🎩 [Jutawan Lokal]' },
-      { min: 5000,   name: '💎 [Orang Kaya]' },
-      { min: 10000,  name: '🏛️ [Konglomerat]' },
-      { min: 50000,  name: '👑 [Sultan Kasino]' },
-      { min: 100000, name: '👑 [Penguasa Server]' }
+      { min: 0,      name: '[The Initiate]' },
+      { min: 500,    name: '[The Rising One]' },
+      { min: 1000,   name: '[Knight of Dawn]' },
+      { min: 3000,   name: '[Noble Knight]' },
+      { min: 5000,   name: '[Lord of Valor]' },
+      { min: 10000,  name: '[Duke of Honor]' },
+      { min: 50000,  name: '[Prince of the Realm]' },
+      { min: 100000, name: '[Emperor of the Realm]' }
     ]
   },
   reme: {
     label: '🎰 KASINO (Reme)',
     unit: 'Win',
     list: [
-      { min: 0,   name: '🪵 [Pemula]' },
-      { min: 5,   name: '🎲 [Pemain Reme]' },
-      { min: 10,  name: '🃏 [Jago Reme]' },
-      { min: 20,  name: '🔥 [Master Reme]' },
-      { min: 50,  name: '🎰 [Raja Spin]' },
-      { min: 100, name: '🔱 [Dewa Reme]' }
+      { min: 0,   name: '[Reme Initiate]' },
+{ min: 5,   name: '[Reme Adept]' },
+{ min: 10,  name: '[Reme Virtuoso]' },
+{ min: 20,  name: '[Reme Highmaster]' },
+{ min: 50,  name: '[The King of Spin]' },
+{ min: 100, name: '[The God of Reme]' }
     ]
   },
   qq: {
     label: '🎴 KASINO (QiuQiu)',
     unit: 'Win',
     list: [
-      { min: 0,  name: '🪵 [Pemula]' },
-      { min: 10, name: '🎴 [Pemain QQ]' },
-      { min: 20, name: '💥 [Jago Domino]' },
-      { min: 50, name: '🐲 [Dewa QiuQiu]' }
+      { min: 0,   name: '[QQ Initiate]' },
+{ min: 10,  name: '[QQ Adept]' },
+{ min: 20,  name: '[QQ Virtuoso]' },
+{ min: 50,  name: '[The Luck Hand]' },
+{ min: 100, name: '[The God of QQ]' }
+    ]
     ]
   },
   trivia: {
     label: '🧠 KUIS (Trivia)',
     unit: 'Soal',
     list: [
-      { min: 0,   name: '🪵 [Pemula]' },
-      { min: 10,  name: '💡 [Penjawab Kuis]' },
-      { min: 30,  name: '📚 [Si Pintar]' },
-      { min: 50,  name: '🧠 [Profesor Kuis]' },
-      { min: 100, name: '🧙‍♂️ [Mbah Cerdas]' }
+      { min: 0,   name: '[The Initiate]' },
+{ min: 10,  name: '[The Quizer]' },
+{ min: 30,  name: '[The Scholar]' },
+{ min: 50,  name: '[The Learned]' },
+{ min: 100, name: '[The Trivia King]' }
     ]
   },
   math: {
     label: '📐 KUIS (Matematika)',
     unit: 'Soal',
     list: [
-      { min: 0,   name: '🪵 [Pemula]' },
-      { min: 10,  name: '📐 [Tukang Hitung]' },
-      { min: 30,  name: '📊 [Jago Aljabar]' },
-      { min: 50,  name: '🧮 [Kalkulator Berjalan]' },
-      { min: 100, name: '⚡ [Albert Einstein]' }
+      { min: 0,   name: '[The Initiate]' },
+{ min: 10,  name: '[The Counter]' },
+{ min: 30,  name: '[The Mathematician]' },
+{ min: 50,  name: '[The Human Calculator]' },
+{ min: 100, name: '[The Einstein]' }
     ]
   }
 };
@@ -109,28 +111,95 @@ module.exports = async function titleCommand(sock, msg, args) {
     const subCommand = args[0] ? args[0].toLowerCase() : null;
 
     // ===================================================
-    // MODE 1: RICIAN PER KATEGORI (misal: .title trivia)
+    // 🎯 MODE 1: MEMAKAI / MEMILIH GELAR
+    // (Contoh: .title pakai trivia 2)
+    // ===================================================
+    if (['pakai', 'set', 'use', 'select'].includes(subCommand)) {
+      const categoryKey = args[1] ? args[1].toLowerCase() : null;
+      const targetIndex = parseInt(args[2]) - 1;
+
+      if (!categoryKey || !TITLES_CONFIG[categoryKey] || isNaN(targetIndex)) {
+        return await sock.sendMessage(remoteJid, {
+          text: `⚠️ *Format Salah, Bre!*\n\n` +
+                `📌 Cara Pakai: *.title pakai <kategori> <nomor_gelar>*\n` +
+                `💡 Contoh: *.title pakai trivia 2*\n` +
+                `💡 Cek list & nomornya via: *.title trivia*`
+        }, { quoted: msg });
+      }
+
+      const catConfig = TITLES_CONFIG[categoryKey];
+      const selectedTitle = catConfig.list[targetIndex];
+
+      if (!selectedTitle) {
+        return await sock.sendMessage(remoteJid, {
+          text: `❌ Nomor gelar tidak ditemukan dalam kategori *${categoryKey}*!`
+        }, { quoted: msg });
+      }
+
+      const userVal = stats[categoryKey];
+      if (userVal < selectedTitle.min) {
+        return await sock.sendMessage(remoteJid, {
+          text: `🔒 Gelar *${selectedTitle.name}* masih terkunci!\n` +
+                `Capaian kamu baru *${userVal}/${selectedTitle.min} ${catConfig.unit}*.`
+        }, { quoted: msg });
+      }
+
+      // Simpan gelar aktif ke DB
+      user.equippedTitle = selectedTitle.name;
+      user.title = selectedTitle.name;
+
+      if (typeof global.saveDatabase === 'function') global.saveDatabase();
+
+      return await sock.sendMessage(remoteJid, {
+        text: `✅ Berhasil memasang gelar: *${selectedTitle.name}*!\n\n` +
+              `Gelar ini akan otomatis muncul saat bot me-mention kamu di game/command.`
+      }, { quoted: msg });
+    }
+
+    // ===================================================
+    // ❌ MODE 2: MELEPAS GELAR
+    // (Contoh: .title lepas)
+    // ===================================================
+    if (['lepas', 'reset', 'off', 'remove'].includes(subCommand)) {
+      delete user.equippedTitle;
+      delete user.title;
+
+      if (typeof global.saveDatabase === 'function') global.saveDatabase();
+
+      return await sock.sendMessage(remoteJid, {
+        text: `✅ Gelar kamu berhasil dilepas!`
+      }, { quoted: msg });
+    }
+
+    // ===================================================
+    // 📜 MODE 3: RICIAN PER KATEGORI (misal: .title trivia)
     // ===================================================
     if (subCommand && TITLES_CONFIG[subCommand]) {
       const catConfig = TITLES_CONFIG[subCommand];
       const val = stats[subCommand];
       const userNum = senderId.split('@')[0];
+      const currentEquipped = user.equippedTitle || user.title;
 
       let caption = `🎖️ *RINCIAN GELAR — ${catConfig.label.toUpperCase()}*\n`;
       caption += `👤 User: @${userNum}\n`;
       caption += `📊 Capaian Kamu: *${val} ${catConfig.unit}*\n`;
       caption += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
-      catConfig.list.forEach((t) => {
+      catConfig.list.forEach((t, idx) => {
+        const no = idx + 1;
+        const isEquipped = currentEquipped === t.name;
+
         if (val >= t.min) {
-          caption += `✅ *${t.name}* — (${t.min} ${catConfig.unit})\n`;
+          const statusBadge = isEquipped ? ' 📌 *[DIPAKAI]*' : ' ✅ *[TERBUKA]*';
+          caption += `${no}. *${t.name}*${statusBadge}\n   └ Syarat: ${t.min} ${catConfig.unit}\n`;
         } else {
-          caption += `🔒 *${t.name}* — Progress: *${val}/${t.min} ${catConfig.unit}*\n`;
+          caption += `${no}. 🔒 *${t.name}*\n   └ Progress: *${val}/${t.min} ${catConfig.unit}*\n`;
         }
       });
 
       caption += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-      caption += `💡 *Petunjuk:* Selesaikan misi atau tingkatkan win rate untuk membuka gelar bertanda 🔒!`;
+      caption += `💡 *Cara Pasang:* Ketik *.title pakai ${subCommand} <nomor_gelar>*\n`;
+      caption += `📌 Contoh: *.title pakai ${subCommand} 2*`;
 
       return await sock.sendMessage(remoteJid, {
         text: caption,
@@ -139,11 +208,14 @@ module.exports = async function titleCommand(sock, msg, args) {
     }
 
     // ===================================================
-    // MODE 2: MENU UTAMA (Ringkasan Semua Kategori)
+    // 🏠 MODE 4: MENU UTAMA (Ringkasan Semua Kategori)
     // ===================================================
     const userNum = senderId.split('@')[0];
-    let caption = `🎖️ *MENU KATEGORI & PROGRESS GELAR*\n`;
+    const currentEquipped = user.equippedTitle || user.title || 'Belum Ada (Otomatis)';
+
+    let caption = `🎖️ *STATUS & MENU GELAR PENGGUNA*\n`;
     caption += `👤 User: @${userNum}\n`;
+    caption += `📌 Gelar Dipakai: *${currentEquipped}*\n`;
     caption += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
     for (const key in TITLES_CONFIG) {
@@ -151,7 +223,7 @@ module.exports = async function titleCommand(sock, msg, args) {
       const prog = getCategoryProgress(cat, stats[key]);
 
       caption += `${cat.label}\n`;
-      caption += `├ Gelar: *${prog.currentTitle}*\n`;
+      caption += `├ Gelar Tertinggi: *${prog.currentTitle}*\n`;
 
       if (prog.isMax) {
         caption += `└ Progress: *MAX LEVEL (Tercapai)* 👑\n\n`;
@@ -161,8 +233,10 @@ module.exports = async function titleCommand(sock, msg, args) {
     }
 
     caption += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-    caption += `💡 *Rincian Lengkap:* Ketik *.title <kategori>*\n`;
-    caption += `📌 Contoh: *.title trivia*, *.title reme*, *.title poin*`;
+    caption += `🔍 *Lihat List Gelar:* Ketik *.title <kategori>*\n`;
+    caption += `👉 *Pasang Gelar:* Ketik *.title pakai <kategori> <nomor>*\n`;
+    caption += `❌ *Lepas Gelar:* Ketik *.title lepas*\n`;
+    caption += `📌 Contoh: *.title trivia* lalu *.title pakai trivia 2*`;
 
     await sock.sendMessage(remoteJid, {
       text: caption,
@@ -176,4 +250,3 @@ module.exports = async function titleCommand(sock, msg, args) {
     }, { quoted: msg });
   }
 };
-    
