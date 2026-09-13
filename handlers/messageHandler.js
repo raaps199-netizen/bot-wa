@@ -49,6 +49,7 @@ const titleCommand = require('../commands/title');
 // 🎣 Import Command Fishing & Shop
 const { handleFishingCommand } = require('../commands/fishing');
 const { handleShopCommand, handleBeliCommand } = require('../commands/shop');
+const auroraCommand = require('../commands/aurora');
 
 // Command Reme & QQ Kasino
 const remeCommand = require('../commands/reme');
@@ -245,6 +246,10 @@ async function handleMessage(sock, msg) {
       case 'beli':
       case 'buy':
         await handleBeliCommand(sock, msg, args, senderId);
+        break;
+
+      case 'aurora':
+        await auroraCommand(sock, msg, args);
         break;
 
       // ==========================================
