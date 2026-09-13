@@ -39,7 +39,7 @@ const fishingItems = {
     { name: '🌟 Aqua Scribe', rarity: 'DIVINE', price: 750, weight: '25kg' },
     { name: '🌟 Celestial Pearl Danio', rarity: 'DIVINE', price: 850, weight: '30kg' },
     { name: '🌟 Poseidon\'s Perch', rarity: 'DIVINE', price: 900, weight: '50kg' },
-    { name: '🌟 Neptune\'s Nibbler', rarity: 'DIVINE', price: 1000, weight: '80kg' }
+    { name: '🌟 THE ABYYSAL DICK', rarity: 'DIVINE', price: 1000, weight: '80kg' }
   ]
 };
 
@@ -81,11 +81,11 @@ const mutations = [
 // 🪱 DAFTAR BAIT (UMPAN)
 // ==========================================
 const baits = {
-  'roti':    { id: 'roti', name: '🍞 Umpan Roti', price: 30, desc: 'Umpan dasar.' },
-  'cacing':  { id: 'cacing', name: '🪱 Cacing Tanah', price: 100, desc: 'Umpan cacing.' },
-  'pelet':   { id: 'pelet', name: '🍘 Pelet Premium', price: 300, desc: 'Pelet berkualitas.' },
-  'udang':   { id: 'udang', name: '🦐 Udang Segar', price: 800, desc: 'Udang pilihan.' },
-  'legenda': { id: 'legenda', name: '✨ Umpan Legendaris', price: 2000, desc: 'Umpan para master.' }
+  'roti':    { id: 'roti', name: '🍞 Umpan Roti', price: 10, desc: 'Umpan dasar.' },
+  'cacing':  { id: 'cacing', name: '🪱 Cacing Tanah', price: 50, desc: 'Umpan cacing.' },
+  'pelet':   { id: 'pelet', name: '🍘 Pelet Premium', price: 100, desc: 'Pelet berkualitas.' },
+  'udang':   { id: 'udang', name: '🦐 Udang Segar', price: 300, desc: 'Udang pilihan.' },
+  'legenda': { id: 'legenda', name: '✨ Umpan Legendaris', price: 500, desc: 'Umpan para master.' }
 };
 
 // ==========================================
