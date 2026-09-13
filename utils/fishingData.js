@@ -78,13 +78,16 @@ const potionRates = {
 function getRandomCatch(activePotionId = 'normal') {
   let rand = Math.random() * 100;
   
-  // 🌟 CEK APAKAH EVENT AURORA SERVER AKTIF
+  // 🌟 CEK APAKAH EVENT AURORA SERVER AKTIF & STACK DENGAN POTION
   const aurora = global.serverAuroraEvent;
-  if (aurora && aurora.active && aurora.expiresAt > Date.now()) {
-    // Karena luck dikali 5, kita bikin angka random jadi lebih kecil (makin kecil peluang rand, makin dapet kasta tinggi)
-    rand = rand / aurora.multiplier; 
-  } else if (aurora && aurora.active && aurora.expiresAt <= Date.now()) {
-    aurora.active = false; // Matikan jika sudah waktunya habis
+  if (aurora && aurora.active) {
+    if (aurora.expiresAt > Date.now()) {
+      // Efek hoki Aurora mendongkrak nilai random mendekati 100 (agar tembus ke tier Mythic/Divine)
+      const boostFactor = 0.45; // Kekuatan dorongan hoki server aurora
+      rand = rand + (100 - rand) * boostFactor;
+    } else {
+      aurora.active = false; // Matikan otomatis jika waktu event habis
+    }
   }
 
   const rate = potionRates[activePotionId] || potionRates['normal'];
@@ -107,6 +110,7 @@ function getRandomCatch(activePotionId = 'normal') {
     id: `${rarity}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   };
 }
+
 module.exports = {
   fishingItems,
   rarityEmoji,
