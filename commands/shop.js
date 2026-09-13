@@ -1,5 +1,6 @@
 // File: commands/shop.js
-const { deductPoints, getTotalScore, getUserData } = require('./helper');
+const { deductPoints, getTotalScore, getUserData } = require('../utils/helper'); // BENAR
+
 const { baits, potions } = require('./fishingData');
 const { addBait, addPotion } = require('./inventoryManager');
 
