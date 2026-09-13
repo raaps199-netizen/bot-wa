@@ -47,4 +47,33 @@ function getSenderId(msg, remoteJid) {
   return null;
 }
 
-module.exports = { isPersonalJid, getSenderId };
+/**
+ * Normalisasi JID biar user yang sama SELALU ke-resolve ke key yang identik,
+ * walau WhatsApp ngasih format beda antar event pesan (kasus umum: @lid vs
+ * @s.whatsapp.net buat orang yang sama).
+ *
+ * db.lidMap nyimpen pemetaan { [lidJid]: nomorAsliJid } begitu ketemu
+ * kaitannya. Kalau belum ada mapping buat suatu LID, key itu dipakai apa
+ * adanya (belum bisa disatuin sampai mapping-nya ke-isi dari tempat lain,
+ * misal event contacts.upsert Baileys).
+ *
+ * @param {object} db - global.db
+ * @param {string} rawId
+ * @returns {string}
+ */
+function resolveUserKey(db, rawId) {
+  if (!rawId) return rawId;
+
+  const bareId = rawId.split(':')[0]; // buang device suffix (:12 dst)
+
+  if (db) {
+    db.lidMap = db.lidMap || {};
+    if (bareId.endsWith('@lid') && db.lidMap[bareId]) {
+      return db.lidMap[bareId];
+    }
+  }
+
+  return bareId;
+}
+
+module.exports = { isPersonalJid, getSenderId, resolveUserKey };
