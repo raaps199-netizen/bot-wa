@@ -2,34 +2,24 @@
 const helper = require('../utils/helper');
 const { getSenderId } = require('../utils/jid-utils');
 
-// Helper wrapper untuk menambah/mengurangi poin dengan aman (support berbagai macam signature helper)
 function safeAddPoints(userJid, amount) {
   if (typeof helper.addPoints === 'function') {
-    try {
-      // Coba signature (db, jid, amount)
-      helper.addPoints(global.db, userJid, amount);
-    } catch (e) {
-      try {
-        // Coba signature (jid, amount) atau (jid, category, amount)
-        helper.addPoints(userJid, 'reme', amount);
-      } catch (err) {      }
+    try { helper.addPoints(global.db, userJid, amount); } catch (e) {
+      try { helper.addPoints(userJid, 'reme', amount); } catch (err) {}
     }
   }
 }
 
 function safeDeductPoints(userJid, amount) {
   if (typeof helper.deductPoints === 'function') {
-    try {
-      helper.deductPoints(global.db, userJid, amount);
-    } catch (e) {
-      try {
-        helper.deductPoints(userJid, amount);
-      } catch (err) {      }
+    try { helper.deductPoints(global.db, userJid, amount); } catch (e) {
+      try { helper.deductPoints(userJid, amount); } catch (err) {}
     }
   }
 }
 
 function hitungReme(angka) {
+  if (angka === undefined || angka === null || isNaN(angka)) return { finalNum: 0, isSpecial: null };
   if (angka === 0) return { finalNum: 0, isSpecial: 'win3x' };
   if (angka === 9) return { finalNum: -1, isSpecial: 'autolose' };
 
@@ -102,8 +92,6 @@ async function finishGame(sock, remoteJid, game, isVsBot) {
     }
 
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
-
-    // Hapus sesi game
     delete global.db.game[remoteJid];
 
     return await sock.sendMessage(remoteJid, { text: finalMsg, mentions });
@@ -115,8 +103,11 @@ async function finishGame(sock, remoteJid, game, isVsBot) {
 
 async function processRoundEnd(sock, remoteJid, game, rolls, isVsBot) {
   const [p1, p2] = game.players;
-  const raw1 = rolls[p1];
-  const raw2 = rolls[p2];
+  
+  // FIX: Mengambil roll dengan akurat dari Object rolls
+  const raw1 = rolls[p1] !== undefined ? rolls[p1] : Object.values(rolls)[0];
+  const raw2 = rolls[p2] !== undefined ? rolls[p2] : Object.values(rolls)[1];
+
   const d1 = hitungReme(raw1);
   const d2 = hitungReme(raw2);
 
@@ -151,14 +142,15 @@ async function processRoundEnd(sock, remoteJid, game, rolls, isVsBot) {
 
   const scoreP1 = game.scores[p1] || 0;
   const scoreP2 = game.scores[p2] || 0;
-  const winningTarget = Math.ceil((game.maxRound || 3) / 2); // Best of 3 -> Butuh 2 kemenangan
-  const isGameOver = scoreP1 >= winningTarget || scoreP2 >= winningTarget || game.round >= (game.maxRound || 3);
+  const maxRound = game.maxRound || 3;
+  const winningTarget = Math.ceil(maxRound / 2); // 2 Kemenangan
+  
+  const isGameOver = scoreP1 >= winningTarget || scoreP2 >= winningTarget || game.round >= maxRound;
 
   if (isGameOver) {
     return await finishGame(sock, remoteJid, game, isVsBot);
   }
 
-  // Naikkan ronde jika game belum selesai
   game.round++;
   game.roundData = {};
   game.currentTurnIndex = 0;
@@ -179,22 +171,26 @@ async function spinCommand(sock, msg) {
     const game = global.db?.game?.[remoteJid];
     if (!game || game.type !== 'reme') return;
 
-    const isPlayingWithBot = game.mode === 'bot' || game.players.some(p => p.includes('bot'));
+    const isPlayingWithBot = game.mode === 'bot' || game.players.some(p => p.includes('bot') || p === sock.user.id.split(':')[0] + '@s.whatsapp.net');
 
     if (isPlayingWithBot) {
-      const targetPlayer = game.players.find(p => !p.includes('bot')) || senderId;
-      const botNumber = game.players.find(p => p.includes('bot')) || 'bot@s.whatsapp.net';
+      // Ambil elemen player langsung dari array game.players
+      const [p1, p2] = game.players;
+      const userJid = p1.includes('bot') ? p2 : p1;
+      const botJid = p1.includes('bot') ? p1 : p2;
 
-      if (baseNum(senderId) !== baseNum(targetPlayer)) return;
+      if (baseNum(senderId) !== baseNum(userJid)) return;
 
+      // 1. Roll Player
       const playerRaw = Math.floor(Math.random() * 37);
       const playerRes = hitungReme(playerRaw);
 
       await sock.sendMessage(remoteJid, {
-        text: `🎰 @${targetPlayer.split('@')[0]} melakukan SPIN!\n🎲 Angka Keluar: *${playerRaw}*\n➕ Hasil Reme: *${fmtResult(playerRes)}*`,
-        mentions: [targetPlayer]
+        text: `🎰 @${userJid.split('@')[0]} melakukan SPIN!\n🎲 Angka Keluar: *${playerRaw}*\n➕ Hasil Reme: *${fmtResult(playerRes)}*`,
+        mentions: [userJid]
       }, { quoted: msg });
 
+      // 2. Roll Bot
       const botRaw = Math.floor(Math.random() * 37);
       const botRes = hitungReme(botRaw);
 
@@ -202,10 +198,14 @@ async function spinCommand(sock, msg) {
         text: `🤖 *Bot* langsung balas SPIN!\n🎲 Angka Keluar: *${botRaw}*\n➕ Hasil Reme: *${fmtResult(botRes)}*`
       });
 
-      return await processRoundEnd(sock, remoteJid, game, { [targetPlayer]: playerRaw, [botNumber]: botRaw }, true);
+      // FIX KUNCI: Kirimkan Object dengan key eksak dari game.players [p1] dan [p2]
+      return await processRoundEnd(sock, remoteJid, game, { 
+        [userJid]: playerRaw, 
+        [botJid]: botRaw 
+      }, true);
     }
 
-    // Perkelahian PvP (Player vs Player)
+    // --- Mode PvP (Player vs Player) ---
     if (!game.roundData) game.roundData = {};
     if (typeof game.currentTurnIndex !== 'number') game.currentTurnIndex = 0;
 
