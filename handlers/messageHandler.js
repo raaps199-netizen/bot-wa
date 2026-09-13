@@ -44,6 +44,7 @@ const leaderboardCommand = require('../commands/leaderboard');
 const claimCommand = require('../commands/claim');
 const tfCommand = require('../commands/tf');
 const { duelCommand, handleDuelAnswer } = require('../commands/duel');
+const titleCommand = require('../commands/title'); // <--- IMPORT COMMAND TITLE
 
 // Command Reme & QQ Kasino
 const remeCommand = require('../commands/reme');
@@ -454,6 +455,11 @@ async function handleMessage(sock, msg) {
         break;
       }
 
+      case 'title':
+      case 'gelar':
+        await titleCommand(sock, msg, args);
+        break;
+
       case 'reme':
         await remeCommand(sock, msg, args);
         break;
@@ -643,7 +649,7 @@ async function handleMessage(sock, msg) {
         await tebakbenderaCommand(sock, msg);
         break;
 
-      case 'tebakkata':
+       case 'tebakkata':
         await tebakkataCommand(sock, msg);
         break;
 
@@ -660,173 +666,13 @@ async function handleMessage(sock, msg) {
         await tetrisCommand(sock, msg, args);
         break;
 
-      case 'claimtetris':
-      case 'klaimtetris':
-        await claimTetrisCommand(sock, msg, args);
-        break;
-
-      case 'menu_game':
-      case 'games': {
-        const gameText = 
-`┏━I *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* I
-┃
-┣⌬ ${prefixUsed}bj
-┣⌬ ${prefixUsed}math [mudah|sedang|hard|max]
-┣⌬ ${prefixUsed}tebakbendera
-┣⌬ ${prefixUsed}tebakkata
-┣⌬ ${prefixUsed}tebakgambar
-┣⌬ ${prefixUsed}trivia <kategori> <level>
-┣⌬ ${prefixUsed}tetris
-┣⌬ ${prefixUsed}claimtetris <kode>
-┣⌬ ${prefixUsed}duel math @user <taruhan> [diff]
-┣⌬ ${prefixUsed}duel trivia @user <taruhan> [kategori] [diff]
-┣⌬ ${prefixUsed}reme <taruhan> (Lawan Bot)
-┣⌬ ${prefixUsed}reme @user <taruhan> (PvP)
-┣⌬ ${prefixUsed}qq <taruhan> (Lawan Bot)
-┣⌬ ${prefixUsed}qq @user <taruhan> (PvP)
-┣⌬ ${prefixUsed}batal
-┣⌬ ${prefixUsed}claim (Ambil Poin Harian)
-┣⌬ ${prefixUsed}tf @user <nominal>
-┣⌬ ${prefixUsed}score
-┣⌬ ${prefixUsed}leaderboard
-┣⌬ ${prefixUsed}nickname <nama>
-┣⌬ ${prefixUsed}cekkhodam <nama>
-┣⌬ ${prefixUsed}bucin <nama>
-┣⌬ ${prefixUsed}truth
-┣⌬ ${prefixUsed}dare
-┗━━━━━━━◧`;
-        await sock.sendMessage(remoteJid, { text: gameText }, { quoted: msg });
-        break;
-      }
-
-      case 'menu_tools':
-      case 'tools': {
-        const toolsText = 
-`┏━I *ᴍᴇɴᴜ ᴛᴏᴏʟꜱ* I
-┃
-┣⌬ ${prefixUsed}jadwal [senin/selasa/dll]
-┣⌬ ${prefixUsed}jsn / .jsl / .jrb / .jkm / .jjt
-┣⌬ ${prefixUsed}ping
-┣⌬ ${prefixUsed}s
-┣⌬ ${prefixUsed}wm <pack|author>
-┣⌬ ${prefixUsed}toimg
-┣⌬ ${prefixUsed}tovid
-┣⌬ ${prefixUsed}tt <link>
-┣⌬ ${prefixUsed}ig <link>
-┣⌬ ${prefixUsed}play <judul>
-┣⌬ ${prefixUsed}ytmp3 <link>
-┣⌬ ${prefixUsed}hd
-┣⌬ ${prefixUsed}ssweb <url>
-┣⌬ ${prefixUsed}ai <teks>
-┣⌬ ${prefixUsed}brat <teks>
-┣⌬ ${prefixUsed}bratvid <teks>
-┣⌬ ${prefixUsed}quote <teks>
-┣⌬ ${prefixUsed}rvo
-┣⌬ ${prefixUsed}ncode
-┗━━━━━━━◧`;
-        await sock.sendMessage(remoteJid, { text: toolsText }, { quoted: msg });
-        break;
-      }
-
-      case 'menu_group':
-      case 'group': {
-        const groupText = 
-`┏━I *ᴍᴇɴᴜ ɢʀᴏᴜ𝚙* I
-┃
-┣⌬ ${prefixUsed}open
-┣⌬ ${prefixUsed}close
-┣⌬ ${prefixUsed}online
-┣⌬ ${prefixUsed}promote @user
-┣⌬ ${prefixUsed}demote @user
-┗━━━━━━━◧`;
-        await sock.sendMessage(remoteJid, { text: groupText }, { quoted: msg });
-        break;
-      }
-
-      case 'allmenu': {
-        const allText = 
-`┏━I *ꜱᴇᴍᴜ🇦 ᴍᴇɴᴜ* I
-┃
-┣⌬ *ɢᴀᴍᴇꜱ*
-┃  • ${prefixUsed}bj
-┃  • ${prefixUsed}math [mudah|sedang|hard|max]
-┃  • ${prefixUsed}tebakbendera
-┃  • ${prefixUsed}tebakkata
-┃  • ${prefixUsed}tebakgambar
-┃  • ${prefixUsed}trivia <kategori> <level>
-┃  • ${prefixUsed}tetris
-┃  • ${prefixUsed}claimtetris <kode>
-┃  • ${prefixUsed}duel math/trivia @user <taruhan>
-┃  • ${prefixUsed}reme <taruhan> (Lawan Bot)
-┃  • ${prefixUsed}reme @user <taruhan> (PvP)
-┃  • ${prefixUsed}qq <taruhan> (Lawan Bot)
-┃  • ${prefixUsed}qq @user <taruhan> (PvP)
-┃  • ${prefixUsed}batal
-┃  • ${prefixUsed}claim (Ambil Poin Harian)
-┃  • ${prefixUsed}tf @user <nominal>
-┃  • ${prefixUsed}score
-┃  • ${prefixUsed}leaderboard
-┃  • ${prefixUsed}nickname <nama>
-┃  • ${prefixUsed}cekkhodam <nama>
-┃  • ${prefixUsed}bucin <nama>
-┃  • ${prefixUsed}truth
-┃  • ${prefixUsed}dare
-┃
-┣⌬ *ᴛᴏᴏʟꜱ & ᴊᴀᴅᴡᴀʟ*
-┃  • ${prefixUsed}jadwal [hari]
-┃  • ${prefixUsed}jsn / .jsl / .jrb / .jkm / .jjt
-┃  • ${prefixUsed}ping
-┃  • ${prefixUsed}s
-┃  • ${prefixUsed}wm <pack|author>
-┃  • ${prefixUsed}toimg
-┃  • ${prefixUsed}tovid
-┃  • ${prefixUsed}tt <link>
-┃  • ${prefixUsed}ig <link>
-┃  • ${prefixUsed}play <judul>
-┃  • ${prefixUsed}ytmp3 <link>
-┃  • ${prefixUsed}hd
-┃  • ${prefixUsed}ssweb <url>
-┃  • ${prefixUsed}ai <teks>
-┃  • ${prefixUsed}brat <teks>
-┃  • ${prefixUsed}bratvid <teks>
-┃  • ${prefixUsed}quote <teks>
-┃  • ${prefixUsed}rvo
-┃  • ${prefixUsed}ncode
-┃
-┣⌬ *ɢʀᴏᴜᴘ*
-┃  • ${prefixUsed}open
-┃  • ${prefixUsed}close
-┃  • ${prefixUsed}online
-┃  • ${prefixUsed}promote @user
-┃  • ${prefixUsed}demote @user
-┗━━━━━━━◧`;
-        await sock.sendMessage(remoteJid, { text: allText }, { quoted: msg });
-        break;
-      }
-
-      case 'list':
       case 'menu':
-      case 'help': {
-        const menuText = 
-`┏━『 *ᴍᴇɴᴜ ᴜᴛᴀᴍᴀ* 』
-┃
-┣⌬ ɢᴀᴍᴇꜱ
-┣⌬ ᴛᴏᴏʟꜱ
-┣⌬ ɢʀᴏᴜᴘ
-┣⌬ ᴀʟʟᴍᴇɴᴜ
-┗━━━━━━━◧
-
-_ᴋᴇᴛɪᴋ ɴᴀᴍᴀ ᴋᴀᴛᴇɢᴏʀɪ ᴜɴᴛᴜᴋ ᴍᴇʟɪʜᴀᴛ ɪꜱɪɴʏᴀ._
-_ᴄᴏɴᴛᴏʜ: *.menu_game* ᴀᴛᴀᴜ *.allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍpilkan ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ_`;
-
-        await sock.sendMessage(remoteJid, { text: menuText }, { quoted: msg });
+      case 'help':
+      case 'list':
+        await listCommand(sock, msg, args);
         break;
-      }
 
       default:
-        await sock.sendMessage(remoteJid, {
-          text: `❌ Command *${prefixUsed}${command}* tidak ditemukan!\nKetik *${prefixUsed}menu* untuk melihat daftar menu.`
-        }, { quoted: msg });
         break;
     }
 
