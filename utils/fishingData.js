@@ -49,20 +49,30 @@ const rarityEmoji = {
 };
 
 // ==========================================
-// 🧪 DATABASE POTION & LUCK RATES
+// 🎣 DAFTAR BAIT (PENGURANG TIMER / KECEPATAN)
+// ==========================================
+const baits = {
+  'roti':    { id: 'roti', name: '🍞 Umpan Roti', price: 30, timer: 5, desc: 'Umpan dasar. Kecepatan: 5 Detik.' },
+  'cacing':  { id: 'cacing', name: '🪱 Cacing Tanah', price: 100, timer: 4, desc: 'Kecepatan mancing naik: 4 Detik.' },
+  'pelet':   { id: 'pelet', name: '🍘 Pelet Premium', price: 300, timer: 3, desc: 'Kecepatan mancing naik: 3 Detik.' },
+  'udang':   { id: 'udang', name: '🦐 Udang Segar', price: 800, timer: 2, desc: 'Mancing super ngebut: 2 Detik.' },
+  'legenda': { id: 'legenda', name: '✨ Umpan Legendaris', price: 2000, timer: 1, desc: 'Kecepatan kilat maksimal: 1 Detik!' }
+};
+
+// ==========================================
+// 🧪 DAFTAR POTION (LUCK BUFF)
 // ==========================================
 const potions = {
-  'minor': { id: 'minor', name: '🧪 Minor Luck Potion', price: 1000, duration: 1 * 60 * 1000, desc: 'Durasi 1 Menit. Sedikit menaikkan peluang ikan langka.' },
+  'minor': { id: 'minor', name: '🧪 Minor Luck Potion', price: 1000, duration: 3 * 60 * 1000, desc: 'Durasi 3 Menit. Sedikit menaikkan peluang ikan langka.' },
   'major': { id: 'major', name: '🧪 Major Luck Potion', price: 3500, duration: 5 * 60 * 1000, desc: 'Durasi 5 Menit. Peluang Epic & Legendary meningkat drastis.' },
   'divine': { id: 'divine', name: '🧪 Divine Luck Potion', price: 15000, duration: 5 * 60 * 1000, desc: 'Durasi 5 Menit. 0% Common! Peluang Mythic & Divine sangat besar.' }
 };
 
-// Rate persentase kumulatif (C, U, R, E, L, M)
 const potionRates = {
-  'normal': { c: 45, u: 73, r: 86, e: 93, l: 97, m: 99.5 }, // Divine 0.5%
-  'minor':  { c: 30, u: 65, r: 82, e: 92, l: 96.5, m: 99.0 }, // Divine 1.0%
-  'major':  { c: 15, u: 45, r: 70, e: 87, l: 95, m: 98.5 }, // Divine 1.5%
-  'divine': { c: 0,  u: 20, r: 50, e: 75, l: 90, m: 97.0 }  // Divine 3.0%, 0% Common
+  'normal': { c: 45, u: 73, r: 86, e: 93, l: 97, m: 99.5 },
+  'minor':  { c: 30, u: 65, r: 82, e: 92, l: 96.5, m: 99.0 },
+  'major':  { c: 15, u: 45, r: 70, e: 87, l: 95, m: 98.5 },
+  'divine': { c: 0,  u: 20, r: 50, e: 75, l: 90, m: 97.0 }
 };
 
 function getRandomCatch(activePotionId = 'normal') {
@@ -91,7 +101,7 @@ function getRandomCatch(activePotionId = 'normal') {
 module.exports = {
   fishingItems,
   rarityEmoji,
+  baits,
   potions,
   getRandomCatch
 };
-             
