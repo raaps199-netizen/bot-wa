@@ -1,6 +1,33 @@
 // File: commands/remeSpin.js
-const { getUserData, addPoints, deductPoints } = require('../utils/helper');
+const helper = require('../utils/helper');
 const { getSenderId } = require('../utils/jid-utils');
+
+// Helper wrapper untuk menambah/mengurangi poin dengan aman (support berbagai macam signature helper)
+function safeAddPoints(userJid, amount) {
+  if (typeof helper.addPoints === 'function') {
+    try {
+      // Coba signature (db, jid, amount)
+      helper.addPoints(global.db, userJid, amount);
+    } catch (e) {
+      try {
+        // Coba signature (jid, amount) atau (jid, category, amount)
+        helper.addPoints(userJid, 'reme', amount);
+      } catch (err) {      }
+    }
+  }
+}
+
+function safeDeductPoints(userJid, amount) {
+  if (typeof helper.deductPoints === 'function') {
+    try {
+      helper.deductPoints(global.db, userJid, amount);
+    } catch (e) {
+      try {
+        helper.deductPoints(userJid, amount);
+      } catch (err) {      }
+    }
+  }
+}
 
 function hitungReme(angka) {
   if (angka === 0) return { finalNum: 0, isSpecial: 'win3x' };
@@ -24,64 +51,66 @@ function fmtResult(res) {
 }
 
 function baseNum(jid) {
+  if (!jid) return '';
   return jid.split('@')[0].split(':')[0];
 }
 
 async function finishGame(sock, remoteJid, game, isVsBot) {
-  const [p1, p2] = game.players;
-  const scoreP1 = game.scores[p1];
-  const scoreP2 = game.scores[p2];
-  const label2 = isVsBot ? 'Bot' : `@${p2.split('@')[0]}`;
-  const mentions = isVsBot ? [p1] : [p1, p2];
+  try {
+    const [p1, p2] = game.players;
+    const scoreP1 = game.scores[p1] || 0;
+    const scoreP2 = game.scores[p2] || 0;
+    const label2 = isVsBot ? 'Bot' : `@${p2.split('@')[0]}`;
+    const mentions = isVsBot ? [p1] : [p1, p2];
 
-  let finalMsg = `🏁 *PERMAINAN REME SELESAI!*\n\nSkor Akhir:\n• @${p1.split('@')[0]} : ${scoreP1} Win\n• ${label2} : ${scoreP2} Win\n\n`;
+    let finalMsg = `🏁 *PERMAINAN REME SELESAI!*\n\nSkor Akhir:\n• @${p1.split('@')[0]} : ${scoreP1} Win\n• ${label2} : ${scoreP2} Win\n\n`;
 
-  const potReward = game.bet * 2;
-  const refundAmount = game.bet;
+    const bet = game.bet || 0;
+    const potReward = bet * 2;
 
-  if (scoreP1 > scoreP2) {
-    finalMsg += `👑 Pemenang Utama: @${p1.split('@')[0]}!`;
-    if (game.bet > 0) {
-      if (isVsBot) {
-        addPoints(remoteJid, p1, 'trivia', game.bet);
-        finalMsg += `\n💰 Menang lawan bot, dapet hadiah *+${game.bet} Poin*!`;
-      } else {
-        // p1 menang PvP: p1 dapat pot (bet miliknya sendiri + bet p2).
-        // p2 sudah dipotong duluan saat .terima (lihat remeAcceptReject.js),
-        // jadi di sini cukup tambahkan pot ke p1, TIDAK perlu deduct p1 lagi.
-        addPoints(remoteJid, p1, 'trivia', potReward);
-        finalMsg += `\n💰 @${p1.split('@')[0]} menang, mengambil Total Pot *+${potReward} Poin*!`;
+    if (scoreP1 > scoreP2) {
+      finalMsg += `👑 Pemenang Utama: @${p1.split('@')[0]}!`;
+      if (bet > 0) {
+        if (isVsBot) {
+          safeAddPoints(p1, bet);
+          finalMsg += `\n💰 Menang lawan bot, dapet hadiah *+${bet} Poin*!`;
+        } else {
+          safeAddPoints(p1, potReward);
+          finalMsg += `\n💰 @${p1.split('@')[0]} menang, mengambil Total Pot *+${potReward} Poin*!`;
+        }
       }
-    }
-  } else if (scoreP2 > scoreP1) {
-    finalMsg += `👑 Pemenang Utama: ${isVsBot ? '*Bot Kasino*' : '@' + p2.split('@')[0]}!`;
-    if (game.bet > 0) {
-      if (isVsBot) {
-        deductPoints(remoteJid, p1, game.bet);
-        finalMsg += `\n💀 Kalah lawan bot, lu dipalak sebesar *-${game.bet} Poin*!`;
-      } else {
-        // FIX: sebelumnya p1 (yang kalah) tidak pernah dipotong di sini.
-        // Karena bet p1 & p2 sudah dipotong duluan saat .terima, di endgame
-        // p2 (pemenang) cukup ditambahkan pot. Baris ini SENGAJA tidak
-        // memotong p1 lagi (sudah kepotong di awal) — cukup bayar p2.
-        addPoints(remoteJid, p2, 'trivia', potReward);
-        finalMsg += `\n💀 @${p1.split('@')[0]} kalah, Total Pot *${potReward} Poin* ditarik ke @${p2.split('@')[0]}!`;
+    } else if (scoreP2 > scoreP1) {
+      finalMsg += `👑 Pemenang Utama: ${isVsBot ? '*Bot Kasino*' : '@' + p2.split('@')[0]}!`;
+      if (bet > 0) {
+        if (isVsBot) {
+          safeDeductPoints(p1, bet);
+          finalMsg += `\n💀 Kalah lawan bot, poin lu berkurang *-${bet} Poin*!`;
+        } else {
+          safeAddPoints(p2, potReward);
+          finalMsg += `\n💀 @${p1.split('@')[0]} kalah, Total Pot *${potReward} Poin* ditarik ke @${p2.split('@')[0]}!`;
+        }
       }
-    }
-  } else {
-    finalMsg += `🤝 Pertandingan berakhir *SERI*!`;
-    if (game.bet > 0 && !isVsBot) {
-      addPoints(remoteJid, p1, 'trivia', refundAmount);
-      addPoints(remoteJid, p2, 'trivia', refundAmount);
-      finalMsg += ` Poin lu berdua (*${refundAmount}*) aman dikembalikan!`;
     } else {
-      finalMsg += ` Poin aman.`;
+      finalMsg += `🤝 Pertandingan berakhir *SERI*!`;
+      if (bet > 0 && !isVsBot) {
+        safeAddPoints(p1, bet);
+        safeAddPoints(p2, bet);
+        finalMsg += ` Poin lu berdua (*${bet}*) aman dikembalikan!`;
+      } else {
+        finalMsg += ` Poin aman.`;
+      }
     }
+
+    if (typeof global.saveDatabase === 'function') global.saveDatabase();
+
+    // Hapus sesi game
+    delete global.db.game[remoteJid];
+
+    return await sock.sendMessage(remoteJid, { text: finalMsg, mentions });
+  } catch (err) {
+    console.error('Error saat finishGame Reme:', err);
+    delete global.db.game[remoteJid];
   }
-
-  delete global.db.game[remoteJid];
-
-  return await sock.sendMessage(remoteJid, { text: finalMsg, mentions });
 }
 
 async function processRoundEnd(sock, remoteJid, game, rolls, isVsBot) {
@@ -111,7 +140,7 @@ async function processRoundEnd(sock, remoteJid, game, rolls, isVsBot) {
   if (roundWinner === 'tie') {
     summaryText += `⚖️ Ronde ${game.round} *SERI*! Poin tidak bertambah.`;
   } else {
-    game.scores[roundWinner]++;
+    game.scores[roundWinner] = (game.scores[roundWinner] || 0) + 1;
     const winnerLabel = roundWinner === p1
       ? `@${p1.split('@')[0]}${isVsBot ? ' (Lu)' : ''}`
       : (isVsBot ? 'Bot' : `@${p2.split('@')[0]}`);
@@ -120,15 +149,16 @@ async function processRoundEnd(sock, remoteJid, game, rolls, isVsBot) {
 
   await sock.sendMessage(remoteJid, { text: summaryText, mentions });
 
-  const scoreP1 = game.scores[p1];
-  const scoreP2 = game.scores[p2];
-  const winningTarget = Math.ceil(game.maxRound / 2);
-  const isGameOver = scoreP1 >= winningTarget || scoreP2 >= winningTarget || game.round >= game.maxRound;
+  const scoreP1 = game.scores[p1] || 0;
+  const scoreP2 = game.scores[p2] || 0;
+  const winningTarget = Math.ceil((game.maxRound || 3) / 2); // Best of 3 -> Butuh 2 kemenangan
+  const isGameOver = scoreP1 >= winningTarget || scoreP2 >= winningTarget || game.round >= (game.maxRound || 3);
 
   if (isGameOver) {
     return await finishGame(sock, remoteJid, game, isVsBot);
   }
 
+  // Naikkan ronde jika game belum selesai
   game.round++;
   game.roundData = {};
   game.currentTurnIndex = 0;
@@ -141,74 +171,81 @@ async function processRoundEnd(sock, remoteJid, game, rolls, isVsBot) {
 }
 
 async function spinCommand(sock, msg) {
-  const remoteJid = msg.key.remoteJid;
-  const senderId = getSenderId(msg, remoteJid);
-  if (!senderId) return;
+  try {
+    const remoteJid = msg.key.remoteJid;
+    const senderId = getSenderId(msg, remoteJid);
+    if (!senderId) return;
 
-  const game = global.db?.game?.[remoteJid];
-  if (!game || game.type !== 'reme') return;
+    const game = global.db?.game?.[remoteJid];
+    if (!game || game.type !== 'reme') return;
 
-  const botNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net';
-  const isPlayingWithBot = game.players.includes(botNumber);
+    const isPlayingWithBot = game.mode === 'bot' || game.players.some(p => p.includes('bot'));
 
-  if (isPlayingWithBot) {
-    const targetPlayer = game.players.find(p => p !== botNumber);
+    if (isPlayingWithBot) {
+      const targetPlayer = game.players.find(p => !p.includes('bot')) || senderId;
+      const botNumber = game.players.find(p => p.includes('bot')) || 'bot@s.whatsapp.net';
 
-    if (baseNum(senderId) !== baseNum(targetPlayer)) return;
+      if (baseNum(senderId) !== baseNum(targetPlayer)) return;
 
-    const playerRaw = Math.floor(Math.random() * 37);
-    const playerRes = hitungReme(playerRaw);
+      const playerRaw = Math.floor(Math.random() * 37);
+      const playerRes = hitungReme(playerRaw);
+
+      await sock.sendMessage(remoteJid, {
+        text: `🎰 @${targetPlayer.split('@')[0]} melakukan SPIN!\n🎲 Angka Keluar: *${playerRaw}*\n➕ Hasil Reme: *${fmtResult(playerRes)}*`,
+        mentions: [targetPlayer]
+      }, { quoted: msg });
+
+      const botRaw = Math.floor(Math.random() * 37);
+      const botRes = hitungReme(botRaw);
+
+      await sock.sendMessage(remoteJid, {
+        text: `🤖 *Bot* langsung balas SPIN!\n🎲 Angka Keluar: *${botRaw}*\n➕ Hasil Reme: *${fmtResult(botRes)}*`
+      });
+
+      return await processRoundEnd(sock, remoteJid, game, { [targetPlayer]: playerRaw, [botNumber]: botRaw }, true);
+    }
+
+    // Perkelahian PvP (Player vs Player)
+    if (!game.roundData) game.roundData = {};
+    if (typeof game.currentTurnIndex !== 'number') game.currentTurnIndex = 0;
+
+    const currentPlayer = game.players[game.currentTurnIndex];
+
+    if (baseNum(senderId) !== baseNum(currentPlayer)) {
+      return await sock.sendMessage(remoteJid, {
+        text: `⏳ Bukan giliran lu! Sekarang giliran @${currentPlayer.split('@')[0]} buat *.spin*.`,
+        mentions: [currentPlayer]
+      }, { quoted: msg });
+    }
+
+    if (game.roundData[currentPlayer] !== undefined) return;
+
+    const raw = Math.floor(Math.random() * 37);
+    const res = hitungReme(raw);
+    game.roundData[currentPlayer] = raw;
 
     await sock.sendMessage(remoteJid, {
-      text: `🎰 @${targetPlayer.split('@')[0]} melakukan SPIN!\n🎲 Angka Keluar: *${playerRaw}*\n➕ Hasil Reme: *${fmtResult(playerRes)}*`,
-      mentions: [targetPlayer]
-    }, { quoted: msg });
-
-    const botRaw = Math.floor(Math.random() * 37);
-    const botRes = hitungReme(botRaw);
-
-    await sock.sendMessage(remoteJid, {
-      text: `🤖 *Bot* langsung balas SPIN!\n🎲 Angka Keluar: *${botRaw}*\n➕ Hasil Reme: *${fmtResult(botRes)}*`
-    });
-
-    return await processRoundEnd(sock, remoteJid, game, { [targetPlayer]: playerRaw, [botNumber]: botRaw }, true);
-  }
-
-  if (!game.roundData) game.roundData = {};
-  if (typeof game.currentTurnIndex !== 'number') game.currentTurnIndex = 0;
-
-  const currentPlayer = game.players[game.currentTurnIndex];
-
-  if (baseNum(senderId) !== baseNum(currentPlayer)) {
-    return await sock.sendMessage(remoteJid, {
-      text: `⏳ Bukan giliran lu! Sekarang giliran @${currentPlayer.split('@')[0]} buat *.spin*.`,
+      text: `🎰 @${currentPlayer.split('@')[0]} melakukan SPIN!\n🎲 Angka Keluar: *${raw}*\n➕ Hasil Reme: *${fmtResult(res)}*`,
       mentions: [currentPlayer]
     }, { quoted: msg });
+
+    const otherPlayer = game.players.find(p => p !== currentPlayer);
+
+    if (game.roundData[otherPlayer] === undefined) {
+      game.currentTurnIndex = game.players.indexOf(otherPlayer);
+      return await sock.sendMessage(remoteJid, {
+        text: `➡️ Giliran @${otherPlayer.split('@')[0]} ketik *.spin*!`,
+        mentions: [otherPlayer]
+      });
+    }
+
+    const [p1, p2] = game.players;
+    return await processRoundEnd(sock, remoteJid, game, { [p1]: game.roundData[p1], [p2]: game.roundData[p2] }, false);
+
+  } catch (err) {
+    console.error('Error di spinCommand:', err);
   }
-
-  if (game.roundData[currentPlayer] !== undefined) return;
-
-  const raw = Math.floor(Math.random() * 37);
-  const res = hitungReme(raw);
-  game.roundData[currentPlayer] = raw;
-
-  await sock.sendMessage(remoteJid, {
-    text: `🎰 @${currentPlayer.split('@')[0]} melakukan SPIN!\n🎲 Angka Keluar: *${raw}*\n➕ Hasil Reme: *${fmtResult(res)}*`,
-    mentions: [currentPlayer]
-  }, { quoted: msg });
-
-  const otherPlayer = game.players.find(p => p !== currentPlayer);
-
-  if (game.roundData[otherPlayer] === undefined) {
-    game.currentTurnIndex = game.players.indexOf(otherPlayer);
-    return await sock.sendMessage(remoteJid, {
-      text: `➡️ Giliran @${otherPlayer.split('@')[0]} ketik *.spin*!`,
-      mentions: [otherPlayer]
-    });
-  }
-
-  const [p1, p2] = game.players;
-  return await processRoundEnd(sock, remoteJid, game, { [p1]: game.roundData[p1], [p2]: game.roundData[p2] }, false);
 }
 
 module.exports = spinCommand;
+    
