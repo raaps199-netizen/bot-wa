@@ -220,7 +220,7 @@ async function handleMessage(sock, msg) {
     const command = args.shift().toLowerCase();
 
     switch (command) {
-      // ==========================================
+            // ==========================================
       // 🎣 COMMAND FISHING & SHOP
       // ==========================================
       case 'fish':
@@ -234,7 +234,6 @@ async function handleMessage(sock, msg) {
 
       case 'lnj':
       case 'lanjut':
-        // Teruskan ke fitur Lanjut Mancing (ngedit pesan sebelumnya)
         await handleFishingCommand(sock, msg, ['lnj'], senderId);
         break;
 
