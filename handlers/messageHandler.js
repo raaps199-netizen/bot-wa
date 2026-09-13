@@ -44,7 +44,7 @@ const leaderboardCommand = require('../commands/leaderboard');
 const claimCommand = require('../commands/claim');
 const tfCommand = require('../commands/tf');
 const { duelCommand, handleDuelAnswer } = require('../commands/duel');
-const titleCommand = require('../commands/title'); // <--- IMPORT COMMAND TITLE
+const titleCommand = require('../commands/title');
 
 // Command Reme & QQ Kasino
 const remeCommand = require('../commands/reme');
@@ -88,53 +88,58 @@ function acakArray(array) {
 // 🚨 DAFTAR KATA TERLARANG (FULL LIST)
 // ==========================================
 const BAD_WORDS = [
-  'g0bl0k',
-  'b3g0',
-  't0l0l',
-  'k0nt0l',
-  'm3m3k',
-  'rule34',
-  'ng3nt0t',
-  'j4nc0k',
-  'b4ngs4t',
-  't4i',
-  'p4nt3k',
-  'asuuu',
-  'kontooool',
-  'memekk',
-  'jancokkktai',
-  'kontol',
-  'memek',
-  'ngentot',
-  'jancok',
-  'cok',
-  'fuck',
-  'kintil',
-  'pantek',
-  'anjing',
-  'monyet',
-  'kimak',
-  'lonte',
-  'sundal',
-  'nekopoi',
-  'porno',
-  'porn',
-  'pornografi',
-  'ph',
-  'pornhub',
-  'porn hub',
-  'brutal sez',
-  'brutal sex',
-  'gay porn',
-  'nhentai',
-  'xvideos',
-  'xnxx'
+  'g0bl0k', 'b3g0', 't0l0l', 'k0nt0l', 'm3m3k', 'rule34', 'ng3nt0t', 'j4nc0k',
+  'b4ngs4t', 't4i', 'p4nt3k', 'asuuu', 'kontooool', 'memekk', 'jancokkktai',
+  'kontol', 'memek', 'ngentot', 'jancok', 'cok', 'fuck', 'kintil', 'pantek',
+  'anjing', 'monyet', 'kimak', 'lonte', 'sundal', 'nekopoi', 'porno', 'porn',
+  'pornografi', 'ph', 'pornhub', 'porn hub', 'brutal sez', 'brutal sex',
+  'gay porn', 'nhentai', 'xvideos', 'xnxx'
 ];
 
 async function handleMessage(sock, msg) {
   try {
     const messageContent = msg.message;
     if (!messageContent || msg.key.remoteJid === 'status@broadcast') return;
+
+    // ===================================================
+    // 🏅 AUTO-INJECT GELAR/TITLE PADA MENTION USER
+    // ===================================================
+    const originalSendMessage = sock.sendMessage.bind(sock);
+    sock = new Proxy(sock, {
+      get(target, prop) {
+        if (prop === 'sendMessage') {
+          return async (jid, content, options) => {
+            if (content && typeof content.text === 'string' && Array.isArray(content.mentions) && content.mentions.length > 0) {
+              let text = content.text;
+              content.mentions.forEach(mJid => {
+                const userData = getUserData(global.db, mJid);
+                // Cek properti gelar (title / activeTitle / gelar / equippedTitle)
+                const title = userData?.title || userData?.activeTitle || userData?.gelar || userData?.equippedTitle;
+                
+                if (title) {
+                  const num = mJid.split('@')[0];
+                  const nick = userData?.nickname || userData?.name;
+                  const titleTag = `[${title}] `;
+
+                  // Pasang gelar jika mention menggunakan nickname
+                  if (nick && text.includes(`@${nick}`) && !text.includes(`${titleTag}@${nick}`)) {
+                    text = text.split(`@${nick}`).join(`${titleTag}@${nick}`);
+                  }
+                  // Pasang gelar jika mention menggunakan nomor HP
+                  if (text.includes(`@${num}`) && !text.includes(`${titleTag}@${num}`)) {
+                    text = text.split(`@${num}`).join(`${titleTag}@${num}`);
+                  }
+                }
+              });
+              content.text = text;
+            }
+            return originalSendMessage(jid, content, options);
+          };
+        }
+        return Reflect.get(target, prop);
+      }
+    });
+    // ===================================================
 
     let text = messageContent.conversation ||
                messageContent.extendedTextMessage?.text ||
@@ -649,7 +654,7 @@ async function handleMessage(sock, msg) {
         await tebakbenderaCommand(sock, msg);
         break;
 
-       case 'tebakkata':
+      case 'tebakkata':
         await tebakkataCommand(sock, msg);
         break;
 
