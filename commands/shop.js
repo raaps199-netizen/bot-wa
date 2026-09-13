@@ -129,7 +129,7 @@ async function handleBeliCommand(sock, msg, args, senderId) {
   await sock.sendMessage(remoteJid, { text: successText }, { quoted: msg });
 }
 
-module.exports, {
+module.exports = {
   handleShopCommand,
   handleBeliCommand
 };
