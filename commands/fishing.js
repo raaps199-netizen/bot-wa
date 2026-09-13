@@ -1,59 +1,75 @@
 // File: commands/fishing.js
 
-async function handleFishingCommand(sock, msg, args, sender) {
-  let command = args[0]?.toLowerCase();
+async function handleFishingCommand(sock, msg, primaryCommand, args, sender) {
+  let subCmd = args[0]?.toLowerCase();
   let subArgs = args.slice(1);
 
-  // Jika user mengetik .fish cast, .mancing roti, dll.
-  if (command === 'fish') {
-    command = args[1]?.toLowerCase() || 'cast';
-    subArgs = args.slice(2);
-  } else if (command === 'mancing') {
-    // Jika user ketik .mancing roti, maka command tetap 'mancing' dan umpan ada di args[0] (subArgs[0])
-    command = 'mancing';
-  }
-  
   try {
-    switch (command) {
-      case 'cast':
-      case 'mancing':
-        // Ambil umpan dari argumen pertama setelah .mancing (misal: .mancing roti -> subArgs[0] adalah 'roti')
-        // Atau jika kosong, cek apakah user nulis .fish cast <umpan> (args[2])
-        const baitArg = subArgs[0] || args[2];
-        return await fishCommand(sock, msg, sender, false, baitArg);
-      
-      case 'lnj':
-      case 'lanjut':
-        const lnjBaitArg = subArgs[0];
-        return await fishCommand(sock, msg, sender, true, lnjBaitArg);
-        
-      case 'inv':
-      case 'inventory':
-      case 'tas':
-        return await inventoryCommand(sock, msg, sender);
-      
-      case 'sell':
-        return await sellCommand(sock, msg, sender, subArgs);
-      
-      case 'sellall':
-        return await sellAllCommand(sock, msg, sender);
-      
-      case 'stats':
-        return await statsCommand(sock, msg, sender);
+    // Jika user mengetik .mancing <nama_umpan> (misal: .mancing pelet)
+    if (primaryCommand === 'mancing') {
+      if (!subCmd) {
+        // Kalau cuma ketik .mancing doang tanpa umpan
+        return await sock.sendMessage(msg.key.remoteJid, { 
+          text: `⚠️ *KAMU HARUS PAKAI UMPAN BARU BISA MANCING!*\n\nFormat: *.mancing <nama_umpan>*\nContoh: *.mancing roti* atau *.mancing pelet*\n\nCek stok umpan di *.fish tas* atau beli di *.shop*` 
+        }, { quoted: msg });
+      }
 
-      case 'pakai':
-        return await pakaiPotionCommand(sock, msg, sender, subArgs);
+      // Cek apakah argumennya sub-command khusus (seperti tas, sell, lnj, dll)
+      if (['lnj', 'lanjut', 'tas', 'inv', 'inventory', 'sell', 'sellall', 'stats', 'pakai', 'help'].includes(subCmd)) {
+        primaryCommand = 'fish'; //alihkan ke penanganan sub-command fish
+      } else {
+        // Jika bukan sub-command, berarti itu adalah NAMA UMPAN! Langsung eksekusi mancing
+        return await fishCommand(sock, msg, sender, false, subCmd);
+      }
+    }
+
+    // Penanganan untuk .fish <subcommand> atau perintah lanjutan
+    if (primaryCommand === 'fish') {
+      if (!subCmd) subCmd = 'help';
       
-      case 'help':
-      case 'bantuan':
-      default:
-        return await fishingHelpCommand(sock, msg);
+      // Jika user ngetik .fish pelet (shorthand langsung pakai umpan)
+      if (baits[subCmd]) {
+        return await fishCommand(sock, msg, sender, false, subCmd);
+      }
+
+      switch (subCmd) {
+        case 'cast':
+        case 'mancing':
+          return await fishCommand(sock, msg, sender, false, subArgs[0]);
+        
+        case 'lnj':
+        case 'lanjut':
+          return await fishCommand(sock, msg, sender, true, subArgs[0]);
+          
+        case 'inv':
+        case 'inventory':
+        case 'tas':
+          return await inventoryCommand(sock, msg, sender);
+        
+        case 'sell':
+          return await sellCommand(sock, msg, sender, subArgs);
+        
+        case 'sellall':
+          return await sellAllCommand(sock, msg, sender);
+        
+        case 'stats':
+          return await statsCommand(sock, msg, sender);
+
+        case 'pakai':
+          return await pakaiPotionCommand(sock, msg, sender, subArgs);
+        
+        case 'help':
+        case 'bantuan':
+        default:
+          return await fishingHelpCommand(sock, msg);
+      }
     }
   } catch (error) {
     console.error('Fishing command error:', error);
     await sock.sendMessage(msg.key.remoteJid, { text: `❌ Error: ${error.message}` });
   }
 }
+
 
 async function fishCommand(sock, msg, sender, isLnj = false, inputBait = null) {
   const remoteJid = msg.key.remoteJid;
