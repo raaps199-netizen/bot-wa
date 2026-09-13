@@ -1,4 +1,10 @@
 // File: commands/fishing.js
+const { getRandomCatch, rarityEmoji, baits, potions } = require('../utils/fishingData');
+const {
+  addItem, getInventory, getInventorySummary, sellItem, sellAllItems, getUserStats,
+  getActiveBuff, usePotion, getBaitCount, consumeBait
+} = require('../utils/inventoryManager');
+const { getUserData, getTotalScore, addPoints, deductPoints } = require('../utils/helper');
 
 async function handleFishingCommand(sock, msg, primaryCommand, args, sender) {
   let subCmd = args[0]?.toLowerCase();
@@ -8,17 +14,14 @@ async function handleFishingCommand(sock, msg, primaryCommand, args, sender) {
     // Jika user mengetik .mancing <nama_umpan> (misal: .mancing pelet)
     if (primaryCommand === 'mancing') {
       if (!subCmd) {
-        // Kalau cuma ketik .mancing doang tanpa umpan
         return await sock.sendMessage(msg.key.remoteJid, { 
           text: `⚠️ *KAMU HARUS PAKAI UMPAN BARU BISA MANCING!*\n\nFormat: *.mancing <nama_umpan>*\nContoh: *.mancing roti* atau *.mancing pelet*\n\nCek stok umpan di *.fish tas* atau beli di *.shop*` 
         }, { quoted: msg });
       }
 
-      // Cek apakah argumennya sub-command khusus (seperti tas, sell, lnj, dll)
       if (['lnj', 'lanjut', 'tas', 'inv', 'inventory', 'sell', 'sellall', 'stats', 'pakai', 'help'].includes(subCmd)) {
-        primaryCommand = 'fish'; //alihkan ke penanganan sub-command fish
+        primaryCommand = 'fish';
       } else {
-        // Jika bukan sub-command, berarti itu adalah NAMA UMPAN! Langsung eksekusi mancing
         return await fishCommand(sock, msg, sender, false, subCmd);
       }
     }
