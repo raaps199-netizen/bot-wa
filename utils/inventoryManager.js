@@ -1,28 +1,24 @@
 // File: utils/inventoryManager.js
 
+// Import fungsi pengelola poin global dari helper.js
+const { addPoints, getTotalScore, getUserData } = require('./helper');
+
 /**
- * Initialize user inventory jika belum ada (Fix untuk user lama)
+ * Initialize user inventory jika belum ada
  */
 function initializeInventory(userId) {
   if (!global.db) global.db = {};
   if (!global.db.users) global.db.users = {};
   
-  // Jika user benar-benar belum ada di database
   if (!global.db.users[userId]) {
     global.db.users[userId] = {};
   }
   
-  // Pastikan properti khusus mancing ditambahkan, meskipun user sudah lama terdaftar
   if (!global.db.users[userId].inventory) {
     global.db.users[userId].inventory = [];
   }
   if (global.db.users[userId].totalFish === undefined) {
     global.db.users[userId].totalFish = 0;
-  }
-  if (global.db.users[userId].points === undefined) {
-    // Sesuaikan dengan nama variabel poin utama di bot kamu. 
-    // Biasanya bot menggunakan .score, .poin, atau .points
-    global.db.users[userId].points = 0; 
   }
 }
 
@@ -93,7 +89,7 @@ function getInventorySummary(userId) {
 }
 
 /**
- * Sell item by ID dan dapatkan points
+ * Sell item by ID dan dapatkan poin global
  */
 function sellItem(userId, itemId) {
   initializeInventory(userId);
@@ -107,23 +103,26 @@ function sellItem(userId, itemId) {
   
   const item = user.inventory[itemIndex];
   
-  // Menambahkan poin ke akun (Pastikan ini terhubung dengan sistem poin utamamu)
-  user.points += item.price;
+  // Tambahkan harga jual langsung ke POIN GLOBAL user
+  addPoints(global.db, userId, item.price);
   
+  // Hapus item dari tas
   user.inventory.splice(itemIndex, 1);
-  
   if (typeof global.saveDatabase === 'function') global.saveDatabase();
+  
+  // Ambil total skor terbaru untuk ditampilkan
+  const currentTotal = getTotalScore(getUserData(global.db, userId));
   
   return {
     success: true,
     itemName: item.name,
     priceReceived: item.price,
-    totalPoints: user.points
+    totalPoints: currentTotal
   };
 }
 
 /**
- * Sell all items
+ * Sell all items dan tambahkan ke poin global
  */
 function sellAllItems(userId) {
   initializeInventory(userId);
@@ -139,17 +138,22 @@ function sellAllItems(userId) {
     totalPrice += item.price;
   });
   
-  user.points += totalPrice;
+  // Tambahkan total harga jual ke POIN GLOBAL user
+  addPoints(global.db, userId, totalPrice);
+  
   const itemCount = user.inventory.length;
-  user.inventory = [];
+  user.inventory = []; // Kosongkan tas
   
   if (typeof global.saveDatabase === 'function') global.saveDatabase();
+  
+  // Ambil total skor terbaru untuk ditampilkan
+  const currentTotal = getTotalScore(getUserData(global.db, userId));
   
   return {
     success: true,
     itemsSold: itemCount,
     totalEarnings: totalPrice,
-    totalPoints: user.points
+    totalPoints: currentTotal
   };
 }
 
@@ -172,15 +176,18 @@ function removeItem(userId, itemId) {
 }
 
 /**
- * Get user stats
+ * Get user stats terhubung dengan poin global
  */
 function getUserStats(userId) {
   initializeInventory(userId);
   const user = global.db.users[userId];
   
+  // Ambil poin global
+  const currentTotal = getTotalScore(getUserData(global.db, userId));
+  
   return {
-    totalPoints: user.points,
-    totalFish: user.totalFish,
+    totalPoints: currentTotal,
+    totalFish: user.totalFish || 0,
     inventoryCount: user.inventory.length,
     bestCatch: user.bestCatch || null
   };
