@@ -10,6 +10,8 @@ async function scoreCommand(sock, msg, args) {
   const totalScore = getTotalScore(user);
   const mathCount = user.mathCount || 0;
   const triviaCount = user.triviaCount || 0;
+  // Menarik data jumlah tangkapan ikan
+  const mancingCount = user.totalFish || 0;
 
   const pushName = msg.pushName || 'User';
 
@@ -17,7 +19,8 @@ async function scoreCommand(sock, msg, args) {
     `👤 Nama: *${user.nickname || pushName}*\n` +
     `💰 Total Poin: *${totalScore}*\n` +
     `🧮 Math Selesai: *${mathCount} soal*\n` +
-    `🧠 Trivia Selesai: *${triviaCount} soal*\n\n` +
+    `🧠 Trivia Selesai: *${triviaCount} soal*\n` +
+    `🎣 Ikan Ditangkap: *${mancingCount} ekor*\n\n` +
     `_Semua poin game & aktivitas terpusat di Total Poin!_`;
 
   await sock.sendMessage(remoteJid, { text }, { quoted: msg });
