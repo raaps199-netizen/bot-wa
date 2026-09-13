@@ -46,8 +46,9 @@ const tfCommand = require('../commands/tf');
 const { duelCommand, handleDuelAnswer } = require('../commands/duel');
 const titleCommand = require('../commands/title');
 
-// 🎣 Import Command Fishing
+// 🎣 Import Command Fishing & Shop
 const { handleFishingCommand } = require('../commands/fishing');
+const { handleShopCommand, handleBeliCommand } = require('../commands/shop');
 
 // Command Reme & QQ Kasino
 const remeCommand = require('../commands/reme');
@@ -220,17 +221,31 @@ async function handleMessage(sock, msg) {
 
     switch (command) {
       // ==========================================
-      // 🎣 COMMAND FISHING / MANCING
+      // 🎣 COMMAND FISHING & SHOP
       // ==========================================
       case 'fish':
       case 'mancing':
-        // Jika user hanya ngetik .mancing, langsung cast (lempar kail)
         if (command === 'mancing' && args.length === 0) {
           await handleFishingCommand(sock, msg, ['cast'], senderId);
         } else {
-          // Teruskan argumen ke handler utama
           await handleFishingCommand(sock, msg, args, senderId);
         }
+        break;
+
+      case 'lnj':
+      case 'lanjut':
+        // Teruskan ke fitur Lanjut Mancing (ngedit pesan sebelumnya)
+        await handleFishingCommand(sock, msg, ['lnj'], senderId);
+        break;
+
+      case 'shop':
+      case 'toko':
+        await handleShopCommand(sock, msg, args, senderId);
+        break;
+
+      case 'beli':
+      case 'buy':
+        await handleBeliCommand(sock, msg, args, senderId);
         break;
 
       // ==========================================
@@ -700,7 +715,10 @@ async function handleMessage(sock, msg) {
 ┃
 ┣⌬ ${prefixUsed}bj
 ┣⌬ ${prefixUsed}mancing
-┣⌬ ${prefixUsed}fish [cast|inv|sell|stats|help]
+┣⌬ ${prefixUsed}lnj (Lanjut Mancing)
+┣⌬ ${prefixUsed}fish [tas|sell|sellall|pakai|stats|help]
+┣⌬ ${prefixUsed}shop (Beli Potion Mancing)
+┣⌬ ${prefixUsed}beli <item> <jumlah>
 ┣⌬ ${prefixUsed}math [mudah|sedang|hard|max]
 ┣⌬ ${prefixUsed}tebakbendera
 ┣⌬ ${prefixUsed}tebakkata
@@ -780,7 +798,10 @@ async function handleMessage(sock, msg) {
 ┣⌬ *ɢᴀᴍᴇꜱ*
 ┃  • ${prefixUsed}bj
 ┃  • ${prefixUsed}mancing
-┃  • ${prefixUsed}fish [cast|inv|sell|stats|help]
+┃  • ${prefixUsed}lnj (Lanjut Mancing)
+┃  • ${prefixUsed}fish [tas|sell|sellall|pakai|stats|help]
+┃  • ${prefixUsed}shop
+┃  • ${prefixUsed}beli <item> <jumlah>
 ┃  • ${prefixUsed}math [mudah|sedang|hard|max]
 ┃  • ${prefixUsed}tebakbendera
 ┃  • ${prefixUsed}tebakkata
