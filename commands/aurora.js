@@ -31,7 +31,7 @@ async function auroraCommand(sock, msg, args) {
     text: `🌌 *[SERVER EVENT]*\n\n_Saat malam meraja dan bintang terdiam... langit mulai berbisik pelan..._` 
   });
 
-  await delay(1000);
+  await delay(3000);
 
   // Edit ke Pesan Puisi 2
   await sock.sendMessage(remoteJid, { 
@@ -39,7 +39,7 @@ async function auroraCommand(sock, msg, args) {
     edit: sentMsg.key
   });
 
-  await delay(1000);
+  await delay(4000);
 
   // Klimaks: Aurora Muncul!
   const finalEventText = `
