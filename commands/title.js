@@ -62,6 +62,24 @@ const TITLES_CONFIG = {
       { min: 50,  name: '[The Human Calculator]' },
       { min: 100, name: '[The Einstein]' }
     ]
+  },
+  // 👇 KATEGORI MANCING DIPERLUAS SAMPAI 10.000 👇
+  mancing: {
+    label: '🎣 MANCING (Fishing)',
+    unit: 'Tangkapan',
+    list: [
+      { min: 0,     name: '[Rookie Angler]' },
+      { min: 10,    name: '[Patient Fisher]' },
+      { min: 50,    name: '[River Master]' },
+      { min: 100,   name: '[Ocean Conqueror]' },
+      { min: 300,   name: '[Poseidon\'s Heir]' },
+      { min: 500,   name: '[The God of Seas]' },
+      { min: 1000,  name: '[Leviathan Tamer]' },
+      { min: 2500,  name: '[Abyssal Hunter]' },
+      { min: 5000,  name: '[Ruler of the Tides]' },
+      { min: 7500,  name: '[Neptune\'s Avatar]' },
+      { min: 10000, name: '[The Ultimate Angler]' }
+    ]
   }
 };
 
@@ -111,7 +129,8 @@ module.exports = async function titleCommand(sock, msg, args) {
       reme: user.remeWin || 0,
       qq: user.qqWin || 0,
       trivia: user.triviaCount || 0,
-      math: user.mathCount || 0
+      math: user.mathCount || 0,
+      mancing: user.totalFish || 0 // 👈 Mengambil data total tangkapan ikan
     };
 
     const subCommand = args[0] ? args[0].toLowerCase() : null;
@@ -178,7 +197,7 @@ module.exports = async function titleCommand(sock, msg, args) {
     }
 
     // ===================================================
-    // 📜 MODE 3: RICIAN PER KATEGORI (misal: .title trivia)
+    // 📜 MODE 3: RINCIAN PER KATEGORI (misal: .title mancing)
     // ===================================================
     if (subCommand && TITLES_CONFIG[subCommand]) {
       const catConfig = TITLES_CONFIG[subCommand];
@@ -242,7 +261,7 @@ module.exports = async function titleCommand(sock, msg, args) {
     caption += `🔍 *Lihat List Gelar:* Ketik *.title <kategori>*\n`;
     caption += `👉 *Pasang Gelar:* Ketik *.title pakai <kategori> <nomor>*\n`;
     caption += `❌ *Lepas Gelar:* Ketik *.title lepas*\n`;
-    caption += `📌 Contoh: *.title trivia* lalu *.title pakai trivia 2*`;
+    caption += `📌 Contoh: *.title mancing* lalu *.title pakai mancing 2*`;
 
     await sock.sendMessage(remoteJid, {
       text: caption,
@@ -256,3 +275,4 @@ module.exports = async function titleCommand(sock, msg, args) {
     }, { quoted: msg });
   }
 };
+  
