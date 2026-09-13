@@ -93,7 +93,7 @@ const BAD_WORDS = [
   'kontol', 'memek', 'ngentot', 'jancok', 'cok', 'fuck', 'kintil', 'pantek',
   'anjing', 'monyet', 'kimak', 'lonte', 'sundal', 'nekopoi', 'porno', 'porn',
   'pornografi', 'ph', 'pornhub', 'porn hub', 'brutal sez', 'brutal sex',
-  'gay porn', 'nhentai', 'xvideos', 'xnxx'
+  'gay porn', 'nhentai', 'xvideos', 'xnxx', 'sex', 'anj', 'anjg', 'ngewe', 'tai', 'bokep'
 ];
 
 async function handleMessage(sock, msg) {
