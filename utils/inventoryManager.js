@@ -9,6 +9,10 @@ function initializeInventory(userId) {
   if (!global.db.users[userId].inventory) global.db.users[userId].inventory = [];
   if (global.db.users[userId].totalFish === undefined) global.db.users[userId].totalFish = 0;
   
+  // Storage Bait (Umpan) - Default user punya 5 Umpan Roti gratis
+  if (!global.db.users[userId].baits) {
+    global.db.users[userId].baits = { roti: 5, cacing: 0, pelet: 0, udang: 0, legenda: 0 };
+  }
   // Storage Potion
   if (!global.db.users[userId].potions) {
     global.db.users[userId].potions = { minor: 0, major: 0, divine: 0 };
@@ -17,6 +21,30 @@ function initializeInventory(userId) {
   if (!global.db.users[userId].activeBuff) {
     global.db.users[userId].activeBuff = { id: null, expiresAt: 0 };
   }
+}
+
+// ==========================================
+// 🪱 SISTEM BAIT (UMPAN)
+// ==========================================
+function addBait(userId, baitId, amount) {
+  initializeInventory(userId);
+  global.db.users[userId].baits[baitId] = (global.db.users[userId].baits[baitId] || 0) + amount;
+  if (typeof global.saveDatabase === 'function') global.saveDatabase();
+}
+
+function getBaitCount(userId, baitId) {
+  initializeInventory(userId);
+  return global.db.users[userId].baits[baitId] || 0;
+}
+
+function consumeBait(userId, baitId) {
+  initializeInventory(userId);
+  if (global.db.users[userId].baits[baitId] > 0) {
+    global.db.users[userId].baits[baitId] -= 1;
+    if (typeof global.saveDatabase === 'function') global.saveDatabase();
+    return true;
+  }
+  return false;
 }
 
 // ==========================================
@@ -57,7 +85,7 @@ function getActiveBuff(userId) {
 }
 
 // ==========================================
-// 🎣 SISTEM INVENTORY LAMA (Biarkan sama)
+// 🎣 SISTEM INVENTORY IKAN
 // ==========================================
 function addItem(userId, item) {
   initializeInventory(userId);
@@ -127,6 +155,7 @@ function getUserStats(userId) {
 }
 
 module.exports = {
-  initializeInventory, addPotion, getPotionCount, usePotion, getActiveBuff,
+  initializeInventory, addBait, getBaitCount, consumeBait,
+  addPotion, getPotionCount, usePotion, getActiveBuff,
   addItem, getInventory, getInventorySummary, sellItem, sellAllItems, getUserStats
 };
