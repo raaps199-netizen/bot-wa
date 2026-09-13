@@ -224,12 +224,10 @@ async function handleMessage(sock, msg) {
             // ==========================================
       // 🎣 COMMAND FISHING & SHOP
       // ==========================================
-       'fish':
       case 'fish':
       case 'mancing':
             await handleFishingCommand(sock, msg, command, args, senderId);
             break;
-
       case 'lnj':
       case 'lanjut':
             await handleFishingCommand(sock, msg, 'fish', ['lnj', ...args], senderId);
