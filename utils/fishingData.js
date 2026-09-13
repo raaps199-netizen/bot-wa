@@ -52,7 +52,7 @@ const rarityEmoji = {
 // 🧪 DATABASE POTION & LUCK RATES
 // ==========================================
 const potions = {
-  'minor': { id: 'minor', name: '🧪 Minor Luck Potion', price: 1000, duration: 3 * 60 * 1000, desc: 'Durasi 3 Menit. Sedikit menaikkan peluang ikan langka.' },
+  'minor': { id: 'minor', name: '🧪 Minor Luck Potion', price: 1000, duration: 1 * 60 * 1000, desc: 'Durasi 1 Menit. Sedikit menaikkan peluang ikan langka.' },
   'major': { id: 'major', name: '🧪 Major Luck Potion', price: 3500, duration: 5 * 60 * 1000, desc: 'Durasi 5 Menit. Peluang Epic & Legendary meningkat drastis.' },
   'divine': { id: 'divine', name: '🧪 Divine Luck Potion', price: 15000, duration: 5 * 60 * 1000, desc: 'Durasi 5 Menit. 0% Common! Peluang Mythic & Divine sangat besar.' }
 };
