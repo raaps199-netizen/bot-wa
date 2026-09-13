@@ -1,47 +1,59 @@
 // File: utils/fishingData.js
 
-// Fishing Items Database dengan Rarity System (Custom Range)
+// Fishing Items Database dengan 7 Rarity System (Nama Fantasy Sesuai Request)
 const fishingItems = {
-  // COMMON - Peluang 50% (Range: 10 - 30 Poin)
+  // COMMON - Peluang 45% (Range: 10 - 30 Poin)
   common: [
-    { name: '🐠 Ikan Mas', rarity: 'COMMON', price: 10, weight: '200g' },
-    { name: '🐟 Ikan Nila', rarity: 'COMMON', price: 15, weight: '180g' },
-    { name: '🐟 Ikan Gabus', rarity: 'COMMON', price: 20, weight: '150g' },
-    { name: '🦐 Udang Biasa', rarity: 'COMMON', price: 25, weight: '50g' },
-    { name: '🐚 Kerang Kecil', rarity: 'COMMON', price: 30, weight: '30g' }
+    { name: '🐟 Anchovy', rarity: 'COMMON', price: 10, weight: '50g' },
+    { name: '🐚 Garden Snail', rarity: 'COMMON', price: 15, weight: '30g' },
+    { name: '🐟 Herring', rarity: 'COMMON', price: 20, weight: '150g' },
+    { name: '🐟 Oil Sardine', rarity: 'COMMON', price: 25, weight: '120g' },
+    { name: '🐟 Red Drum', rarity: 'COMMON', price: 30, weight: '200g' }
   ],
 
-  // UNCOMMON - Peluang 30% (Range: 40 - 70 Poin)
+  // UNCOMMON - Peluang 28% (Range: 40 - 70 Poin)
   uncommon: [
-    { name: '🎣 Ikan Lele Besar', rarity: 'UNCOMMON', price: 40, weight: '400g' },
-    { name: '🐟 Ikan Koi', rarity: 'UNCOMMON', price: 45, weight: '500g' },
-    { name: '🦑 Cumi-Cumi', rarity: 'UNCOMMON', price: 50, weight: '300g' },
-    { name: '🦐 Udang Jumbo', rarity: 'UNCOMMON', price: 60, weight: '150g' },
-    { name: '🐚 Kerang Mutiara', rarity: 'UNCOMMON', price: 70, weight: '80g' }
+    { name: '🐠 Piranha', rarity: 'UNCOMMON', price: 40, weight: '300g' },
+    { name: '🐟 Gem Anchovy', rarity: 'UNCOMMON', price: 50, weight: '80g' },
+    { name: '🐟 Gem Salmon', rarity: 'UNCOMMON', price: 60, weight: '400g' },
+    { name: '🦑 Peacock Squid', rarity: 'UNCOMMON', price: 70, weight: '250g' }
   ],
 
-  // RARE - Peluang 12% (Range: 80 - 120 Poin)
+  // RARE - Peluang 13% (Range: 80 - 120 Poin)
   rare: [
-    { name: '✨ Ikan Bawal Emas', rarity: 'RARE', price: 80, weight: '800g' },
-    { name: '✨ Ikan Arwana Merah', rarity: 'RARE', price: 90, weight: '1kg' },
-    { name: '✨ Belut Emas', rarity: 'RARE', price: 100, weight: '600g' },
-    { name: '✨ Cumi Raksasa', rarity: 'RARE', price: 120, weight: '900g' }
+    { name: '✨ Bluegem Angelfish', rarity: 'RARE', price: 80, weight: '500g' },
+    { name: '✨ Emerald Angelfish', rarity: 'RARE', price: 95, weight: '450g' },
+    { name: '✨ Quartzfin Queenfish', rarity: 'RARE', price: 110, weight: '800g' },
+    { name: '✨ Bluntnose Sixgill Shark', rarity: 'RARE', price: 120, weight: '15kg' }
   ],
 
-  // EPIC - Peluang 6% (Range: 130 - 160 Poin)
+  // EPIC - Peluang 7% (Range: 130 - 160 Poin)
   epic: [
-    { name: '💫 Ikan Paus Kecil', rarity: 'EPIC', price: 130, weight: '5kg' },
-    { name: '💫 Ikan Hiu Putih', rarity: 'EPIC', price: 140, weight: '8kg' },
-    { name: '💫 Buaya Purba', rarity: 'EPIC', price: 150, weight: '10kg' },
-    { name: '💫 Piranha Langka', rarity: 'EPIC', price: 160, weight: '3kg' }
+    { name: '💫 Atlantean Sardine', rarity: 'EPIC', price: 130, weight: '1kg' },
+    { name: '💫 Abyssal Slickhead', rarity: 'EPIC', price: 145, weight: '3kg' },
+    { name: '💫 Cladoselache', rarity: 'EPIC', price: 160, weight: '12kg' }
   ],
 
-  // LEGENDARY - Peluang 2% (Range: 170 - 220 Poin)
+  // LEGENDARY - Peluang 4% (Range: 170 - 250 Poin)
   legendary: [
-    { name: '👑 Naga Laut Mitologi', rarity: 'LEGENDARY', price: 170, weight: '50kg' },
-    { name: '👑 Ikan Emas Abadi', rarity: 'LEGENDARY', price: 180, weight: '20kg' },
-    { name: '👑 Leviathan Purba', rarity: 'LEGENDARY', price: 200, weight: '100kg' },
-    { name: '👑 Ikan Cahaya Malam', rarity: 'LEGENDARY', price: 220, weight: '15kg' }
+    { name: '👑 Celestial Crab', rarity: 'LEGENDARY', price: 170, weight: '5kg' },
+    { name: '👑 Hellfire Haddock', rarity: 'LEGENDARY', price: 200, weight: '8kg' },
+    { name: '👑 Greenland Shark', rarity: 'LEGENDARY', price: 250, weight: '100kg' }
+  ],
+
+  // MYTHIC - Peluang 2.5% (Range: 300 - 500 Poin)
+  mythic: [
+    { name: '🔴 Calcified Trilobite', rarity: 'MYTHIC', price: 300, weight: '10kg' },
+    { name: '🔴 Petrified Ammonite', rarity: 'MYTHIC', price: 400, weight: '15kg' },
+    { name: '🔴 Flamekissed Hawkfish', rarity: 'MYTHIC', price: 500, weight: '20kg' }
+  ],
+
+  // DIVINE (GODLY) - Peluang 0.5% (Range: 750 - 1000 Poin)
+  divine: [
+    { name: '🌟 Aqua Scribe', rarity: 'DIVINE', price: 750, weight: '25kg' },
+    { name: '🌟 Celestial Pearl Danio', rarity: 'DIVINE', price: 850, weight: '30kg' },
+    { name: '🌟 Poseidon\'s Perch', rarity: 'DIVINE', price: 900, weight: '50kg' },
+    { name: '🌟 Neptune\'s Nibbler', rarity: 'DIVINE', price: 1000, weight: '80kg' }
   ]
 };
 
@@ -51,7 +63,9 @@ const rarityColors = {
   'UNCOMMON': '#00AA00',
   'RARE': '#0055FF',
   'EPIC': '#AA00FF',
-  'LEGENDARY': '#FFAA00'
+  'LEGENDARY': '#FFAA00',
+  'MYTHIC': '#FF0000',
+  'DIVINE': '#00FFFF'
 };
 
 // Emoji mapping untuk rarity
@@ -60,29 +74,37 @@ const rarityEmoji = {
   'UNCOMMON': '🟢',
   'RARE': '🔵',
   'EPIC': '🟣',
-  'LEGENDARY': '🟡'
+  'LEGENDARY': '🟡',
+  'MYTHIC': '🔴',
+  'DIVINE': '🌟'
 };
 
-// Fungsi untuk mendapatkan item random berdasarkan rarity
+// Fungsi probabilitas Gacha 7 Kasta
 function getRandomCatch() {
   const rand = Math.random() * 100;
   let items, rarity;
 
-  if (rand < 50) {
+  if (rand < 45) {
     items = fishingItems.common;
     rarity = 'COMMON';
-  } else if (rand < 80) {
+  } else if (rand < 73) {
     items = fishingItems.uncommon;
     rarity = 'UNCOMMON';
-  } else if (rand < 92) {
+  } else if (rand < 86) {
     items = fishingItems.rare;
     rarity = 'RARE';
-  } else if (rand < 98) {
+  } else if (rand < 93) {
     items = fishingItems.epic;
     rarity = 'EPIC';
-  } else {
+  } else if (rand < 97) {
     items = fishingItems.legendary;
     rarity = 'LEGENDARY';
+  } else if (rand < 99.5) {
+    items = fishingItems.mythic;
+    rarity = 'MYTHIC';
+  } else {
+    items = fishingItems.divine;
+    rarity = 'DIVINE';
   }
 
   const item = items[Math.floor(Math.random() * items.length)];
@@ -99,3 +121,4 @@ module.exports = {
   rarityEmoji,
   getRandomCatch
 };
+    
