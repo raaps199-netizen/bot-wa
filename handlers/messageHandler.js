@@ -113,19 +113,16 @@ async function handleMessage(sock, msg) {
               let text = content.text;
               content.mentions.forEach(mJid => {
                 const userData = getUserData(global.db, mJid);
-                // Cek properti gelar (title / activeTitle / gelar / equippedTitle)
                 const title = userData?.title || userData?.activeTitle || userData?.gelar || userData?.equippedTitle;
-                
+
                 if (title) {
                   const num = mJid.split('@')[0];
                   const nick = userData?.nickname || userData?.name;
                   const titleTag = `[${title}] `;
 
-                  // Pasang gelar jika mention menggunakan nickname
                   if (nick && text.includes(`@${nick}`) && !text.includes(`${titleTag}@${nick}`)) {
                     text = text.split(`@${nick}`).join(`${titleTag}@${nick}`);
                   }
-                  // Pasang gelar jika mention menggunakan nomor HP
                   if (text.includes(`@${num}`) && !text.includes(`${titleTag}@${num}`)) {
                     text = text.split(`@${num}`).join(`${titleTag}@${num}`);
                   }
@@ -256,7 +253,7 @@ async function handleMessage(sock, msg) {
         if (dataMapel) {
           let pesan = `📅 *JADWAL PELAJARAN — HARI ${dataMapel.hari.toUpperCase()}*\n`;
           pesan += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-          
+
           dataMapel.mapel.forEach((mapel, index) => {
             pesan += `📖 *Jam ke-${index + 1}:* ${mapel}\n`;
           });
@@ -267,7 +264,7 @@ async function handleMessage(sock, msg) {
             pesan += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
             pesan += `🧹 *PEMBAGIAN PIKET KELAS (${dataMapel.hari.toUpperCase()})*\n`;
             pesan += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-            
+
             pesan += `🧹 *Menyapu (2 Orang):*\n  1. ${piketKelas[0]}\n  2. ${piketKelas[1]}\n\n`;
             pesan += `🧽 *Mengepel (2 Orang):*\n  1. ${piketKelas[2]}\n  2. ${piketKelas[3]}\n\n`;
             pesan += `🪟 *Mengelap Kaca (2 Orang):*\n  1. ${piketKelas[4]}\n  2. ${piketKelas[5]}\n\n`;
@@ -330,14 +327,14 @@ async function handleMessage(sock, msg) {
         const start = Date.now();
         const sentMsg = await sock.sendMessage(remoteJid, { text: 'Pong! 🏓' }, { quoted: msg });
         const latency = Date.now() - start;
-        
-        await sock.sendMessage(remoteJid, { 
-          text: `Pong! 🏓\nKecepatan respon: *${latency} ms*` 
+
+        await sock.sendMessage(remoteJid, {
+          text: `Pong! 🏓\nKecepatan respon: *${latency} ms*`
         }, { quoted: sentMsg });
         break;
       }
 
-      case 'add': {        
+      case 'add': {
         if (!isOwner) {
           await sock.sendMessage(remoteJid, { text: `❌ Lu bukan owner, gak usah sok asik mau nambah poin sendiri wkwk!\n(ID terdeteksi: ${senderId})` }, { quoted: msg });
           break;
@@ -356,8 +353,8 @@ async function handleMessage(sock, msg) {
         }
 
         if (isNaN(addAmount)) {
-          await sock.sendMessage(remoteJid, { 
-            text: `⚠️ Format salah, bre!\nContoh buat diri sendiri: *.add 100*\nContoh buat orang lain: *.add @user 500*` 
+          await sock.sendMessage(remoteJid, {
+            text: `⚠️ Format salah, bre!\nContoh buat diri sendiri: *.add 100*\nContoh buat orang lain: *.add @user 500*`
           }, { quoted: msg });
           break;
         }
@@ -380,7 +377,7 @@ async function handleMessage(sock, msg) {
         const currentTotal = getTotalScore(userData);
         const targetName = targetId.split('@')[0];
 
-        await sock.sendMessage(remoteJid, { 
+        await sock.sendMessage(remoteJid, {
           text: `✅ Sukses mengubah poin sebesar *${addAmount}* ke @${targetName}!\nTotal poin target sekarang: *${currentTotal}*`,
           mentions: [targetId]
         }, { quoted: msg });
@@ -405,8 +402,8 @@ async function handleMessage(sock, msg) {
       case 'setname': {
         const newNick = args.join(' ').trim();
         if (!newNick) {
-          await sock.sendMessage(remoteJid, { 
-            text: `⚠️ Masukkan nickname baru yang kamu mau!\nContoh: *${prefixUsed}nickname azalia*` 
+          await sock.sendMessage(remoteJid, {
+            text: `⚠️ Masukkan nickname baru yang kamu mau!\nContoh: *${prefixUsed}nickname azalia*`
           }, { quoted: msg });
           break;
         }
@@ -424,8 +421,8 @@ async function handleMessage(sock, msg) {
           global.saveDatabase();
         }
 
-        await sock.sendMessage(remoteJid, { 
-          text: `✅ Sukses mengubah nickname leaderboard kamu menjadi: *${newNick}*` 
+        await sock.sendMessage(remoteJid, {
+          text: `✅ Sukses mengubah nickname leaderboard kamu menjadi: *${newNick}*`
         }, { quoted: msg });
         break;
       }
@@ -433,7 +430,7 @@ async function handleMessage(sock, msg) {
       case 'batal':
       case 'cancel': {
         const currentGame = global.db.game?.[remoteJid];
-        
+
         if (!currentGame) {
           await sock.sendMessage(remoteJid, { text: `⚠️ Lagi tidak ada sesi game aktif yang bisa dibatalkan di chat ini.` }, { quoted: msg });
           break;
@@ -451,8 +448,8 @@ async function handleMessage(sock, msg) {
       case 'j': {
         const userAnswer = args.join(' ');
         if (!userAnswer) {
-          await sock.sendMessage(remoteJid, { 
-            text: `⚠️ Masukkan jawaban kamu!\nContoh: *${prefixUsed}jawab a*` 
+          await sock.sendMessage(remoteJid, {
+            text: `⚠️ Masukkan jawaban kamu!\nContoh: *${prefixUsed}jawab a*`
           }, { quoted: msg });
           break;
         }
@@ -548,7 +545,7 @@ async function handleMessage(sock, msg) {
       case 'menyerah':
         await handleGameAnswer(sock, msg, '.nyerah');
         break;
-        
+
       case 'promote':
       case 'pm':
         await groupCommand(sock, msg, args, 'promote');
@@ -671,11 +668,171 @@ async function handleMessage(sock, msg) {
         await tetrisCommand(sock, msg, args);
         break;
 
-      case 'menu':
-      case 'help':
-      case 'list':
-        await listCommand(sock, msg, args);
+      case 'claimtetris':
+      case 'klaimtetris':
+        await claimTetrisCommand(sock, msg, args);
         break;
+
+      // ==========================================
+      // 📋 SISTEM MENU (dipindah dari command lama)
+      // ==========================================
+      case 'menu_game':
+      case 'games': {
+        const gameText =
+`┏━I *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* I
+┃
+┣⌬ ${prefixUsed}bj
+┣⌬ ${prefixUsed}math [mudah|sedang|hard|max]
+┣⌬ ${prefixUsed}tebakbendera
+┣⌬ ${prefixUsed}tebakkata
+┣⌬ ${prefixUsed}tebakgambar
+┣⌬ ${prefixUsed}trivia <kategori> <level>
+┣⌬ ${prefixUsed}tetris
+┣⌬ ${prefixUsed}claimtetris <kode>
+┣⌬ ${prefixUsed}duel math @user <taruhan> [diff]
+┣⌬ ${prefixUsed}duel trivia @user <taruhan> [kategori] [diff]
+┣⌬ ${prefixUsed}reme <taruhan> (Lawan Bot)
+┣⌬ ${prefixUsed}reme @user <taruhan> (PvP)
+┣⌬ ${prefixUsed}qq <taruhan> (Lawan Bot)
+┣⌬ ${prefixUsed}qq @user <taruhan> (PvP)
+┣⌬ ${prefixUsed}batal
+┣⌬ ${prefixUsed}claim (Ambil Poin Harian)
+┣⌬ ${prefixUsed}tf @user <nominal>
+┣⌬ ${prefixUsed}score
+┣⌬ ${prefixUsed}leaderboard
+┣⌬ ${prefixUsed}nickname <nama>
+┣⌬ ${prefixUsed}cekkhodam <nama>
+┣⌬ ${prefixUsed}bucin <nama>
+┣⌬ ${prefixUsed}truth
+┣⌬ ${prefixUsed}dare
+┗━━━━━━━◧`;
+        await sock.sendMessage(remoteJid, { text: gameText }, { quoted: msg });
+        break;
+      }
+
+      case 'menu_tools':
+      case 'tools': {
+        const toolsText =
+`┏━I *ᴍᴇɴᴜ ᴛᴏᴏʟꜱ* I
+┃
+┣⌬ ${prefixUsed}jadwal [senin/selasa/dll]
+┣⌬ ${prefixUsed}jsn / .jsl / .jrb / .jkm / .jjt
+┣⌬ ${prefixUsed}ping
+┣⌬ ${prefixUsed}s
+┣⌬ ${prefixUsed}wm <pack|author>
+┣⌬ ${prefixUsed}toimg
+┣⌬ ${prefixUsed}tovid
+┣⌬ ${prefixUsed}tt <link>
+┣⌬ ${prefixUsed}ig <link>
+┣⌬ ${prefixUsed}play <judul>
+┣⌬ ${prefixUsed}ytmp3 <link>
+┣⌬ ${prefixUsed}hd
+┣⌬ ${prefixUsed}ssweb <url>
+┣⌬ ${prefixUsed}ai <teks>
+┣⌬ ${prefixUsed}brat <teks>
+┣⌬ ${prefixUsed}bratvid <teks>
+┣⌬ ${prefixUsed}quote <teks>
+┣⌬ ${prefixUsed}rvo
+┣⌬ ${prefixUsed}ncode
+┗━━━━━━━◧`;
+        await sock.sendMessage(remoteJid, { text: toolsText }, { quoted: msg });
+        break;
+      }
+
+      case 'menu_group':
+      case 'group': {
+        const groupText =
+`┏━I *ᴍᴇɴᴜ ɢʀᴏᴜ𝚙* I
+┃
+┣⌬ ${prefixUsed}open
+┣⌬ ${prefixUsed}close
+┣⌬ ${prefixUsed}online
+┣⌬ ${prefixUsed}promote @user
+┣⌬ ${prefixUsed}demote @user
+┗━━━━━━━◧`;
+        await sock.sendMessage(remoteJid, { text: groupText }, { quoted: msg });
+        break;
+      }
+
+      case 'allmenu': {
+        const allText =
+`┏━I *ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ* I
+┃
+┣⌬ *ɢᴀᴍᴇꜱ*
+┃  • ${prefixUsed}bj
+┃  • ${prefixUsed}math [mudah|sedang|hard|max]
+┃  • ${prefixUsed}tebakbendera
+┃  • ${prefixUsed}tebakkata
+┃  • ${prefixUsed}tebakgambar
+┃  • ${prefixUsed}trivia <kategori> <level>
+┃  • ${prefixUsed}tetris
+┃  • ${prefixUsed}claimtetris <kode>
+┃  • ${prefixUsed}duel math/trivia @user <taruhan>
+┃  • ${prefixUsed}reme <taruhan> (Lawan Bot)
+┃  • ${prefixUsed}reme @user <taruhan> (PvP)
+┃  • ${prefixUsed}qq <taruhan> (Lawan Bot)
+┃  • ${prefixUsed}qq @user <taruhan> (PvP)
+┃  • ${prefixUsed}batal
+┃  • ${prefixUsed}claim (Ambil Poin Harian)
+┃  • ${prefixUsed}tf @user <nominal>
+┃  • ${prefixUsed}score
+┃  • ${prefixUsed}leaderboard
+┃  • ${prefixUsed}nickname <nama>
+┃  • ${prefixUsed}cekkhodam <nama>
+┃  • ${prefixUsed}bucin <nama>
+┃  • ${prefixUsed}truth
+┃  • ${prefixUsed}dare
+┃
+┣⌬ *ᴛᴏᴏʟꜱ & ᴊᴀᴅᴡᴀʟ*
+┃  • ${prefixUsed}jadwal [hari]
+┃  • ${prefixUsed}jsn / .jsl / .jrb / .jkm / .jjt
+┃  • ${prefixUsed}ping
+┃  • ${prefixUsed}s
+┃  • ${prefixUsed}wm <pack|author>
+┃  • ${prefixUsed}toimg
+┃  • ${prefixUsed}tovid
+┃  • ${prefixUsed}tt <link>
+┃  • ${prefixUsed}ig <link>
+┃  • ${prefixUsed}play <judul>
+┃  • ${prefixUsed}ytmp3 <link>
+┃  • ${prefixUsed}hd
+┃  • ${prefixUsed}ssweb <url>
+┃  • ${prefixUsed}ai <teks>
+┃  • ${prefixUsed}brat <teks>
+┃  • ${prefixUsed}bratvid <teks>
+┃  • ${prefixUsed}quote <teks>
+┃  • ${prefixUsed}rvo
+┃  • ${prefixUsed}ncode
+┃
+┣⌬ *ɢʀᴏᴜᴘ*
+┃  • ${prefixUsed}open
+┃  • ${prefixUsed}close
+┃  • ${prefixUsed}online
+┃  • ${prefixUsed}promote @user
+┃  • ${prefixUsed}demote @user
+┗━━━━━━━◧`;
+        await sock.sendMessage(remoteJid, { text: allText }, { quoted: msg });
+        break;
+      }
+
+      case 'list':
+      case 'menu':
+      case 'help': {
+        const menuText =
+`┏━『 *ᴍᴇɴᴜ ᴜᴛᴀᴍᴀ* 』
+┃
+┣⌬ ɢᴀᴍᴇꜱ
+┣⌬ ᴛᴏᴏʟꜱ
+┣⌬ ɢʀᴏᴜᴘ
+┣⌬ ᴀʟʟᴍᴇɴᴜ
+┗━━━━━━━◧
+
+_ᴋᴇᴛɪᴋ ɴᴀᴍᴀ ᴋᴀᴛᴇɢᴏʀɪ ᴜɴᴛᴜᴋ ᴍᴇʟɪʜᴀᴛ ɪꜱɪɴʏᴀ._
+_ᴄᴏɴᴛᴏʜ: *.menu_game* ᴀᴛᴀᴜ *.allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍᴘɪʟᴋᴀɴ ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ_`;
+
+        await sock.sendMessage(remoteJid, { text: menuText }, { quoted: msg });
+        break;
+      }
 
       default:
         break;
@@ -687,3 +844,5 @@ async function handleMessage(sock, msg) {
 }
 
 module.exports = handleMessage;
+
+  
