@@ -1,3 +1,4 @@
+// File: commands/qqSpin.js
 const { getSenderId } = require('../utils/jid-utils');
 const { getUserData } = require('../utils/helper');
 
@@ -116,6 +117,9 @@ async function qqSpinCommand(sock, msg) {
 
         if (pWins > bWins) {
           userDb.score = (userDb.score || 0) + totalPot;
+          // Increment statistik qqWin
+          userDb.qqWin = (userDb.qqWin || 0) + 1;
+
           finalSummary += `\n\n👑 Pemenang Utama: @${pName}!\n🎉 Selamat! Total Pot *${totalPot} Poin* masuk ke akun kamu!`;
         } else if (bWins > pWins) {
           finalSummary += `\n\n👑 Pemenang Utama: Bot!\n💀 @${pName} kalah, Total Pot *${totalPot} Poin* melayang ke Bot!`;
@@ -217,9 +221,15 @@ async function qqSpinCommand(sock, msg) {
 
         if (p1Wins > p2Wins) {
           p1Db.score = (p1Db.score || 0) + totalPot;
+          // Increment statistik qqWin untuk p1
+          p1Db.qqWin = (p1Db.qqWin || 0) + 1;
+
           finalSummary += `\n\n👑 Pemenang Utama: @${p1Name}!\n🎉 Total Pot *${totalPot} Poin* masuk ke akun @${p1Name}!`;
         } else if (p2Wins > p1Wins) {
           p2Db.score = (p2Db.score || 0) + totalPot;
+          // Increment statistik qqWin untuk p2
+          p2Db.qqWin = (p2Db.qqWin || 0) + 1;
+
           finalSummary += `\n\n👑 Pemenang Utama: @${p2Name}!\n🎉 Total Pot *${totalPot} Poin* masuk ke akun @${p2Name}!`;
         } else {
           p1Db.score = (p1Db.score || 0) + game.taruhan;
@@ -251,3 +261,4 @@ async function qqSpinCommand(sock, msg) {
 }
 
 module.exports = qqSpinCommand;
+          
