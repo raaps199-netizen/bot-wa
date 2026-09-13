@@ -1,4 +1,5 @@
-// Fishing Command Handler
+// File: commands/fishing.js
+
 const { getRandomCatch, rarityEmoji } = require('../utils/fishingData');
 const {
   addItem,
@@ -8,6 +9,9 @@ const {
   sellAllItems,
   getUserStats
 } = require('../utils/inventoryManager');
+
+// Fungsi pembantu untuk membuat delay (jeda waktu)
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function handleFishingCommand(sock, msg, args, sender) {
   const command = args[0]?.toLowerCase();
@@ -37,6 +41,7 @@ async function handleFishingCommand(sock, msg, args, sender) {
         return await fishingHelpCommand(sock, msg);
       
       default:
+        // Jika hanya memanggil `.fish` tanpa argumen tambahan
         return await fishingHelpCommand(sock, msg);
     }
   } catch (error) {
@@ -50,13 +55,20 @@ async function handleFishingCommand(sock, msg, args, sender) {
 async function fishCommand(sock, msg, sender) {
   const remoteJid = msg.key.remoteJid;
   
-  // Cek cooldown (opsional - bisa diganti dengan sistem cooldown real)
-  const catch_item = getRandomCatch();
+  // 1. Kirim pesan awal (Melempar kail)
+  const initialMessage = await sock.sendMessage(remoteJid, { 
+    text: '🎣 *Melempar kail ke air...*\n_Mohon tunggu 5 detik..._' 
+  }, { quoted: msg });
   
+  // 2. Jeda waktu 5 detik
+  await delay(5000);
+  
+  // 3. Proses tangkapan ikan
+  const catch_item = getRandomCatch();
   addItem(sender, catch_item);
   
   const rarityEmoji_map = rarityEmoji[catch_item.rarity] || '⚪';
-  const message = `
+  const resultText = `
 ╭─ 🎣 *FISHING SUCCESS* 🎣 ─╮
 │
 │ ${rarityEmoji_map} *${catch_item.rarity}* Catch
@@ -64,11 +76,15 @@ async function fishCommand(sock, msg, sender) {
 │ ⚖️  Berat: ${catch_item.weight}
 │ 💰 Harga: Rp ${catch_item.price.toLocaleString('id-ID')}
 │
-│ Sudah masuk ke inventory!
+│ ✅ Sudah masuk ke inventory!
 │
 ╰────────────────────────╯`;
 
-  await sock.sendMessage(remoteJid, { text: message });
+  // 4. Edit pesan awal menjadi hasil tangkapan
+  await sock.sendMessage(remoteJid, { 
+    text: resultText,
+    edit: initialMessage.key // Ini yang membuat bot meng-edit pesan sebelumnya
+  });
 }
 
 async function inventoryCommand(sock, msg, sender) {
@@ -78,8 +94,8 @@ async function inventoryCommand(sock, msg, sender) {
   
   if (inventory.length === 0) {
     await sock.sendMessage(remoteJid, {
-      text: '🎣 *INVENTORY KOSONG*\n\nMulai mancing dengan `.fish cast` untuk mendapatkan item!'
-    });
+      text: '🎣 *INVENTORY KOSONG*\n\nMulai mancing dengan `.fish cast` atau `.mancing` untuk mendapatkan item!'
+    }, { quoted: msg });
     return;
   }
   
@@ -99,8 +115,7 @@ async function inventoryCommand(sock, msg, sender) {
 
   inventory.forEach((item, index) => {
     const emoji = rarityEmoji[item.rarity] || '⚪';
-    message += `│ ${index + 1}. ${emoji} ${item.name} - Rp ${item.price}
-`;
+    message += `│ ${index + 1}. ${emoji} ${item.name} - Rp ${item.price}\n`;
   });
 
   message += `│
@@ -109,7 +124,7 @@ async function inventoryCommand(sock, msg, sender) {
 │
 ╰────────────────────────╯`;
 
-  await sock.sendMessage(remoteJid, { text: message });
+  await sock.sendMessage(remoteJid, { text: message }, { quoted: msg });
 }
 
 async function sellCommand(sock, msg, sender, args) {
@@ -119,7 +134,7 @@ async function sellCommand(sock, msg, sender, args) {
   if (inventory.length === 0) {
     await sock.sendMessage(remoteJid, {
       text: '❌ Inventory kosong! Tidak ada yang bisa dijual.'
-    });
+    }, { quoted: msg });
     return;
   }
   
@@ -128,7 +143,7 @@ async function sellCommand(sock, msg, sender, args) {
   if (isNaN(itemNumber) || itemNumber < 0 || itemNumber >= inventory.length) {
     await sock.sendMessage(remoteJid, {
       text: `❌ Nomor item tidak valid! Gunakan nomor 1-${inventory.length}`
-    });
+    }, { quoted: msg });
     return;
   }
   
@@ -146,9 +161,9 @@ async function sellCommand(sock, msg, sender, args) {
 │
 ╰────────────────────────╯`;
     
-    await sock.sendMessage(remoteJid, { text: message });
+    await sock.sendMessage(remoteJid, { text: message }, { quoted: msg });
   } else {
-    await sock.sendMessage(remoteJid, { text: result.message });
+    await sock.sendMessage(remoteJid, { text: result.message }, { quoted: msg });
   }
 }
 
@@ -167,9 +182,9 @@ async function sellAllCommand(sock, msg, sender) {
 │
 ╰────────────────────────╯`;
     
-    await sock.sendMessage(remoteJid, { text: message });
+    await sock.sendMessage(remoteJid, { text: message }, { quoted: msg });
   } else {
-    await sock.sendMessage(remoteJid, { text: result.message });
+    await sock.sendMessage(remoteJid, { text: result.message }, { quoted: msg });
   }
 }
 
@@ -191,7 +206,7 @@ async function statsCommand(sock, msg, sender) {
 │
 ╰────────────────────────╯`;
 
-  await sock.sendMessage(remoteJid, { text: message });
+  await sock.sendMessage(remoteJid, { text: message }, { quoted: msg });
 }
 
 async function fishingHelpCommand(sock, msg) {
@@ -201,8 +216,9 @@ async function fishingHelpCommand(sock, msg) {
 │
 │ 📌 *COMMANDS:*
 │
+│ *.mancing* - Mulai memancing langsung
 │ *.fish cast* - Mulai memancing
-│ *.fish inventory* - Lihat inventory
+│ *.fish inventory* / *.fish tas* - Lihat tas
 │ *.fish sell [no]* - Jual item tertentu
 │ *.fish sellall* - Jual semua item
 │ *.fish stats* - Lihat statistik
@@ -217,13 +233,13 @@ async function fishingHelpCommand(sock, msg) {
 │ 🟡 Legendary (2%) - Rp 5000-8000
 │
 │ 💡 *TIPS:*
-│ • Semakin langka, semakin besar hadiah
-│ • Kumpulkan item untuk inventory penuh
-│ • Jual item untuk mendapat points
+│ • Tunggu 5 detik saat kail dilempar!
+│ • Semakin langka, semakin besar harga jualnya
+│ • Jual item untuk menambah Total Points kamu
 │
 ╰────────────────────────╯`;
 
-  await sock.sendMessage(remoteJid, { text: helpText });
+  await sock.sendMessage(remoteJid, { text: helpText }, { quoted: msg });
 }
 
 module.exports = {
@@ -235,3 +251,4 @@ module.exports = {
   statsCommand,
   fishingHelpCommand
 };
+              
