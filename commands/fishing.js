@@ -52,18 +52,29 @@ async function handleFishingCommand(sock, msg, args, sender) {
   }
 }
 
+// ... (kode di atasnya tetap biarkan seperti biasa)
+
 async function fishCommand(sock, msg, sender) {
   const remoteJid = msg.key.remoteJid;
   
   // 1. Kirim pesan awal (Melempar kail)
   const initialMessage = await sock.sendMessage(remoteJid, { 
-    text: '🎣 *Melempar kail ke air...*\n_Mohon tunggu 5 detik..._' 
+    text: '🎣 *Melempar kail ke air...*\n⏱️ Menunggu ikan menyambar: *5 detik*' 
   }, { quoted: msg });
   
-  // 2. Jeda waktu 5 detik
-  await delay(5000);
+  // 2. Proses countdown dari 4 sampai 1 dengan edit pesan
+  for (let i = 4; i >= 1; i--) {
+    await delay(1000); // Jeda 1 detik
+    await sock.sendMessage(remoteJid, {
+      text: `🎣 *Melempar kail ke air...*\n⏱️ Menunggu ikan menyambar: *${i} detik*`,
+      edit: initialMessage.key
+    });
+  }
   
-  // 3. Proses tangkapan ikan
+  // Jeda 1 detik terakhir sebelum ikan muncul
+  await delay(1000);
+  
+  // 3. Proses tangkapan ikan setelah hitung mundur selesai
   const catch_item = getRandomCatch();
   addItem(sender, catch_item);
   
@@ -73,19 +84,21 @@ async function fishCommand(sock, msg, sender) {
 │
 │ ${rarityEmoji_map} *${catch_item.rarity}* Catch
 │ 🐟 Item: ${catch_item.name}
-│ ⚖️  Berat: ${catch_item.weight}
-│ 💰 Harga: Rp ${catch_item.price.toLocaleString('id-ID')}
+│ ⚖️ Berat: ${catch_item.weight}
+│ 💰 Harga: ${catch_item.price} Poin
 │
 │ ✅ Sudah masuk ke inventory!
 │
 ╰────────────────────────╯`;
 
-  // 4. Edit pesan awal menjadi hasil tangkapan
+  // 4. Edit pesan terakhir menjadi hasil tangkapan ikan
   await sock.sendMessage(remoteJid, { 
     text: resultText,
-    edit: initialMessage.key // Ini yang membuat bot meng-edit pesan sebelumnya
+    edit: initialMessage.key 
   });
 }
+
+// ... (sisa kode di bawahnya tetap)
 
 async function inventoryCommand(sock, msg, sender) {
   const remoteJid = msg.key.remoteJid;
