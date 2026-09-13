@@ -49,23 +49,52 @@ const rarityEmoji = {
 };
 
 // ==========================================
-// 🎣 DAFTAR BAIT (PENGURANG TIMER / KECEPATAN)
+// 🎣 DAFTAR JORAN (RODS) & STATISTIK LUCK
+// ==========================================
+const rods = {
+  'training':  { id: 'training', name: '🪵 Training Rod', luck: 1, timer: 5, price: 0, desc: 'Joran kayu pemula.' },
+  'carbon':    { id: 'carbon', name: '🎣 Carbon Rod', luck: 2, timer: 4, price: 1000, desc: 'Serat karbon ringan.' },
+  'crystal':   { id: 'crystal', name: '💎 Crystal Rod', luck: 3.5, timer: 3.5, price: 5000, desc: 'Berbalut kristal berkilau.' },
+  'fortune':   { id: 'fortune', name: '🍀 Fortune Rod', luck: 6, timer: 3, price: 15000, desc: 'Joran penuh keberuntungan.' },
+  'sovereign': { id: 'sovereign', name: '👑 Sovereign Rod', luck: 10, timer: 2.5, price: 40000, desc: 'Joran bangsawan.' },
+  'destiny':   { id: 'destiny', name: '🌟 Destiny Rod', luck: 16, timer: 2, price: 100000, desc: 'Joran penjemput takdir.' },
+  'trident':   { id: 'trident', name: '🔱 Trident Rod', luck: 24, timer: 1.5, price: 250000, desc: 'Kekuatan penguasa samudera.' },
+  'aurora':    { id: 'aurora', name: '🌌 Aurora Cosmic Rod', luck: 35, timer: 1, price: 600000, desc: 'Joran pamungkas cahaya kosmik.' }
+};
+
+// ==========================================
+// 🧬 DAFTAR MUTASI IKAN & MULTIPLIER HARGA
+// ==========================================
+const mutations = [
+  { name: 'Shiny', prefix: '✨ Shiny', multiplier: 1.5, baseChance: 0.15 },
+  { name: 'Gold', prefix: '🪙 Golden', multiplier: 2.0, baseChance: 0.10 },
+  { name: 'Albino', prefix: '🥛 Albino', multiplier: 2.5, baseChance: 0.07 },
+  { name: 'Translucent', prefix: '🧊 Translucent', multiplier: 3.0, baseChance: 0.04 },
+  { name: 'Darkened', prefix: '🌑 Darkened', multiplier: 3.5, baseChance: 0.025 },
+  { name: 'Electric', prefix: '⚡ Electric', multiplier: 4.5, baseChance: 0.015 },
+  { name: 'Celestial', prefix: '🌟 Celestial', multiplier: 6.0, baseChance: 0.008 },
+  { name: 'Abyssal', prefix: '🌀 Abyssal', multiplier: 8.0, baseChance: 0.003 },
+  { name: 'Mythical', prefix: '👑 Mythical', multiplier: 12.0, baseChance: 0.001 }
+];
+
+// ==========================================
+// 🪱 DAFTAR BAIT (UMPAN)
 // ==========================================
 const baits = {
-  'roti':    { id: 'roti', name: '🍞 Umpan Roti', price: 10, timer: 5, desc: 'Umpan dasar. Kecepatan: 5 Detik.' },
-  'cacing':  { id: 'cacing', name: '🪱 Cacing Tanah', price: 50, timer: 4, desc: 'Kecepatan mancing naik: 4 Detik.' },
-  'pelet':   { id: 'pelet', name: '🍘 Pelet Premium', price: 100, timer: 3, desc: 'Kecepatan mancing naik: 3 Detik.' },
-  'udang':   { id: 'udang', name: '🦐 Udang Segar', price: 500, timer: 2, desc: 'Mancing super ngebut: 2 Detik.' },
-  'legenda': { id: 'legenda', name: '✨ Umpan Legendaris', price: 1000, timer: 1, desc: 'Kecepatan kilat maksimal: 1 Detik!' }
+  'roti':    { id: 'roti', name: '🍞 Umpan Roti', price: 30, desc: 'Umpan dasar.' },
+  'cacing':  { id: 'cacing', name: '🪱 Cacing Tanah', price: 100, desc: 'Umpan cacing.' },
+  'pelet':   { id: 'pelet', name: '🍘 Pelet Premium', price: 300, desc: 'Pelet berkualitas.' },
+  'udang':   { id: 'udang', name: '🦐 Udang Segar', price: 800, desc: 'Udang pilihan.' },
+  'legenda': { id: 'legenda', name: '✨ Umpan Legendaris', price: 2000, desc: 'Umpan para master.' }
 };
 
 // ==========================================
 // 🧪 DAFTAR POTION (LUCK BUFF)
 // ==========================================
 const potions = {
-  'minor': { id: 'minor', name: '🧪 Minor Luck Potion', price: 1000, duration: 3 * 60 * 1000, desc: 'Durasi 3 Menit. Sedikit menaikkan peluang ikan langka.' },
-  'major': { id: 'major', name: '🧪 Major Luck Potion', price: 3500, duration: 5 * 60 * 1000, desc: 'Durasi 5 Menit. Peluang Epic & Legendary meningkat drastis.' },
-  'divine': { id: 'divine', name: '🧪 Divine Luck Potion', price: 15000, duration: 5 * 60 * 1000, desc: 'Durasi 5 Menit. 0% Common! Peluang Mythic & Divine sangat besar.' }
+  'minor': { id: 'minor', name: '🧪 Minor Luck Potion', price: 1000, duration: 3 * 60 * 1000 },
+  'major': { id: 'major', name: '🧪 Major Luck Potion', price: 3500, duration: 5 * 60 * 1000 },
+  'divine': { id: 'divine', name: '🧪 Divine Luck Potion', price: 15000, duration: 5 * 60 * 1000 }
 };
 
 const potionRates = {
@@ -75,20 +104,24 @@ const potionRates = {
   'divine': { c: 0,  u: 20, r: 50, e: 75, l: 90, m: 97.0 }
 };
 
-function getRandomCatch(activePotionId = 'normal') {
+function getRandomCatch(activePotionId = 'normal', userRodId = 'training') {
+  let rod = rods[userRodId] || rods['training'];
   let rand = Math.random() * 100;
   
-  // 🌟 CEK APAKAH EVENT AURORA SERVER AKTIF & STACK DENGAN POTION
+  // 1. Cek Event Aurora Server (Stack dengan Potion & Rod)
   const aurora = global.serverAuroraEvent;
   if (aurora && aurora.active) {
     if (aurora.expiresAt > Date.now()) {
-      // Efek hoki Aurora mendongkrak nilai random mendekati 100 (agar tembus ke tier Mythic/Divine)
-      const boostFactor = 0.45; // Kekuatan dorongan hoki server aurora
+      const boostFactor = 0.45;
       rand = rand + (100 - rand) * boostFactor;
     } else {
-      aurora.active = false; // Matikan otomatis jika waktu event habis
+      aurora.active = false;
     }
   }
+
+  // 2. Terapkan Stat Luck dari Joran (Rod)
+  let luckFactor = Math.max(1, rod.luck);
+  rand = rand / Math.pow(luckFactor, 0.35);
 
   const rate = potionRates[activePotionId] || potionRates['normal'];
   let items, rarity;
@@ -103,9 +136,35 @@ function getRandomCatch(activePotionId = 'normal') {
 
   if (items.length === 0) { items = fishingItems.uncommon; rarity = 'UNCOMMON'; }
 
-  const item = items[Math.floor(Math.random() * items.length)];
+  const baseItem = items[Math.floor(Math.random() * items.length)];
+
+  // 3. Sistem Roll Mutasi Ikan (Dipengaruhi Luck Joran)
+  let chosenMutation = null;
+  let mutationBoost = Math.sqrt(rod.luck); // Makin bagus joran, makin tinggi chance mutasi
+
+  // Urutkan dari mutasi terlangka ke umum
+  const sortedMutations = [...mutations].sort((a, b) => b.multiplier - a.multiplier);
+  for (let mut of sortedMutations) {
+    let finalChance = mut.baseChance * mutationBoost;
+    if (Math.random() < finalChance) {
+      chosenMutation = mut;
+      break; // Dapat satu mutasi tertinggi yang tembus roll
+    }
+  }
+
+  let finalName = baseItem.name;
+  let finalPrice = baseItem.price;
+
+  if (chosenMutation) {
+    finalName = `${chosenMutation.prefix} ${baseItem.name}`;
+    finalPrice = Math.round(baseItem.price * chosenMutation.multiplier);
+  }
+
   return {
-    ...item,
+    ...baseItem,
+    name: finalName,
+    price: finalPrice,
+    mutation: chosenMutation ? chosenMutation.name : null,
     catchTime: new Date().getTime(),
     id: `${rarity}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   };
@@ -114,7 +173,10 @@ function getRandomCatch(activePotionId = 'normal') {
 module.exports = {
   fishingItems,
   rarityEmoji,
+  rods,
+  mutations,
   baits,
   potions,
   getRandomCatch
 };
+      
