@@ -23,11 +23,11 @@ const TITLES_CONFIG = {
     unit: 'Win',
     list: [
       { min: 0,   name: '[Reme Initiate]' },
-{ min: 5,   name: '[Reme Adept]' },
-{ min: 10,  name: '[Reme Virtuoso]' },
-{ min: 20,  name: '[Reme Highmaster]' },
-{ min: 50,  name: '[The King of Spin]' },
-{ min: 100, name: '[The God of Reme]' }
+      { min: 5,   name: '[Reme Adept]' },
+      { min: 10,  name: '[Reme Virtuoso]' },
+      { min: 20,  name: '[Reme Highmaster]' },
+      { min: 50,  name: '[The King of Spin]' },
+      { min: 100, name: '[The God of Reme]' }
     ]
   },
   qq: {
@@ -35,10 +35,10 @@ const TITLES_CONFIG = {
     unit: 'Win',
     list: [
       { min: 0,   name: '[QQ Initiate]' },
-{ min: 10,  name: '[QQ Adept]' },
-{ min: 20,  name: '[QQ Virtuoso]' },
-{ min: 50,  name: '[The Luck Hand]' },
-{ min: 100, name: '[The God of QQ]' }
+      { min: 10,  name: '[QQ Adept]' },
+      { min: 20,  name: '[QQ Virtuoso]' },
+      { min: 50,  name: '[The Luck Hand]' },
+      { min: 100, name: '[The God of QQ]' }
     ]
   },
   trivia: {
@@ -46,10 +46,10 @@ const TITLES_CONFIG = {
     unit: 'Soal',
     list: [
       { min: 0,   name: '[The Initiate]' },
-{ min: 10,  name: '[The Quizer]' },
-{ min: 30,  name: '[The Scholar]' },
-{ min: 50,  name: '[The Learned]' },
-{ min: 100, name: '[The Trivia King]' }
+      { min: 10,  name: '[The Quizer]' },
+      { min: 30,  name: '[The Scholar]' },
+      { min: 50,  name: '[The Learned]' },
+      { min: 100, name: '[The Trivia King]' }
     ]
   },
   math: {
@@ -57,10 +57,10 @@ const TITLES_CONFIG = {
     unit: 'Soal',
     list: [
       { min: 0,   name: '[The Initiate]' },
-{ min: 10,  name: '[The Counter]' },
-{ min: 30,  name: '[The Mathematician]' },
-{ min: 50,  name: '[The Human Calculator]' },
-{ min: 100, name: '[The Einstein]' }
+      { min: 10,  name: '[The Counter]' },
+      { min: 30,  name: '[The Mathematician]' },
+      { min: 50,  name: '[The Human Calculator]' },
+      { min: 100, name: '[The Einstein]' }
     ]
   }
 };
@@ -98,9 +98,16 @@ module.exports = async function titleCommand(sock, msg, args) {
 
     const user = getUserData(global.db, senderId);
 
-    // Ambil statistik user dari DB
+    // Tracking Peak Points (Poin Tertinggi yang Pernah Dicapai)
+    const currentScore = getTotalScore(user);
+    if (typeof user.maxPoin !== 'number' || currentScore > user.maxPoin) {
+      user.maxPoin = currentScore;
+      if (typeof global.saveDatabase === 'function') global.saveDatabase();
+    }
+
+    // Menggunakan maxPoin agar progress tidak turun saat transfer atau kalah kasino
     const stats = {
-      poin: getTotalScore(user),
+      poin: user.maxPoin,
       reme: user.remeWin || 0,
       qq: user.qqWin || 0,
       trivia: user.triviaCount || 0,
