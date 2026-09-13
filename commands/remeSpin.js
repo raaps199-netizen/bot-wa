@@ -59,6 +59,12 @@ async function finishGame(sock, remoteJid, game, isVsBot) {
     const potReward = bet * 2;
 
     if (scoreP1 > scoreP2) {
+      // Tambah statistik remeWin untuk P1
+      if (typeof helper.getUserData === 'function') {
+        const userP1 = helper.getUserData(global.db, p1);
+        userP1.remeWin = (userP1.remeWin || 0) + 1;
+      }
+
       finalMsg += `👑 Pemenang Utama: @${p1.split('@')[0]}!`;
       if (bet > 0) {
         if (isVsBot) {
@@ -70,6 +76,12 @@ async function finishGame(sock, remoteJid, game, isVsBot) {
         }
       }
     } else if (scoreP2 > scoreP1) {
+      // Tambah statistik remeWin untuk P2 (jika bukan bot)
+      if (!isVsBot && typeof helper.getUserData === 'function') {
+        const userP2 = helper.getUserData(global.db, p2);
+        userP2.remeWin = (userP2.remeWin || 0) + 1;
+      }
+
       finalMsg += `👑 Pemenang Utama: ${isVsBot ? '*Bot Kasino*' : '@' + p2.split('@')[0]}!`;
       if (bet > 0) {
         if (isVsBot) {
@@ -104,7 +116,6 @@ async function finishGame(sock, remoteJid, game, isVsBot) {
 async function processRoundEnd(sock, remoteJid, game, rolls, isVsBot) {
   const [p1, p2] = game.players;
   
-  // FIX: Mengambil roll dengan akurat dari Object rolls
   const raw1 = rolls[p1] !== undefined ? rolls[p1] : Object.values(rolls)[0];
   const raw2 = rolls[p2] !== undefined ? rolls[p2] : Object.values(rolls)[1];
 
@@ -143,7 +154,7 @@ async function processRoundEnd(sock, remoteJid, game, rolls, isVsBot) {
   const scoreP1 = game.scores[p1] || 0;
   const scoreP2 = game.scores[p2] || 0;
   const maxRound = game.maxRound || 3;
-  const winningTarget = Math.ceil(maxRound / 2); // 2 Kemenangan
+  const winningTarget = Math.ceil(maxRound / 2);
   
   const isGameOver = scoreP1 >= winningTarget || scoreP2 >= winningTarget || game.round >= maxRound;
 
@@ -174,14 +185,12 @@ async function spinCommand(sock, msg) {
     const isPlayingWithBot = game.mode === 'bot' || game.players.some(p => p.includes('bot') || p === sock.user.id.split(':')[0] + '@s.whatsapp.net');
 
     if (isPlayingWithBot) {
-      // Ambil elemen player langsung dari array game.players
       const [p1, p2] = game.players;
       const userJid = p1.includes('bot') ? p2 : p1;
       const botJid = p1.includes('bot') ? p1 : p2;
 
       if (baseNum(senderId) !== baseNum(userJid)) return;
 
-      // 1. Roll Player
       const playerRaw = Math.floor(Math.random() * 37);
       const playerRes = hitungReme(playerRaw);
 
@@ -190,7 +199,6 @@ async function spinCommand(sock, msg) {
         mentions: [userJid]
       }, { quoted: msg });
 
-      // 2. Roll Bot
       const botRaw = Math.floor(Math.random() * 37);
       const botRes = hitungReme(botRaw);
 
@@ -198,14 +206,12 @@ async function spinCommand(sock, msg) {
         text: `🤖 *Bot* langsung balas SPIN!\n🎲 Angka Keluar: *${botRaw}*\n➕ Hasil Reme: *${fmtResult(botRes)}*`
       });
 
-      // FIX KUNCI: Kirimkan Object dengan key eksak dari game.players [p1] dan [p2]
       return await processRoundEnd(sock, remoteJid, game, { 
         [userJid]: playerRaw, 
         [botJid]: botRaw 
       }, true);
     }
 
-    // --- Mode PvP (Player vs Player) ---
     if (!game.roundData) game.roundData = {};
     if (typeof game.currentTurnIndex !== 'number') game.currentTurnIndex = 0;
 
@@ -248,4 +254,3 @@ async function spinCommand(sock, msg) {
 }
 
 module.exports = spinCommand;
-    
