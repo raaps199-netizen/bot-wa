@@ -1,17 +1,28 @@
-// Inventory Manager untuk mengelola item pengguna
+// File: utils/inventoryManager.js
 
 /**
- * Initialize user inventory jika belum ada
+ * Initialize user inventory jika belum ada (Fix untuk user lama)
  */
 function initializeInventory(userId) {
+  if (!global.db) global.db = {};
   if (!global.db.users) global.db.users = {};
+  
+  // Jika user benar-benar belum ada di database
   if (!global.db.users[userId]) {
-    global.db.users[userId] = {
-      inventory: [],
-      points: 0,
-      totalFish: 0,
-      bestCatch: null
-    };
+    global.db.users[userId] = {};
+  }
+  
+  // Pastikan properti khusus mancing ditambahkan, meskipun user sudah lama terdaftar
+  if (!global.db.users[userId].inventory) {
+    global.db.users[userId].inventory = [];
+  }
+  if (global.db.users[userId].totalFish === undefined) {
+    global.db.users[userId].totalFish = 0;
+  }
+  if (global.db.users[userId].points === undefined) {
+    // Sesuaikan dengan nama variabel poin utama di bot kamu. 
+    // Biasanya bot menggunakan .score, .poin, atau .points
+    global.db.users[userId].points = 0; 
   }
 }
 
@@ -31,7 +42,7 @@ function addItem(userId, item) {
   }
   
   global.db.users[userId].totalFish += 1;
-  global.saveDatabase();
+  if (typeof global.saveDatabase === 'function') global.saveDatabase();
   
   return item;
 }
@@ -95,10 +106,13 @@ function sellItem(userId, itemId) {
   }
   
   const item = user.inventory[itemIndex];
+  
+  // Menambahkan poin ke akun (Pastikan ini terhubung dengan sistem poin utamamu)
   user.points += item.price;
+  
   user.inventory.splice(itemIndex, 1);
   
-  global.saveDatabase();
+  if (typeof global.saveDatabase === 'function') global.saveDatabase();
   
   return {
     success: true,
@@ -129,7 +143,7 @@ function sellAllItems(userId) {
   const itemCount = user.inventory.length;
   user.inventory = [];
   
-  global.saveDatabase();
+  if (typeof global.saveDatabase === 'function') global.saveDatabase();
   
   return {
     success: true,
@@ -153,7 +167,7 @@ function removeItem(userId, itemId) {
   }
   
   user.inventory.splice(itemIndex, 1);
-  global.saveDatabase();
+  if (typeof global.saveDatabase === 'function') global.saveDatabase();
   return true;
 }
 
