@@ -76,7 +76,17 @@ const potionRates = {
 };
 
 function getRandomCatch(activePotionId = 'normal') {
-  const rand = Math.random() * 100;
+  let rand = Math.random() * 100;
+  
+  // 🌟 CEK APAKAH EVENT AURORA SERVER AKTIF
+  const aurora = global.serverAuroraEvent;
+  if (aurora && aurora.active && aurora.expiresAt > Date.now()) {
+    // Karena luck dikali 5, kita bikin angka random jadi lebih kecil (makin kecil peluang rand, makin dapet kasta tinggi)
+    rand = rand / aurora.multiplier; 
+  } else if (aurora && aurora.active && aurora.expiresAt <= Date.now()) {
+    aurora.active = false; // Matikan jika sudah waktunya habis
+  }
+
   const rate = potionRates[activePotionId] || potionRates['normal'];
   let items, rarity;
 
@@ -97,7 +107,6 @@ function getRandomCatch(activePotionId = 'normal') {
     id: `${rarity}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   };
 }
-
 module.exports = {
   fishingItems,
   rarityEmoji,
