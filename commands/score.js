@@ -1,5 +1,5 @@
 // File: commands/score.js
-const { getUserData, getTotalScore } = require('../utils/helper');
+const { getUserData, getTotalScore, formatRupiah } = require('../utils/helper');
 const { getSenderId } = require('../utils/jid-utils');
 
 async function scoreCommand(sock, msg, args) {
@@ -15,13 +15,13 @@ async function scoreCommand(sock, msg, args) {
 
   const pushName = msg.pushName || 'User';
 
-  const text = `📊 *STATUS SKOR & STATISTIK* 📊\n\n` +
+  const text = `📊 *STATUS SALDO & STATISTIK* 📊\n\n` +
     `👤 Nama: *${user.nickname || pushName}*\n` +
-    `💰 Total Poin: *${totalScore}*\n` +
-    `🧮 Math Selesai: *${mathCount} soal*\n` +
-    `🧠 Trivia Selesai: *${triviaCount} soal*\n` +
-    `🎣 Ikan Ditangkap: *${mancingCount} ekor*\n\n` +
-    `_Semua poin game & aktivitas terpusat di Total Poin!_`;
+    `💰 Total Saldo: *${formatRupiah(totalScore)}*[span_0](start_span)[span_0](end_span)\n` +
+    `🧮 Math Selesai: *${mathCount} soal*[span_1](start_span)[span_1](end_span)\n` +
+    `🧠 Trivia Selesai: *${triviaCount} soal*[span_2](start_span)[span_2](end_span)\n` +
+    `🎣 Ikan Ditangkap: *${mancingCount} ekor*[span_3](start_span)[span_3](end_span)\n\n` +
+    `_Semua saldo game & aktivitas terpusat di Total Saldo!_`;
 
   await sock.sendMessage(remoteJid, { text }, { quoted: msg });
 }
