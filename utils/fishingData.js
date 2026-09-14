@@ -1,178 +1,152 @@
 // File: utils/fishingData.js
 
-const fishingItems = {
-  common: [
-    { name: '🐟 Anchovy', rarity: 'COMMON', price: 10, weight: '50g' },
-    { name: '🐚 Garden Snail', rarity: 'COMMON', price: 15, weight: '30g' },
-    { name: '🐟 Herring', rarity: 'COMMON', price: 20, weight: '150g' },
-    { name: '🐟 Oil Sardine', rarity: 'COMMON', price: 25, weight: '120g' },
-    { name: '🐟 Red Drum', rarity: 'COMMON', price: 30, weight: '200g' }
-  ],
-  uncommon: [
-    { name: '🐠 Piranha', rarity: 'UNCOMMON', price: 40, weight: '300g' },
-    { name: '🐟 Gem Anchovy', rarity: 'UNCOMMON', price: 50, weight: '80g' },
-    { name: '🐟 Gem Salmon', rarity: 'UNCOMMON', price: 60, weight: '400g' },
-    { name: '🦑 Peacock Squid', rarity: 'UNCOMMON', price: 70, weight: '250g' }
-  ],
-  rare: [
-    { name: '✨ Bluegem Angelfish', rarity: 'RARE', price: 80, weight: '500g' },
-    { name: '✨ Emerald Angelfish', rarity: 'RARE', price: 95, weight: '450g' },
-    { name: '✨ Quartzfin Queenfish', rarity: 'RARE', price: 110, weight: '800g' },
-    { name: '✨ Bluntnose Sixgill Shark', rarity: 'RARE', price: 120, weight: '15kg' }
-  ],
-  epic: [
-    { name: '💫 Atlantean Sardine', rarity: 'EPIC', price: 130, weight: '1kg' },
-    { name: '💫 Abyssal Slickhead', rarity: 'EPIC', price: 145, weight: '3kg' },
-    { name: '💫 Cladoselache', rarity: 'EPIC', price: 160, weight: '12kg' }
-  ],
-  legendary: [
-    { name: '👑 Celestial Crab', rarity: 'LEGENDARY', price: 170, weight: '5kg' },
-    { name: '👑 Hellfire Haddock', rarity: 'LEGENDARY', price: 200, weight: '8kg' },
-    { name: '👑 Greenland Shark', rarity: 'LEGENDARY', price: 250, weight: '100kg' }
-  ],
-  mythic: [
-    { name: '🔴 Calcified Trilobite', rarity: 'MYTHIC', price: 300, weight: '10kg' },
-    { name: '🔴 Petrified Ammonite', rarity: 'MYTHIC', price: 400, weight: '15kg' },
-    { name: '🔴 Flamekissed Hawkfish', rarity: 'MYTHIC', price: 500, weight: '20kg' }
-  ],
-  divine: [
-    { name: '🌟 Aqua Scribe', rarity: 'DIVINE', price: 750, weight: '25kg' },
-    { name: '🌟 Celestial Pearl Danio', rarity: 'DIVINE', price: 850, weight: '30kg' },
-    { name: '🌟 Poseidon\'s Perch', rarity: 'DIVINE', price: 900, weight: '50kg' },
-    { name: '🌟 Neptune\'s Nibbler', rarity: 'DIVINE', price: 1000, weight: '80kg' }
-  ],
-  secret: [
-    { name: '🌟 The Celestial Leviathan', rarity: 'SECRET', price: 5000, weight: '500kg' },
-    { name: '🌀 The Void Sovereign', rarity: 'SECRET', price: 7500, weight: '750kg' },
-    { name: '👑 The Eternal Neptune', rarity: 'SECRET', price: 10000, weight: '1200kg' }
-  ]
-};
-
 const rarityEmoji = {
-  'COMMON': '⚪', 'UNCOMMON': '🟢', 'RARE': '🔵', 
-  'EPIC': '🟣', 'LEGENDARY': '🟡', 'MYTHIC': '🔴', 'DIVINE': '🌟', 'SECRET': '🔮'
+  COMMON: '⚪',
+  UNCOMMON: '🟢',
+  RARE: '🔵',
+  EPIC: '🟣',
+  LEGENDARY: '🟡',
+  MYTHIC: '🔴',
+  SECRET: '✨'
 };
-
-const rods = {
-  'training':  { id: 'training', name: '🪵 Training Rod', luck: 1, timer: 5, mutationBonus: 1.0, price: 0, desc: 'Joran kayu standar.' },
-  'carbon':    { id: 'carbon', name: '🎣 Carbon Rod', luck: 1.8, timer: 3.5, mutationBonus: 1.1, price: 1000, desc: 'Fokus kecepatan tinggi, mutasi standar.' },
-  'crystal':   { id: 'crystal', name: '💎 Crystal Rod', luck: 3.0, timer: 4.5, mutationBonus: 1.4, price: 5000, desc: 'Hoki lumayan, waktu sedikit lebih lama.' },
-  'fortune':   { id: 'fortune', name: '🍀 Fortune Rod', luck: 5.0, timer: 3.0, mutationBonus: 1.6, price: 15000, desc: 'Seimbang antara hoki dan kecepatan.' },
-  'sovereign': { id: 'sovereign', name: '👑 Sovereign Rod', luck: 8.5, timer: 6.0, mutationBonus: 2.0, price: 40000, desc: 'Hoki tinggi tapi butuh kesabaran.' },
-  'destiny':   { id: 'destiny', name: '🌟 Destiny Rod', luck: 13.0, timer: 4.0, mutationBonus: 2.3, price: 100000, desc: 'Joran takdir pencari ikan besar.' },
-  'trident':   { id: 'trident', name: '🔱 Trident Rod', luck: 20.0, timer: 7.0, mutationBonus: 2.8, price: 250000, desc: 'Hoki brutal, tapi timer lumayan lama.' },
-  'aurora':    { id: 'aurora', name: '🌌 Aurora Cosmic Rod', luck: 30.0, timer: 5.0, mutationBonus: 3.5, price: 600000, desc: 'Hoki mutlak, penguasa kosmik.' }
-};
-
-const mutations = [
-  { name: 'Shiny', prefix: '✨ Shiny', multiplier: 1.5, baseChance: 0.12 },
-  { name: 'Gold', prefix: '🪙 Golden', multiplier: 2.0, baseChance: 0.08 },
-  { name: 'Albino', prefix: '🥛 Albino', multiplier: 2.5, baseChance: 0.05 },
-  { name: 'Translucent', prefix: '🧊 Translucent', multiplier: 3.0, baseChance: 0.03 },
-  { name: 'Darkened', prefix: '🌑 Darkened', multiplier: 3.5, baseChance: 0.02 },
-  { name: 'Electric', prefix: '⚡ Electric', multiplier: 4.5, baseChance: 0.01 },
-  { name: 'Celestial', prefix: '🌟 Celestial', multiplier: 6.0, baseChance: 0.005 },
-  { name: 'Abyssal', prefix: '🌀 Abyssal', multiplier: 8.0, baseChance: 0.002 },
-  { name: 'Mythical', prefix: '👑 Mythical', multiplier: 12.0, baseChance: 0.0008 }
-];
 
 const baits = {
-  'roti':    { id: 'roti', name: '🍞 Umpan Roti', price: 10, desc: 'Umpan dasar.' },
-  'cacing':  { id: 'cacing', name: '🪱 Cacing Tanah', price: 30, desc: 'Umpan cacing.' },
-  'pelet':   { id: 'pelet', name: '🍘 Pelet Premium', price: 50, desc: 'Pelet berkualitas.' },
-  'udang':   { id: 'udang', name: '🦐 Udang Segar', price: 100, desc: 'Udang pilihan.' },
-  'legenda': { id: 'legenda', name: '✨ Umpan Legendaris', price: 200, desc: 'Umpan para master.' }
+  roti: { name: '🍞 Roti', price: 50, luckBonus: 1 },
+  cacing: { name: '🪱 Cacing', price: 150, luckBonus: 1.2 },
+  pelet: { name: '🟢 Pelet Super', price: 350, luckBonus: 1.5 },
+  udang: { name: '🦐 Udang Segar', price: 750, luckBonus: 2.0 },
+  cumi: { name: '🦑 Cumi Impor', price: 1500, luckBonus: 3.0 }
 };
 
 const potions = {
-  'minor': { id: 'minor', name: '🧪 Minor Luck Potion', price: 1000, duration: 3 * 60 * 1000 },
-  'major': { id: 'major', name: '🧪 Major Luck Potion', price: 3500, duration: 5 * 60 * 1000 },
-  'divine': { id: 'divine', name: '🧪 Divine Luck Potion', price: 15000, duration: 5 * 60 * 1000 }
+  minor: { name: '🧪 Minor Luck Potion', price: 1000, multiplier: 1.25, duration: 15 * 60 * 1000 },
+  major: { name: '🧪 Major Luck Potion', price: 2500, multiplier: 1.5, duration: 30 * 60 * 1000 },
+  divine: { name: '🧪 Divine Luck Potion', price: 6000, multiplier: 2.0, duration: 60 * 60 * 1000 }
 };
 
-const autoPasses = {
-  'auto5m':  { id: 'auto5m',  name: '⏳ Auto Pass (5 Menit)',  price: 5000,  duration: 5 * 60 * 1000,  desc: 'Bebas mancing otomatis selama 5 menit.' },
-  'auto15m': { id: 'auto15m', name: '⏳ Auto Pass (15 Menit)', price: 12000, duration: 15 * 60 * 1000, desc: 'Auto mancing hemat poin!' },
-  'auto30m': { id: 'auto30m', name: '⏳ Auto Pass (30 Menit)', price: 20000, duration: 30 * 60 * 1000, desc: 'Durasi maksimal untuk AFK.' }
+const rods = {
+  training: { name: '🎣 Training Rod', price: 0, luck: 1.0, timer: 5 },
+  fiber: { name: '🎣 Fiberglass Rod', price: 5000, luck: 1.3, timer: 4 },
+  carbon: { name: '🎣 Carbon Rod', price: 15000, luck: 1.7, timer: 3 },
+  magical: { name: '🎣 Mystic Wand Rod', price: 50000, luck: 2.3, timer: 2 },
+  crystal: { name: '🔱 Destiny Crystal Rod', price: 150000, luck: 3.5, timer: 1 }
 };
 
-const potionRates = {
-  'normal': { c: 45, u: 73, r: 86, e: 93, l: 97, m: 99.5, s: 99.8 },
-  'minor':  { c: 30, u: 65, r: 82, e: 92, l: 96.5, m: 99.0, s: 99.5 },
-  'major':  { c: 15, u: 45, r: 70, e: 87, l: 95, m: 98.5, s: 99.2 },
-  'divine': { c: 0,  u: 20, r: 50, e: 75, l: 90, m: 97.0, s: 98.5 }
+const fishPool = {
+  COMMON: [
+    { name: 'Ikan Lele', price: 20 },
+    { name: 'Ikan Mujair', price: 25 },
+    { name: 'Ikan Nila', price: 30 },
+    { name: 'Ikan Mas', price: 35 },
+    { name: 'Ikan Sepat', price: 15 }
+  ],
+  UNCOMMON: [
+    { name: 'Ikan Gurame', price: 80 },
+    { name: 'Ikan Bawal', price: 100 },
+    { name: 'Ikan Patin', price: 120 },
+    { name: 'Ikan Gabus', price: 150 }
+  ],
+  RARE: [
+    { name: 'Ikan Salmon', price: 400 },
+    { name: 'Ikan Tuna', price: 500 },
+    { name: 'Ikan Kakap Merah', price: 650 },
+    { name: 'Ikan Tenggiri', price: 800 }
+  ],
+  EPIC: [
+    { name: 'Ikan Hiu Martil', price: 2000 },
+    { name: 'Ikan Pari Manta', price: 2500 },
+    { name: 'Ikan Swordfish', price: 3200 },
+    { name: 'Ikan Marlin Biru', price: 4000 }
+  ],
+  LEGENDARY: [
+    { name: 'Ikan Hiu Putih', price: 10000 },
+    { name: 'Ikan Paus Biru', price: 15000 },
+    { name: 'Ikan Coelacanth Purba', price: 22000 }
+  ],
+  MYTHIC: [
+    { name: 'Kraken Junior', price: 50000 },
+    { name: 'Naga Laut Dalam', price: 75000 },
+    { name: 'Leviathan Samudra', price: 100000 }
+  ],
+  SECRET: [
+    { name: 'The Celestial Leviathan', price: 250000 },
+    { name: 'The Void Sovereign', price: 500000 },
+    { name: 'The Eternal Neptune', price: 1000000 }
+  ]
 };
 
-function getRandomCatch(activePotionId = 'normal', userRodId = 'training') {
-  let rod = rods[userRodId] || rods['training'];
-  let rand = Math.random() * 100;
-  
-  const aurora = global.serverAuroraEvent;
-  if (aurora && aurora.active) {
-    if (aurora.expiresAt > Date.now()) {
-      const boostFactor = Math.min(0.85, 0.3 * (aurora.multiplier / 5));
-      rand = rand + (100 - rand) * boostFactor;
-    } else {
-      aurora.active = false;
-    }
+const mutations = [
+  { prefix: 'Golden', multiplier: 2.0 },
+  { prefix: 'Shiny', multiplier: 1.5 },
+  { prefix: 'Shadow', multiplier: 2.5 },
+  { prefix: 'Rainbow', multiplier: 3.0 }
+];
+
+function getRandomCatch(potionBuff = 'normal', rodId = 'training') {
+  let totalLuck = 1.0;
+
+  // 1. Rod Multiplier
+  const rod = rods[rodId] || rods.training;
+  totalLuck *= rod.luck;
+
+  // 2. Potion Multiplier
+  if (potionBuff && potions[potionBuff]) {
+    totalLuck *= potions[potionBuff].multiplier;
   }
 
-  let luckFactor = Math.max(1, rod.luck);
-  rand = rand / Math.pow(luckFactor, 0.35);
-
-  const rate = potionRates[activePotionId] || potionRates['normal'];
-  let items, rarity;
-
-  if (rand < rate.c) { items = fishingItems.common; rarity = 'COMMON'; }
-  else if (rand < rate.u) { items = fishingItems.uncommon; rarity = 'UNCOMMON'; }
-  else if (rand < rate.r) { items = fishingItems.rare; rarity = 'RARE'; }
-  else if (rand < rate.e) { items = fishingItems.epic; rarity = 'EPIC'; }
-  else if (rand < rate.l) { items = fishingItems.legendary; rarity = 'LEGENDARY'; }
-  else if (rand < rate.m) { items = fishingItems.mythic; rarity = 'MYTHIC'; }
-  else if (rand < rate.s) { items = fishingItems.divine; rarity = 'DIVINE'; }
-  else { items = fishingItems.secret; rarity = 'SECRET'; }
-
-  if (items.length === 0) { items = fishingItems.uncommon; rarity = 'UNCOMMON'; }
-
-  const baseItem = items[Math.floor(Math.random() * items.length)];
-
-  let chosenMutation = null;
-  let mutationChanceMultiplier = rod.mutationBonus || 1.0;
-
-  const sortedMutations = [...mutations].sort((a, b) => b.multiplier - a.multiplier);
-  for (let mut of sortedMutations) {
-    let finalChance = mut.baseChance * mutationChanceMultiplier;
-    if (Math.random() < finalChance) {
-      chosenMutation = mut;
-      break;
-    }
+  // 3. Server Luck Multiplier (Diatur via .setluck)
+  if (global.serverAuroraEvent && global.serverAuroraEvent.active) {
+    const serverLuck = global.serverAuroraEvent.multiplier || 1.0;
+    totalLuck *= serverLuck;
   }
 
-  let finalName = baseItem.name;
-  let finalPrice = baseItem.price;
+  const roll = Math.random() * 100;
 
-  if (chosenMutation) {
-    finalName = `${chosenMutation.prefix} ${baseItem.name}`;
-    finalPrice = Math.round(baseItem.price * chosenMutation.multiplier);
+  let rarity = 'COMMON';
+  if (roll < 0.5 * (totalLuck / 1.5)) {
+    rarity = 'SECRET';
+  } else if (roll < 2 * (totalLuck / 1.2)) {
+    rarity = 'MYTHIC';
+  } else if (roll < 6 * (totalLuck / 1.1)) {
+    rarity = 'LEGENDARY';
+  } else if (roll < 15 * totalLuck) {
+    rarity = 'EPIC';
+  } else if (roll < 35 * totalLuck) {
+    rarity = 'RARE';
+  } else if (roll < 65 * totalLuck) {
+    rarity = 'UNCOMMON';
+  }
+
+  const pool = fishPool[rarity];
+  const baseFish = pool[Math.floor(Math.random() * pool.length)];
+
+  let finalPrice = baseFish.price;
+  let fishName = baseFish.name;
+  let mutationApplied = null;
+
+  // 15% peluang kena Mutasi
+  if (Math.random() < 0.15) {
+    const mutation = mutations[Math.floor(Math.random() * mutations.length)];
+    fishName = `${mutation.prefix} ${baseFish.name}`;
+    finalPrice = Math.floor(baseFish.price * mutation.multiplier);
+    mutationApplied = mutation.prefix;
   }
 
   return {
-    ...baseItem,
-    name: finalName,
+    id: `fish_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    name: fishName,
+    rarity: rarity,
     price: finalPrice,
-    mutation: chosenMutation ? chosenMutation.name : null,
-    catchTime: new Date().getTime(),
-    id: `${rarity}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    mutation: mutationApplied,
+    isFavorite: false
   };
 }
 
 module.exports = {
-  fishingItems,
   rarityEmoji,
-  rods,
-  mutations,
   baits,
   potions,
-  autoPasses,
+  rods,
+  fishPool,
   getRandomCatch
 };
