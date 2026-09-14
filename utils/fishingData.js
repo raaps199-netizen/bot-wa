@@ -42,9 +42,9 @@ const fishingItems = {
     { name: '🌟 Neptune\'s Nibbler', rarity: 'DIVINE', price: 1000, weight: '80kg' }
   ],
   secret: [
-    { name: ' The King Void', rarity: 'SECRET', price: 5000, weight: '500kg' },
-    { name: ' The Abyssal Monstee', rarity: 'SECRET', price: 7500, weight: '750kg' },
-    { name: ' The Celestial Megalodon', rarity: 'SECRET', price: 10000, weight: '1200kg' }
+    { name: '🌟 The Celestial Leviathan', rarity: 'SECRET', price: 5000, weight: '500kg' },
+    { name: '🌀 The Void Sovereign', rarity: 'SECRET', price: 7500, weight: '750kg' },
+    { name: '👑 The Eternal Neptune', rarity: 'SECRET', price: 10000, weight: '1200kg' }
   ]
 };
 
@@ -53,9 +53,6 @@ const rarityEmoji = {
   'EPIC': '🟣', 'LEGENDARY': '🟡', 'MYTHIC': '🔴', 'DIVINE': '🌟', 'SECRET': '🔮'
 };
 
-// ==========================================
-// 🎣 DAFTAR JORAN (RODS) - BALANCE TRADE-OFF
-// ==========================================
 const rods = {
   'training':  { id: 'training', name: '🪵 Training Rod', luck: 1, timer: 5, mutationBonus: 1.0, price: 0, desc: 'Joran kayu standar.' },
   'carbon':    { id: 'carbon', name: '🎣 Carbon Rod', luck: 1.8, timer: 3.5, mutationBonus: 1.1, price: 1000, desc: 'Fokus kecepatan tinggi, mutasi standar.' },
@@ -67,9 +64,6 @@ const rods = {
   'aurora':    { id: 'aurora', name: '🌌 Aurora Cosmic Rod', luck: 30.0, timer: 5.0, mutationBonus: 3.5, price: 600000, desc: 'Hoki mutlak, penguasa kosmik.' }
 };
 
-// ==========================================
-// 🧬 DAFTAR MUTASI IKAN & MULTIPLIER HARGA
-// ==========================================
 const mutations = [
   { name: 'Shiny', prefix: '✨ Shiny', multiplier: 1.5, baseChance: 0.12 },
   { name: 'Gold', prefix: '🪙 Golden', multiplier: 2.0, baseChance: 0.08 },
@@ -96,6 +90,12 @@ const potions = {
   'divine': { id: 'divine', name: '🧪 Divine Luck Potion', price: 15000, duration: 5 * 60 * 1000 }
 };
 
+const autoPasses = {
+  'auto5m':  { id: 'auto5m',  name: '⏳ Auto Pass (5 Menit)',  price: 5000,  duration: 5 * 60 * 1000,  desc: 'Bebas mancing otomatis selama 5 menit.' },
+  'auto15m': { id: 'auto15m', name: '⏳ Auto Pass (15 Menit)', price: 12000, duration: 15 * 60 * 1000, desc: 'Auto mancing hemat poin!' },
+  'auto30m': { id: 'auto30m', name: '⏳ Auto Pass (30 Menit)', price: 20000, duration: 30 * 60 * 1000, desc: 'Durasi maksimal untuk AFK.' }
+};
+
 const potionRates = {
   'normal': { c: 45, u: 73, r: 86, e: 93, l: 97, m: 99.5, s: 99.8 },
   'minor':  { c: 30, u: 65, r: 82, e: 92, l: 96.5, m: 99.0, s: 99.5 },
@@ -107,11 +107,9 @@ function getRandomCatch(activePotionId = 'normal', userRodId = 'training') {
   let rod = rods[userRodId] || rods['training'];
   let rand = Math.random() * 100;
   
-  // 🌟 1. CEK EVENT AURORA SERVER & TARIK ANGKA RANDOM
   const aurora = global.serverAuroraEvent;
   if (aurora && aurora.active) {
     if (aurora.expiresAt > Date.now()) {
-      // Server aurora mendongkrak hoki berdasarkan multiplier-nya
       const boostFactor = Math.min(0.85, 0.3 * (aurora.multiplier / 5));
       rand = rand + (100 - rand) * boostFactor;
     } else {
@@ -119,7 +117,6 @@ function getRandomCatch(activePotionId = 'normal', userRodId = 'training') {
     }
   }
 
-  // 2. Terapkan Stat Luck dari Joran
   let luckFactor = Math.max(1, rod.luck);
   rand = rand / Math.pow(luckFactor, 0.35);
 
@@ -139,7 +136,6 @@ function getRandomCatch(activePotionId = 'normal', userRodId = 'training') {
 
   const baseItem = items[Math.floor(Math.random() * items.length)];
 
-  // 3. Roll Mutasi
   let chosenMutation = null;
   let mutationChanceMultiplier = rod.mutationBonus || 1.0;
 
@@ -170,7 +166,6 @@ function getRandomCatch(activePotionId = 'normal', userRodId = 'training') {
   };
 }
 
-
 module.exports = {
   fishingItems,
   rarityEmoji,
@@ -178,5 +173,6 @@ module.exports = {
   mutations,
   baits,
   potions,
+  autoPasses,
   getRandomCatch
 };
