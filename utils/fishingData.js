@@ -40,18 +40,22 @@ const fishingItems = {
     { name: '🌟 Celestial Pearl Danio', rarity: 'DIVINE', price: 850, weight: '30kg' },
     { name: '🌟 Poseidon\'s Perch', rarity: 'DIVINE', price: 900, weight: '50kg' },
     { name: '🌟 Neptune\'s Nibbler', rarity: 'DIVINE', price: 1000, weight: '80kg' }
+  ],
+  secret: [
+    { name: ' 🌭 The Sausage of Ambatublow', rarity: 'SECRET', price: 5000, weight: '500kg' },
+    { name: ' 🌭 The Abyssal Dick', rarity: 'SECRET', price: 7500, weight: '750kg' },
+    { name: ' 🐦‍⬛ The Big Black Cock', rarity: 'SECRET', price: 10000, weight: '1200kg' }
   ]
 };
 
 const rarityEmoji = {
   'COMMON': '⚪', 'UNCOMMON': '🟢', 'RARE': '🔵', 
-  'EPIC': '🟣', 'LEGENDARY': '🟡', 'MYTHIC': '🔴', 'DIVINE': '🌟'
+  'EPIC': '🟣', 'LEGENDARY': '🟡', 'MYTHIC': '🔴', 'DIVINE': '🌟', 'SECRET': '🔮'
 };
 
 // ==========================================
 // 🎣 DAFTAR JORAN (RODS) - BALANCE TRADE-OFF
 // ==========================================
-// mutationBonus: Pengali tambahan untuk persentase dapet mutasi (bisa minus/kecil kalau joran fokus speed)
 const rods = {
   'training':  { id: 'training', name: '🪵 Training Rod', luck: 1, timer: 5, mutationBonus: 1.0, price: 0, desc: 'Joran kayu standar.' },
   'carbon':    { id: 'carbon', name: '🎣 Carbon Rod', luck: 1.8, timer: 3.5, mutationBonus: 1.1, price: 1000, desc: 'Fokus kecepatan tinggi, mutasi standar.' },
@@ -79,11 +83,11 @@ const mutations = [
 ];
 
 const baits = {
-  'roti':    { id: 'roti', name: '🍞 Umpan Roti', price: 30, desc: 'Umpan dasar.' },
-  'cacing':  { id: 'cacing', name: '🪱 Cacing Tanah', price: 100, desc: 'Umpan cacing.' },
-  'pelet':   { id: 'pelet', name: '🍘 Pelet Premium', price: 300, desc: 'Pelet berkualitas.' },
-  'udang':   { id: 'udang', name: '🦐 Udang Segar', price: 800, desc: 'Udang pilihan.' },
-  'legenda': { id: 'legenda', name: '✨ Umpan Legendaris', price: 2000, desc: 'Umpan para master.' }
+  'roti':    { id: 'roti', name: '🍞 Umpan Roti', price: 10, desc: 'Umpan dasar.' },
+  'cacing':  { id: 'cacing', name: '🪱 Cacing Tanah', price: 30, desc: 'Umpan cacing.' },
+  'pelet':   { id: 'pelet', name: '🍘 Pelet Premium', price: 50, desc: 'Pelet berkualitas.' },
+  'udang':   { id: 'udang', name: '🦐 Udang Segar', price: 100, desc: 'Udang pilihan.' },
+  'legenda': { id: 'legenda', name: '✨ Umpan Legendaris', price: 200, desc: 'Umpan para master.' }
 };
 
 const potions = {
@@ -93,10 +97,10 @@ const potions = {
 };
 
 const potionRates = {
-  'normal': { c: 45, u: 73, r: 86, e: 93, l: 97, m: 99.5 },
-  'minor':  { c: 30, u: 65, r: 82, e: 92, l: 96.5, m: 99.0 },
-  'major':  { c: 15, u: 45, r: 70, e: 87, l: 95, m: 98.5 },
-  'divine': { c: 0,  u: 20, r: 50, e: 75, l: 90, m: 97.0 }
+  'normal': { c: 45, u: 73, r: 86, e: 93, l: 97, m: 99.5, s: 99.8 },
+  'minor':  { c: 30, u: 65, r: 82, e: 92, l: 96.5, m: 99.0, s: 99.5 },
+  'major':  { c: 15, u: 45, r: 70, e: 87, l: 95, m: 98.5, s: 99.2 },
+  'divine': { c: 0,  u: 20, r: 50, e: 75, l: 90, m: 97.0, s: 98.5 }
 };
 
 function getRandomCatch(activePotionId = 'normal', userRodId = 'training') {
@@ -127,7 +131,8 @@ function getRandomCatch(activePotionId = 'normal', userRodId = 'training') {
   else if (rand < rate.e) { items = fishingItems.epic; rarity = 'EPIC'; }
   else if (rand < rate.l) { items = fishingItems.legendary; rarity = 'LEGENDARY'; }
   else if (rand < rate.m) { items = fishingItems.mythic; rarity = 'MYTHIC'; }
-  else { items = fishingItems.divine; rarity = 'DIVINE'; }
+  else if (rand < rate.s) { items = fishingItems.divine; rarity = 'DIVINE'; }
+  else { items = fishingItems.secret; rarity = 'SECRET'; }
 
   if (items.length === 0) { items = fishingItems.uncommon; rarity = 'UNCOMMON'; }
 
