@@ -1,5 +1,5 @@
 // File: commands/leaderboard.js (atau top.js)
-const { getUserData } = require('../utils/helper');
+const { getUserData, formatRupiah } = require('../utils/helper');
 
 async function leaderboardCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
@@ -16,7 +16,7 @@ async function leaderboardCommand(sock, msg, args) {
         score: data.score || 0,
         mathCount: data.mathCount || 0,
         triviaCount: data.triviaCount || 0,
-        totalFish: data.totalFish || 0, // Tambahkan totalFish di sini
+        totalFish: data.totalFish || 0, 
         nickname: data.nickname || userId.split('@')[0]
       };
     });
@@ -31,7 +31,7 @@ async function leaderboardCommand(sock, msg, args) {
       return await sock.sendMessage(remoteJid, { text: '⚠️ Belum ada data untuk leaderboard saat ini.' }, { quoted: msg });
     }
 
-    let text = `🏆 *LEADERBOARD UTAMA POIN & STATISTIK* 🏆\n\n`;
+    let text = `🏆 *LEADERBOARD UTAMA SALDO & STATISTIK* 🏆\n\n`;
     topUsers.forEach((user, index) => {
       let medal = '';
       if (index === 0) medal = '🥇 ';
@@ -40,8 +40,8 @@ async function leaderboardCommand(sock, msg, args) {
       else medal = `${index + 1}. `;
 
       text += `${medal}@${user.userId.split('@')[0]}\n`;
-      // Tambahkan ikon ikan di barisan statistik
-      text += `   💰 Poin: *${user.score}* | 🧮 Math: *${user.mathCount}* | 🧠 Trivia: *${user.triviaCount}* | 🎣 Ikan: *${user.totalFish}*\n\n`;
+      // Tampilkan saldo dengan format Rupiah
+      text += `   💰 Saldo: *${formatRupiah(user.score)}* | 🧮 Math: *${user.mathCount}* | 🧠 Trivia: *${user.triviaCount}* | 🎣 Ikan: *${user.totalFish}*\n\n`;
     });
 
     text += `_Ketik .score untuk mengecek statistik pribadi kamu!_`;
