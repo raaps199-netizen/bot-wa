@@ -1,4 +1,4 @@
-// File: commands/leaderboard.js (atau top.js)
+// File: commands/leaderboard.js
 const { getUserData, formatRupiah } = require('../utils/helper');
 
 async function leaderboardCommand(sock, msg, args) {
@@ -9,7 +9,6 @@ async function leaderboardCommand(sock, msg, args) {
       return await sock.sendMessage(remoteJid, { text: '⚠️ Belum ada data pengguna di database!' }, { quoted: msg });
     }
 
-    // Ubah objek global.db.users menjadi array agar bisa di-sort
     const usersArray = Object.entries(global.db.users).map(([userId, data]) => {
       return {
         userId,
@@ -21,10 +20,7 @@ async function leaderboardCommand(sock, msg, args) {
       };
     });
 
-    // Urutkan berdasarkan total poin tertinggi (descending)
     usersArray.sort((a, b) => b.score - a.score);
-
-    // Ambil top 10 pengguna teratas
     const topUsers = usersArray.slice(0, 10);
 
     if (topUsers.length === 0) {
@@ -40,7 +36,6 @@ async function leaderboardCommand(sock, msg, args) {
       else medal = `${index + 1}. `;
 
       text += `${medal}@${user.userId.split('@')[0]}\n`;
-      // Tampilkan saldo dengan format Rupiah
       text += `   💰 Saldo: *${formatRupiah(user.score)}* | 🧮 Math: *${user.mathCount}* | 🧠 Trivia: *${user.triviaCount}* | 🎣 Ikan: *${user.totalFish}*\n\n`;
     });
 
