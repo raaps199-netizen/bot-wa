@@ -536,3 +536,4 @@ async function fishingHelpCommand(sock, msg) {
 module.exports = {
   handleFishingCommand, fishCommand, inventoryCommand, sellCommand,
   sellAllCommand, statsCommand, fishingHelpCommand, pakaiPotionCommand, rodCommand, switchRodCommand, startAutoFish, stopAu
+};
