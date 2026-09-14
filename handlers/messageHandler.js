@@ -256,9 +256,10 @@ async function handleMessage(sock, msg) {
         await handleBeliCommand(sock, msg, args, senderId);
         break;
 
-    case 'aurora':
-        await auroraCommand(sock, msg, args);
-        break;
+    case 'setluck':
+case 'setmultiplier':
+    await handleSetLuckCommand(sock, msg, args, senderId);
+    break;
 
 
       // ==========================================
