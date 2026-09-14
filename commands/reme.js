@@ -1,5 +1,5 @@
 // File: commands/reme.js
-const { getUserData, getTotalScore, parseBetAmount } = require('../utils/helper');
+const { getUserData, getTotalScore, parseBetAmount, formatRupiah } = require('../utils/helper');
 const { isPersonalJid, getSenderId } = require('../utils/jid-utils');
 
 function ensureDB() {
@@ -29,11 +29,9 @@ async function remeCommand(sock, msg, args) {
       }, { quoted: msg });
     }
 
-    // 1. Ambil data sender & poin
     const senderUser = getUserData(global.db, senderId);
     const senderScore = getTotalScore(senderUser);
 
-    // 2. Deteksi Target (Mentions / Reply / Nomor)
     let targetId = null;
     let targetArgStr = null;
     const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
@@ -55,7 +53,6 @@ async function remeCommand(sock, msg, args) {
       }
     }
 
-    // 3. Parsing Nominal Taruhan (Memisahkan angka dari tag @user)
     const filteredArgs = args.filter(a => a !== targetArgStr && !a.includes('@'));
     
     let betAmount = 0;
@@ -75,17 +72,16 @@ async function remeCommand(sock, msg, args) {
     }
 
     if (isNaN(betAmount) || !betAmount || betAmount <= 0) {
-      betAmount = 15; // default fallback jika tidak memasukkan nominal
+      betAmount = 15000; // default fallback taruhan
     }
 
-    // 4. Validasi Poin Sender
     if (senderScore < betAmount) {
       return await sock.sendMessage(remoteJid, { 
-        text: `⚠️ Poin lu gak cukup buat taruhan! Poin lu saat ini: *${senderScore}*, tapi mau taruhan *${betAmount}*.` 
+        text: `⚠️ Saldo lu gak cukup buat taruhan!\nSaldo lu saat ini: *${formatRupiah(senderScore)}*, tapi mau taruhan *${formatRupiah(betAmount)}*.` 
       }, { quoted: msg });
     }
 
-    // 5. Mode SOLO (Lawan Bot)
+    // Mode SOLO (Lawan Bot)
     if (!targetId) {
       const botJid = sock.user.id;
       const cleanBotId = botJid.includes(':') ? botJid.split(':')[0] + '@s.whatsapp.net' : botJid;
@@ -104,12 +100,11 @@ async function remeCommand(sock, msg, args) {
 
       const senderName = senderId.split('@')[0];
       return await sock.sendMessage(remoteJid, {
-        text: `🤖 *Wuih, nantangin bot buat Remenan mandiri!*\n\nTaruhan: *${betAmount}* poin (3 Ronde).\nSilakan @${senderName} ketik *.spin* buat mulai ronde 1!`,
+        text: `🤖 *Wuih, nantangin bot buat Remenan mandiri!*\n\nTaruhan: *${formatRupiah(betAmount)}* (3 Ronde).\nSilakan @${senderName} ketik *.spin* buat mulai ronde 1!`,
         mentions: [senderId]
       }, { quoted: msg });
     }
 
-    // 6. Mode PvP (Lawan Member Lain)
     if (targetId === senderId || targetId.includes(senderId.split('@')[0])) {
       return await sock.sendMessage(remoteJid, { text: '⚠️ Gila ya, mau main lawan diri sendiri wkwk!' }, { quoted: msg });
     }
@@ -119,7 +114,7 @@ async function remeCommand(sock, msg, args) {
 
     if (targetScore < betAmount) {
       return await sock.sendMessage(remoteJid, { 
-        text: `⚠️ Lawan lu total poinnya gak cukup buat taruhan *${betAmount}* poin! (Poin target: ${targetScore})` 
+        text: `⚠️ Lawan lu total saldonya gak cukup buat taruhan *${formatRupiah(betAmount)}*! (Saldo target: ${formatRupiah(targetScore)})` 
       }, { quoted: msg });
     }
 
@@ -130,7 +125,7 @@ async function remeCommand(sock, msg, args) {
       timestamp: Date.now()
     };
 
-    const text = `🎰 *REME DUEL TARUHAN POIN* 🎰\n\n@${senderId.split('@')[0]} menantang @${targetId.split('@')[0]} taruhan sebesar *${betAmount}* poin!\n\nKetik *.terima* buat gas main, atau *.tolak* buat kabur.`;
+    const text = `🎰 *REME DUEL TARUHAN SALDO* 🎰\n\n@${senderId.split('@')[0]} menantang @${targetId.split('@')[0]} taruhan sebesar *${formatRupiah(betAmount)}*!\n\nKetik *.terima* buat gas main, atau *.tolak* buat kabur.`;
 
     await sock.sendMessage(remoteJid, {
       text: text,
