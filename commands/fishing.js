@@ -9,11 +9,6 @@ const { getUserData, getTotalScore, addPoints, deductPoints, formatRupiah } = re
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 global.activeAutoFish = global.activeAutoFish || {};
 
-// 👑 Daftar JID / Nomor HP Admin & Owner (Sesuaikan dengan nomor lu)
-const ADMIN_NUMBERS = [
-  '6281234567890@s.whatsapp.net' // 👈 Ganti dengan JID/Nomor kamu!
-];
-
 async function handleFishingCommand(sock, msg, primaryCommand, args, sender) {
   let subCmd = args[0]?.toLowerCase();
   let subArgs = args.slice(1);
@@ -413,17 +408,9 @@ async function sellAllCommand(sock, msg, sender) {
   }, { quoted: msg });
 }
 
-// 🔐 KHUSUS ADMIN / OWNER
+// 🟢 BEBAS (Bisa dipakai siapa saja & tidak masuk help menu)
 async function handleSetLuckCommand(sock, msg, args, senderId) {
   const remoteJid = msg.key.remoteJid;
-
-  // Validasi apakah pengirim pesan adalah Admin / Owner
-  if (!ADMIN_NUMBERS.includes(senderId)) {
-    return await sock.sendMessage(remoteJid, { 
-      text: `🚫 *Akses Ditolak!* Perintah ini hanya dapat digunakan oleh Admin Bot.` 
-    }, { quoted: msg });
-  }
-
   const multiplier = parseFloat(args[0]);
 
   if (isNaN(multiplier) || multiplier < 1) {
@@ -541,7 +528,6 @@ async function fishingHelpCommand(sock, msg) {
 │ *.fish tas* - Lihat daftar ikan & umpan
 │ *.fish sellall* - Jual semua ikan (kecuali favorit)
 │ *.shop* - Toko Umpan, Potion, Rod, & Pass Waktu
-│ *.setluck <angka>* - Set multiplier server luck (Admin Only)
 │
 ╰────────────────────────╯`;
   await sock.sendMessage(msg.key.remoteJid, { text: helpText }, { quoted: msg });
@@ -549,5 +535,4 @@ async function fishingHelpCommand(sock, msg) {
 
 module.exports = {
   handleFishingCommand, fishCommand, inventoryCommand, sellCommand,
-  sellAllCommand, statsCommand, fishingHelpCommand, pakaiPotionCommand, rodCommand, switchRodCommand, startAutoFish, stopAutoFish, favoritCommand, handleSetLuckCommand
-};
+  sellAllCommand, statsCommand, fishingHelpCommand, pakaiPotionCommand, rodCommand, switchRodCommand, startAutoFish, stopAu
