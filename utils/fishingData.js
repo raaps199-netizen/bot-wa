@@ -42,9 +42,9 @@ const fishingItems = {
     { name: '🌟 Neptune\'s Nibbler', rarity: 'DIVINE', price: 1000, weight: '80kg' }
   ],
   secret: [
-    { name: ' 🌭 The Sausage of Ambatublow', rarity: 'SECRET', price: 5000, weight: '500kg' },
-    { name: ' 🌭 The Abyssal Dick', rarity: 'SECRET', price: 7500, weight: '750kg' },
-    { name: ' 🐦‍⬛ The Big Black Cock', rarity: 'SECRET', price: 10000, weight: '1200kg' }
+    { name: ' The King Void', rarity: 'SECRET', price: 5000, weight: '500kg' },
+    { name: ' The Abyssal Monstee', rarity: 'SECRET', price: 7500, weight: '750kg' },
+    { name: ' The Celestial Megalodon', rarity: 'SECRET', price: 10000, weight: '1200kg' }
   ]
 };
 
