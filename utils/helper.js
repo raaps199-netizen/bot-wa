@@ -1,3 +1,5 @@
+// File: utils/helper.js
+
 function getUserData(db, userId) {
   if (!db) global.db = {};
   if (!db.users) db.users = {};
@@ -59,10 +61,16 @@ function parseBetAmount(arg, userTotalScore) {
   return parsed;
 }
 
+// 💵 Format angka ke tampilan Rupiah (contoh: 5000 -> Rp5.000)
+function formatRupiah(amount) {
+  return `Rp${Number(amount || 0).toLocaleString('id-ID')}`;
+}
+
 module.exports = {
   getUserData,
   getTotalScore,
   addPoints,
   deductPoints,
-  parseBetAmount
+  parseBetAmount,
+  formatRupiah
 };
