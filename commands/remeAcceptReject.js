@@ -1,5 +1,5 @@
 // File: commands/remeAcceptReject.js
-const { deductPoints } = require('../utils/helper');
+const { deductPoints, formatRupiah } = require('../utils/helper');
 const { getSenderId } = require('../utils/jid-utils');
 
 async function terimaCommand(sock, msg) {
@@ -14,14 +14,12 @@ async function terimaCommand(sock, msg) {
 
   const targetChallenged = challenge.challenged;
 
-  // Verifikasi pencocokan ID (menghindari error beda format @lid / @s.whatsapp.net)
   if (targetChallenged !== senderId && targetChallenged.split('@')[0] !== senderId.split('@')[0]) {
     return await sock.sendMessage(remoteJid, { text: '⚠️ Tantangan ini bukan buat lo, bro!' }, { quoted: msg });
   }
 
   const { challenger, challenged, bet } = challenge;
 
-  // Perbaikan utama: Mengirim global.db sebagai argumen pertama ke fungsi deductPoints
   deductPoints(global.db, challenger, bet);
   deductPoints(global.db, challenged, bet);
 
@@ -41,7 +39,7 @@ async function terimaCommand(sock, msg) {
   const starterName = challenger.split('@')[0];
 
   await sock.sendMessage(remoteJid, {
-    text: `⚔️ *Tantangan Diterima & Poin Dipotong (${bet} Poin)*!\n\nPermainan Reme 3 Ronde dimulai!\nGiliran pertama melakukan *.spin* adalah: @${starterName}`,
+    text: `⚔️ *Tantangan Diterima & Saldo Dipotong (${formatRupiah(bet)})*!\n\nPermainan Reme 3 Ronde dimulai!\nGiliran pertama melakukan *.spin* adalah: @${starterName}`,
     mentions: [challenger, challenged]
   }, { quoted: msg });
 }
