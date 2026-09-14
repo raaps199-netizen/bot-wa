@@ -14,12 +14,22 @@ async function handleFishingCommand(sock, msg, primaryCommand, args, sender) {
   let subArgs = args.slice(1);
 
   try {
-    // 1. Direct command .lnj / .lanjut (Manual Mancing Cepat)
+    // 1. Perintah Direct: .lnj / .lanjut
     if (['lnj', 'lanjut'].includes(primaryCommand)) {
       return await fishCommand(sock, msg, sender, true, subCmd);
     }
 
-    // 2. Direct command .start auto & .stop auto
+    // 2. Perintah Direct: .favorit <nomor>
+    if (['favorit', 'fav', 'favorite'].includes(primaryCommand)) {
+      return await favoritCommand(sock, msg, sender, args);
+    }
+
+    // 3. Perintah Direct: .start auto & .stop auto / .autofish
+    if (primaryCommand === 'autofish') {
+      if (subCmd === 'stop') return await stopAutoFish(sock, msg, sender);
+      return await startAutoFish(sock, msg, sender, subCmd);
+    }
+
     if (primaryCommand === 'start' && subCmd === 'auto') {
       return await startAutoFish(sock, msg, sender, subArgs[0]);
     }
@@ -35,7 +45,7 @@ async function handleFishingCommand(sock, msg, primaryCommand, args, sender) {
         }, { quoted: msg });
       }
 
-      if (['lnj', 'lanjut', 'tas', 'inv', 'inventory', 'sell', 'sellall', 'stats', 'pakai', 'rod', 'joran', 'pakaijoran', 'help'].includes(subCmd)) {
+      if (['lnj', 'lanjut', 'tas', 'inv', 'inventory', 'sell', 'sellall', 'stats', 'pakai', 'rod', 'joran', 'pakaijoran', 'favorit', 'fav', 'help'].includes(subCmd)) {
         primaryCommand = 'fish';
       } else {
         return await fishCommand(sock, msg, sender, false, subCmd);
@@ -63,6 +73,10 @@ async function handleFishingCommand(sock, msg, primaryCommand, args, sender) {
         case 'tas':
           return await inventoryCommand(sock, msg, sender);
         
+        case 'favorit':
+        case 'fav':
+          return await favoritCommand(sock, msg, sender, subArgs);
+
         case 'sell':
           return await sellCommand(sock, msg, sender, subArgs);
         
@@ -131,9 +145,14 @@ async function startAutoFish(sock, msg, sender, baitInput) {
   global.activeAutoFish[sender] = true;
   const sisaMenit = Math.ceil((user.autoFishingUntil - now) / 60000);
 
-  await sock.sendMessage(remoteJid, {
-    text: `🤖 ⚙️ *AUTO-FISH STARTED!*\n\n🪱 Umpan: *${baits[baitId].name}*\n⏱️ Sisa Durasi Pass: *~${sisaMenit} Menit*\n\n_Bot akan memancing otomatis secara terus-menerus.\nKetik *.stop auto* kapan saja untuk berhenti!_`
+  // Kirim pesan starter dan gunakan ID pesan ini untuk di-edit berulang kali
+  let sentMsg = await sock.sendMessage(remoteJid, {
+    text: `🤖 ⚙️ *AUTO-FISH STARTED!*\n\n🪱 Umpan: *${baits[baitId].name}*\n⏱️ Sisa Durasi Pass: *~${sisaMenit} Menit*\n\n_Memulai pancingan..._`
   }, { quoted: msg });
+
+  user.lastFishKey = sentMsg.key;
+  user.lastBait = baitId;
+  if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
   runAutoFishLoop(sock, msg, sender, baitId);
 }
@@ -221,7 +240,6 @@ async function fishCommand(sock, msg, sender, isLnj = false, inputBait = null, i
   const buffText = activeBuffId ? `\n🧪 *Potion:* ${potions[activeBuffId].name}` : '';
   
   const timerDuration = currentRod.timer;
-
   const startingText = `🎣 *Melempar kail dengan ${currentRod.name}* (${baits[baitId].name})...${buffText}\n⏱️ Menunggu ikan menyambar: *${timerDuration} detik*`;
   let sentMsg;
   
@@ -269,6 +287,121 @@ _Ketik *.lnj* untuk manual / *.start auto* untuk AFK!_`;
   user.lastFishKey = sentMsg.key;
   user.lastBait = baitId;
   if (typeof global.saveDatabase === 'function') global.saveDatabase();
+}
+
+async function inventoryCommand(sock, msg, sender) {
+  const remoteJid = msg.key.remoteJid;
+  const inventory = getInventory(sender);
+  const summary = getInventorySummary(sender);
+  
+  let baitList = `🪱 *STOK UMPAN ANDA:*\n`;
+  for (const [id, data] of Object.entries(baits)) {
+    baitList += `• ${data.name}: *${getBaitCount(sender, id)}x*\n`;
+  }
+
+  if (inventory.length === 0) {
+    return await sock.sendMessage(remoteJid, { text: `🎣 *INVENTORY KOSONG*\n\n${baitList}\nMulai mancing wajib pakai umpan, contoh: *.mancing roti*` }, { quoted: msg });
+  }
+
+  let fishListText = `📋 *DAFTAR IKAN DI TAS:*\n`;
+  inventory.forEach((item, index) => {
+    const emoji = rarityEmoji[item.rarity] || '⚪';
+    const favTag = item.isFavorite ? ' ⭐ [FAVORIT]' : '';
+    fishListText += `${index + 1}. ${emoji} *${item.name}* (${item.price} Poin)${favTag}\n`;
+  });
+
+  let message = `╭─ 🎣 *INVENTORY ANDA* 🎣 ─╮
+│
+│ 📊 Total Ikan: ${summary.totalItems}
+│ 💰 Total Nilai: ${summary.totalValue} Poin
+│
+├────────────────────────┤
+${fishListText.split('\n').map(line => line ? `│ ${line}` : '│').join('\n')}
+├────────────────────────┤
+${baitList.split('\n').map(line => line ? `│ ${line}` : '│').join('\n')}
+╰────────────────────────╯
+_Ketik *.favorit <nomor>* untuk mengunci ikan agar tak terjual_
+_Ketik *.fish sell <nomor>* untuk jual 1 ikan_`;
+
+  await sock.sendMessage(remoteJid, { text: message }, { quoted: msg });
+}
+
+async function favoritCommand(sock, msg, sender, args) {
+  const remoteJid = msg.key.remoteJid;
+  const inventory = getInventory(sender);
+  
+  if (inventory.length === 0) {
+    return await sock.sendMessage(remoteJid, { text: '❌ Inventory kamu kosong!' }, { quoted: msg });
+  }
+
+  const index = parseInt(args[0]) - 1;
+  if (isNaN(index) || index < 0 || index >= inventory.length) {
+    return await sock.sendMessage(remoteJid, { text: `⚠️ Nomor ikan tidak valid! Masukkan nomor (1 - ${inventory.length}).\nCek nomor ikan di *.fish tas*` }, { quoted: msg });
+  }
+
+  const item = inventory[index];
+  item.isFavorite = !item.isFavorite;
+
+  if (typeof global.saveDatabase === 'function') global.saveDatabase();
+
+  const statusText = item.isFavorite 
+    ? `⭐ *${item.name}* (No. ${index + 1}) berhasil ditandai sebagai *FAVORIT*!\nIkan ini tidak akan ikut terjual saat *.sellall*.`
+    : `❌ Tanda favorit pada *${item.name}* (No. ${index + 1}) telah dilepas.`;
+
+  await sock.sendMessage(remoteJid, { text: statusText }, { quoted: msg });
+}
+
+async function sellCommand(sock, msg, sender, args) {
+  const remoteJid = msg.key.remoteJid;
+  const inventory = getInventory(sender);
+  if (inventory.length === 0) return await sock.sendMessage(remoteJid, { text: '❌ Inventory kosong!' }, { quoted: msg });
+  
+  const itemNumber = parseInt(args[0]) - 1;
+  if (isNaN(itemNumber) || itemNumber < 0 || itemNumber >= inventory.length) {
+    return await sock.sendMessage(remoteJid, { text: `❌ Nomor item tidak valid (1-${inventory.length})` }, { quoted: msg });
+  }
+  
+  const item = inventory[itemNumber];
+  const result = sellItem(sender, item.id);
+  if (result.success) {
+    await sock.sendMessage(remoteJid, { text: `✅ Terjual: ${result.itemName} (+${result.priceReceived} Poin)\nTotal Poin Global: ${result.totalPoints}` }, { quoted: msg });
+  }
+}
+
+async function sellAllCommand(sock, msg, sender) {
+  const remoteJid = msg.key.remoteJid;
+  const inventory = getInventory(sender);
+  
+  if (inventory.length === 0) {
+    return await sock.sendMessage(remoteJid, { text: '❌ Inventory kosong!' }, { quoted: msg });
+  }
+
+  const itemsToSell = inventory.filter(item => !item.isFavorite);
+  const itemsToKeep = inventory.filter(item => item.isFavorite);
+
+  if (itemsToSell.length === 0) {
+    return await sock.sendMessage(remoteJid, { 
+      text: `⚠️ Tidak ada ikan yang dijual! Semua ${inventory.length} ikan di tas kamu ditandai sebagai ⭐ *FAVORIT*.` 
+    }, { quoted: msg });
+  }
+
+  let totalEarnings = 0;
+  itemsToSell.forEach(item => {
+    totalEarnings += item.price;
+  });
+
+  const user = getUserData(global.db, sender);
+  user.inventory = itemsToKeep;
+  addPoints(global.db, sender, totalEarnings);
+
+  if (typeof global.saveDatabase === 'function') global.saveDatabase();
+
+  const totalPoints = getTotalScore(user);
+  const keepText = itemsToKeep.length > 0 ? `\n⭐ *${itemsToKeep.length} ikan favorit* tetap tersimpan aman di tas.` : '';
+
+  await sock.sendMessage(remoteJid, { 
+    text: `✅ Berhasil menjual *${itemsToSell.length} ikan*!\n💵 Total Pendapatan: *+${totalEarnings} Poin*${keepText}\n💰 Total Poin Global: *${totalPoints}*` 
+  }, { quoted: msg });
 }
 
 async function rodCommand(sock, msg, sender) {
@@ -338,68 +471,6 @@ async function pakaiPotionCommand(sock, msg, sender, args) {
   }
 }
 
-async function inventoryCommand(sock, msg, sender) {
-  const remoteJid = msg.key.remoteJid;
-  const inventory = getInventory(sender);
-  const summary = getInventorySummary(sender);
-  
-  let baitList = `🪱 *STOK UMPAN ANDA:*\n`;
-  for (const [id, data] of Object.entries(baits)) {
-    baitList += `• ${data.name}: *${getBaitCount(sender, id)}x*\n`;
-  }
-
-  if (inventory.length === 0) {
-    return await sock.sendMessage(remoteJid, { text: `🎣 *INVENTORY KOSONG*\n\n${baitList}\nMulai mancing wajib pakai umpan, contoh: *.mancing roti*` }, { quoted: msg });
-  }
-  
-  let message = `╭─ 🎣 *INVENTORY ANDA* 🎣 ─╮
-│
-│ 📊 Total Ikan: ${summary.totalItems}
-│ 💰 Total Nilai: ${summary.totalValue} Poin
-│
-│ ⚪ Common: ${summary.byRarity.COMMON || 0}
-│ 🟢 Uncommon: ${summary.byRanimy || summary.byRarity.UNCOMMON || 0}
-│ 🔵 Rare: ${summary.byRarity.RARE || 0}
-│ 🟣 Epic: ${summary.byRarity.EPIC || 0}
-│ 🟡 Legendary: ${summary.byRarity.LEGENDARY || 0}
-│ 🔴 Mythic: ${summary.byRarity.MYTHIC || 0}
-│ 🌟 Divine: ${summary.byRarity.DIVINE || 0}
-│ 🔮 Secret: ${summary.byRarity.SECRET || 0}
-│
-├────────────────────────┤
-│ ${baitList.replace(/\n/g, '\n│ ')}
-╰────────────────────────╯`;
-
-  await sock.sendMessage(remoteJid, { text: message }, { quoted: msg });
-}
-
-async function sellCommand(sock, msg, sender, args) {
-  const remoteJid = msg.key.remoteJid;
-  const inventory = getInventory(sender);
-  if (inventory.length === 0) return await sock.sendMessage(remoteJid, { text: '❌ Inventory kosong!' }, { quoted: msg });
-  
-  const itemNumber = parseInt(args[0]) - 1;
-  if (isNaN(itemNumber) || itemNumber < 0 || itemNumber >= inventory.length) {
-    return await sock.sendMessage(remoteJid, { text: `❌ Nomor item tidak valid (1-${inventory.length})` }, { quoted: msg });
-  }
-  
-  const item = inventory[itemNumber];
-  const result = sellItem(sender, item.id);
-  if (result.success) {
-    await sock.sendMessage(remoteJid, { text: `✅ Terjual: ${result.itemName} (+${result.priceReceived} Poin)\nTotal Poin Global: ${result.totalPoints}` }, { quoted: msg });
-  }
-}
-
-async function sellAllCommand(sock, msg, sender) {
-  const remoteJid = msg.key.remoteJid;
-  const result = sellAllItems(sender);
-  if (result.success) {
-    await sock.sendMessage(remoteJid, { text: `✅ Semua ikan terjual!\n💵 Total Pendapatan: +${result.totalEarnings} Poin\nTotal Poin Global: ${result.totalPoints}` }, { quoted: msg });
-  } else {
-    await sock.sendMessage(remoteJid, { text: result.message }, { quoted: msg });
-  }
-}
-
 async function statsCommand(sock, msg, sender) {
   const remoteJid = msg.key.remoteJid;
   const stats = getUserStats(sender);
@@ -421,20 +492,15 @@ async function fishingHelpCommand(sock, msg) {
   const helpText = `
 ╭─ 🎣 *FISHING SYSTEM HELP* 🎣 ─╮
 │
-│ 📌 *ATURAN UTAMA:*
-│ *Wajib pakai umpan baru bisa mancing!*
-│
-│ 📌 *COMMANDS:*
+│ 📌 *COMMANDS UTAMA:*
 │ *.mancing <umpan>* - Mulai mancing
 │ *.lnj* - Lanjut mancing manual
 │ *.start auto* - Mulai auto-mancing (AFK)
 │ *.stop auto* - Hentikan auto-mancing
-│ *.fish rod* - Cek & ganti joran aktif
-│ *.shop auto* - Beli durasi auto-mancing
-│ *.shop joran* - Beli joran baru
-│ *.fish tas* - Lihat isi tas
-│ *.fish sellall* - Jual semua ikan
-│ *.shop* - Buka pusat toko
+│ *.favorit <no>* - Kunci/Buka favorit ikan
+│ *.fish tas* - Lihat daftar ikan & umpan
+│ *.fish sellall* - Jual semua ikan (kecuali favorit)
+│ *.shop* - Toko Umpan, Potion, Rod, & Pass Waktu
 │
 ╰────────────────────────╯`;
   await sock.sendMessage(msg.key.remoteJid, { text: helpText }, { quoted: msg });
@@ -442,6 +508,6 @@ async function fishingHelpCommand(sock, msg) {
 
 module.exports = {
   handleFishingCommand, fishCommand, inventoryCommand, sellCommand,
-  sellAllCommand, statsCommand, fishingHelpCommand, pakaiPotionCommand, rodCommand, switchRodCommand, startAutoFish, stopAutoFish
+  sellAllCommand, statsCommand, fishingHelpCommand, pakaiPotionCommand, rodCommand, switchRodCommand, startAutoFish, stopAutoFish, favoritCommand
 };
-                                                                       
+        
