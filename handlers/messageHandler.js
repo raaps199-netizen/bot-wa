@@ -221,30 +221,45 @@ async function handleMessage(sock, msg) {
     const command = args.shift().toLowerCase();
 
     switch (command) {
-            // ==========================================
-      // 🎣 COMMAND FISHING & SHOP
-      // ==========================================
-      case 'fish':
-      case 'mancing':
-            await handleFishingCommand(sock, msg, command, args, senderId);
-            break;
-      case 'lnj':
-      case 'lanjut':
-            await handleFishingCommand(sock, msg, 'fish', ['lnj', ...args], senderId);
-            break;
-      case 'shop':
-      case 'toko':
+
+        
+                // 🎣 COMMAND FISHING & SHOP
+    case 'fish':
+    case 'mancing':
+        await handleFishingCommand(sock, msg, command, args, senderId);
+        break;
+
+    case 'lnj':
+    case 'lanjut':
+        await handleFishingCommand(sock, msg, 'fish', ['lnj', ...args], senderId);
+        break;
+
+    case 'start':
+    case 'stop':
+    case 'autofish':
+    case 'auto':
+        await handleFishingCommand(sock, msg, command, args, senderId);
+        break;
+
+    case 'favorit':
+    case 'fav':
+        await handleFishingCommand(sock, msg, command, args, senderId);
+        break;
+
+    case 'shop':
+    case 'toko':
         await handleShopCommand(sock, msg, args, senderId);
         break;
 
-      case 'beli':
-      case 'buy':
+    case 'beli':
+    case 'buy':
         await handleBeliCommand(sock, msg, args, senderId);
         break;
 
-      case 'aurora':
+    case 'aurora':
         await auroraCommand(sock, msg, args);
         break;
+
 
       // ==========================================
       // 📅 COMMAND JADWAL & PIKET KELAS
