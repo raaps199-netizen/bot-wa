@@ -58,11 +58,11 @@ _Ayo segera pakai umpan terbaikmu dan ketik .mancing atau .lnj sekarang juga unt
   });
 
   // Aktifkan Buff Luck Server 5x di Global Database
-  global.serverAuroraEvent = {
+    global.serverAuroraEvent = {
     active: true,
-    multiplier: 15,
+    multiplier: 15, // Sesuaikan angka multiplier di sini
     expiresAt: Date.now() + (durationInSeconds * 1000)
   };
-}
+
 
 module.exports = auroraCommand;
