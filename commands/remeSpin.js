@@ -1,8 +1,8 @@
-// File: commands/remeSpin.js
-const helper = require('../utils/helper');
-const { getSenderId } = require('../utils/jid-utils');
+// File: commands/remeSpin.js[span_2](start_span)[span_2](end_span)
+const helper = require('../utils/helper');[span_3](start_span)[span_3](end_span)
+const { getSenderId } = require('../utils/jid-utils');[span_4](start_span)[span_4](end_span)
 
-function safeAddPoints(userJid, amount) {
+function safeAddPoints(userJid, amount) {[span_5](start_span)[span_5](end_span)
   if (typeof helper.addPoints === 'function') {
     try { helper.addPoints(global.db, userJid, amount); } catch (e) {
       try { helper.addPoints(userJid, 'reme', amount); } catch (err) {}
@@ -10,7 +10,7 @@ function safeAddPoints(userJid, amount) {
   }
 }
 
-function safeDeductPoints(userJid, amount) {
+function safeDeductPoints(userJid, amount) {[span_6](start_span)[span_6](end_span)
   if (typeof helper.deductPoints === 'function') {
     try { helper.deductPoints(global.db, userJid, amount); } catch (e) {
       try { helper.deductPoints(userJid, amount); } catch (err) {}
@@ -18,34 +18,35 @@ function safeDeductPoints(userJid, amount) {
   }
 }
 
-function hitungReme(angka) {
+function hitungReme(angka) {[span_7](start_span)[span_7](end_span)
   if (angka === undefined || angka === null || isNaN(angka)) return { finalNum: 0, isSpecial: null };
   if (angka === 0) return { finalNum: 0, isSpecial: 'win3x' };
   if (angka === 9) return { finalNum: -1, isSpecial: 'autolose' };
 
+  // 1. Jumlahkan semua digit angka (Contoh: 28 -> 2 + 8 = 10)
   let sum = String(angka).split('').reduce((acc, digit) => acc + parseInt(digit), 0);
-  while (sum > 9) {
-    sum = String(sum).split('').reduce((acc, digit) => acc + parseInt(digit), 0);
-  }
+  
+  // 2. Ambil angka paling belakang saja (Contoh: 10 -> 0)
+  let finalSum = sum % 10;
 
-  if (sum === 9) return { finalNum: -1, isSpecial: 'autolose' };
-  if (sum === 0) return { finalNum: 0, isSpecial: 'win3x' };
+  if (finalSum === 9) return { finalNum: -1, isSpecial: 'autolose' };
+  if (finalSum === 0) return { finalNum: 0, isSpecial: 'win3x' };
 
-  return { finalNum: sum, isSpecial: null };
+  return { finalNum: finalSum, isSpecial: null };
 }
 
-function fmtResult(res) {
+function fmtResult(res) {[span_8](start_span)[span_8](end_span)
   if (res.isSpecial === 'autolose') return '9 (Auto Lose)';
   if (res.isSpecial === 'win3x') return '0 (Auto Win 3x)';
   return res.finalNum;
 }
 
-function baseNum(jid) {
+function baseNum(jid) {[span_9](start_span)[span_9](end_span)
   if (!jid) return '';
   return jid.split('@')[0].split(':')[0];
 }
 
-async function finishGame(sock, remoteJid, game, isVsBot) {
+async function finishGame(sock, remoteJid, game, isVsBot) {[span_10](start_span)[span_10](end_span)
   try {
     const [p1, p2] = game.players;
     const scoreP1 = game.scores[p1] || 0;
@@ -57,9 +58,9 @@ async function finishGame(sock, remoteJid, game, isVsBot) {
 
     const bet = game.bet || 0;
     const potReward = bet * 2;
+    const formatRp = helper.formatRupiah || (val => `Rp${val.toLocaleString()}`);
 
     if (scoreP1 > scoreP2) {
-      // Tambah statistik remeWin untuk P1
       if (typeof helper.getUserData === 'function') {
         const userP1 = helper.getUserData(global.db, p1);
         userP1.remeWin = (userP1.remeWin || 0) + 1;
@@ -69,14 +70,13 @@ async function finishGame(sock, remoteJid, game, isVsBot) {
       if (bet > 0) {
         if (isVsBot) {
           safeAddPoints(p1, bet);
-          finalMsg += `\n💰 Menang lawan bot, dapet hadiah *+${bet} Poin*!`;
+          finalMsg += `\n💰 Menang lawan bot, dapet hadiah *+${formatRp(bet)}*!`;
         } else {
           safeAddPoints(p1, potReward);
-          finalMsg += `\n💰 @${p1.split('@')[0]} menang, mengambil Total Pot *+${potReward} Poin*!`;
+          finalMsg += `\n💰 @${p1.split('@')[0]} menang, mengambil Total Pot *+${formatRp(potReward)}*!`;
         }
       }
     } else if (scoreP2 > scoreP1) {
-      // Tambah statistik remeWin untuk P2 (jika bukan bot)
       if (!isVsBot && typeof helper.getUserData === 'function') {
         const userP2 = helper.getUserData(global.db, p2);
         userP2.remeWin = (userP2.remeWin || 0) + 1;
@@ -86,10 +86,10 @@ async function finishGame(sock, remoteJid, game, isVsBot) {
       if (bet > 0) {
         if (isVsBot) {
           safeDeductPoints(p1, bet);
-          finalMsg += `\n💀 Kalah lawan bot, poin lu berkurang *-${bet} Poin*!`;
+          finalMsg += `\n💀 Kalah lawan bot, saldo lu berkurang *-${formatRp(bet)}*!`;
         } else {
           safeAddPoints(p2, potReward);
-          finalMsg += `\n💀 @${p1.split('@')[0]} kalah, Total Pot *${potReward} Poin* ditarik ke @${p2.split('@')[0]}!`;
+          finalMsg += `\n💀 @${p1.split('@')[0]} kalah, Total Pot *${formatRp(potReward)}* ditarik ke @${p2.split('@')[0]}!`;
         }
       }
     } else {
@@ -97,9 +97,9 @@ async function finishGame(sock, remoteJid, game, isVsBot) {
       if (bet > 0 && !isVsBot) {
         safeAddPoints(p1, bet);
         safeAddPoints(p2, bet);
-        finalMsg += ` Poin lu berdua (*${bet}*) aman dikembalikan!`;
+        finalMsg += ` Saldo lu berdua (*${formatRp(bet)}*) aman dikembalikan!`;
       } else {
-        finalMsg += ` Poin aman.`;
+        finalMsg += ` Saldo aman.`;
       }
     }
 
@@ -113,7 +113,7 @@ async function finishGame(sock, remoteJid, game, isVsBot) {
   }
 }
 
-async function processRoundEnd(sock, remoteJid, game, rolls, isVsBot) {
+async function processRoundEnd(sock, remoteJid, game, rolls, isVsBot) {[span_11](start_span)[span_11](end_span)
   const [p1, p2] = game.players;
   
   const raw1 = rolls[p1] !== undefined ? rolls[p1] : Object.values(rolls)[0];
@@ -140,7 +140,7 @@ async function processRoundEnd(sock, remoteJid, game, rolls, isVsBot) {
   summaryText += `• ${isVsBot ? 'Bot' : '@' + p2.split('@')[0]} : ${raw2} (Reme: ${fmtResult(d2)})\n\n`;
 
   if (roundWinner === 'tie') {
-    summaryText += `⚖️ Ronde ${game.round} *SERI*! Poin tidak bertambah.`;
+    summaryText += `⚖️ Ronde ${game.round} *SERI*! Saldo tidak bertambah.`;
   } else {
     game.scores[roundWinner] = (game.scores[roundWinner] || 0) + 1;
     const winnerLabel = roundWinner === p1
@@ -173,7 +173,7 @@ async function processRoundEnd(sock, remoteJid, game, rolls, isVsBot) {
   await sock.sendMessage(remoteJid, { text: nextText, mentions: [p1] });
 }
 
-async function spinCommand(sock, msg) {
+async function spinCommand(sock, msg) {[span_12](start_span)[span_12](end_span)
   try {
     const remoteJid = msg.key.remoteJid;
     const senderId = getSenderId(msg, remoteJid);
@@ -253,4 +253,4 @@ async function spinCommand(sock, msg) {
   }
 }
 
-module.exports = spinCommand;
+module.exports = spinCommand;[span_13](start_span)[span_13](end_span)
