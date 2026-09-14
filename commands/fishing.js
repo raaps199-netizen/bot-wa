@@ -7,12 +7,27 @@ const {
 const { getUserData, getTotalScore, addPoints, deductPoints } = require('../utils/helper');
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+global.activeAutoFish = global.activeAutoFish || {};
 
 async function handleFishingCommand(sock, msg, primaryCommand, args, sender) {
   let subCmd = args[0]?.toLowerCase();
   let subArgs = args.slice(1);
 
   try {
+    // 1. Direct command .lnj / .lanjut (Manual Mancing Cepat)
+    if (['lnj', 'lanjut'].includes(primaryCommand)) {
+      return await fishCommand(sock, msg, sender, true, subCmd);
+    }
+
+    // 2. Direct command .start auto & .stop auto
+    if (primaryCommand === 'start' && subCmd === 'auto') {
+      return await startAutoFish(sock, msg, sender, subArgs[0]);
+    }
+
+    if (primaryCommand === 'stop' && subCmd === 'auto') {
+      return await stopAutoFish(sock, msg, sender);
+    }
+
     if (primaryCommand === 'mancing') {
       if (!subCmd) {
         return await sock.sendMessage(msg.key.remoteJid, { 
@@ -67,6 +82,13 @@ async function handleFishingCommand(sock, msg, primaryCommand, args, sender) {
         case 'pakaijoran':
         case 'setrod':
           return await switchRodCommand(sock, msg, sender, subArgs);
+
+        case 'autofish':
+        case 'auto':
+          if (subArgs[0] === 'stop') {
+            return await stopAutoFish(sock, msg, sender);
+          }
+          return await startAutoFish(sock, msg, sender, subArgs[0]);
         
         case 'help':
         case 'bantuan':
@@ -80,20 +102,92 @@ async function handleFishingCommand(sock, msg, primaryCommand, args, sender) {
   }
 }
 
-async function fishCommand(sock, msg, sender, isLnj = false, inputBait = null) {
+async function startAutoFish(sock, msg, sender, baitInput) {
   const remoteJid = msg.key.remoteJid;
   const user = global.db.users[sender] || {};
+  const now = Date.now();
 
-  // ⏱️ CEK MASA AKTIF AUTO-FISH PASS SAAT .LNJ
-  if (isLnj) {
-    const now = Date.now();
-    const isAutoActive = user.autoFishingUntil && user.autoFishingUntil > now;
-    if (!isAutoActive) {
-      return await sock.sendMessage(remoteJid, { 
-        text: `❌ *Waktu Auto-Fish kamu sudah habis!* \n\nSilakan beli pass durasi waktu terlebih dahulu di shop:\n👉 *.shop auto*\n👉 *.beli auto5m*` 
-      }, { quoted: msg });
-    }
+  if (!user.autoFishingUntil || user.autoFishingUntil <= now) {
+    return await sock.sendMessage(remoteJid, {
+      text: `❌ *Kamu belum memiliki Auto-Fish Pass aktif!*\n\nBeli durasi terlebih dahulu di shop:\n👉 *.shop auto*\n👉 *.beli auto5m*`
+    }, { quoted: msg });
   }
+
+  if (global.activeAutoFish[sender]) {
+    return await sock.sendMessage(remoteJid, {
+      text: `⚠️ *Auto-Fish kamu sudah berjalan!*\nKetik *.stop auto* untuk menghentikan.`
+    }, { quoted: msg });
+  }
+
+  let baitId = baitInput?.toLowerCase() || user.lastBait || 'roti';
+  if (!baits[baitId]) baitId = 'roti';
+
+  if (getBaitCount(sender, baitId) < 1) {
+    return await sock.sendMessage(remoteJid, {
+      text: `❌ Stok umpan *${baits[baitId].name}* kamu habis!\nSilakan beli terlebih dahulu di *.shop*`
+    }, { quoted: msg });
+  }
+
+  global.activeAutoFish[sender] = true;
+  const sisaMenit = Math.ceil((user.autoFishingUntil - now) / 60000);
+
+  await sock.sendMessage(remoteJid, {
+    text: `🤖 ⚙️ *AUTO-FISH STARTED!*\n\n🪱 Umpan: *${baits[baitId].name}*\n⏱️ Sisa Durasi Pass: *~${sisaMenit} Menit*\n\n_Bot akan memancing otomatis secara terus-menerus.\nKetik *.stop auto* kapan saja untuk berhenti!_`
+  }, { quoted: msg });
+
+  runAutoFishLoop(sock, msg, sender, baitId);
+}
+
+async function stopAutoFish(sock, msg, sender) {
+  const remoteJid = msg.key.remoteJid;
+  if (!global.activeAutoFish[sender]) {
+    return await sock.sendMessage(remoteJid, { 
+      text: `⚠️ Auto-Fish kamu sedang tidak aktif!` 
+    }, { quoted: msg });
+  }
+
+  global.activeAutoFish[sender] = false;
+  await sock.sendMessage(remoteJid, { 
+    text: `🛑 *AUTO-FISH BERHASIL DIHENTIKAN!*` 
+  }, { quoted: msg });
+}
+
+async function runAutoFishLoop(sock, msg, sender, baitId) {
+  const remoteJid = msg.key.remoteJid;
+
+  while (global.activeAutoFish[sender]) {
+    const user = global.db.users[sender] || {};
+    const now = Date.now();
+
+    if (!user.autoFishingUntil || user.autoFishingUntil <= now) {
+      global.activeAutoFish[sender] = false;
+      await sock.sendMessage(remoteJid, {
+        text: `🛑 *AUTO-FISH BERHENTI!*\n\n⏱️ Masa aktif Auto-Fish Pass kamu telah habis. Beli lagi di *.shop auto*!`
+      });
+      break;
+    }
+
+    if (getBaitCount(sender, baitId) < 1) {
+      global.activeAutoFish[sender] = false;
+      await sock.sendMessage(remoteJid, {
+        text: `🛑 *AUTO-FISH BERHENTI!*\n\n🪱 Stok umpan *${baits[baitId].name}* kamu habis. Beli lagi di *.shop*!`
+      });
+      break;
+    }
+
+    try {
+      await fishCommand(sock, msg, sender, true, baitId, true);
+    } catch (e) {
+      console.error('Error during auto fish step:', e);
+    }
+
+    await delay(2000);
+  }
+}
+
+async function fishCommand(sock, msg, sender, isLnj = false, inputBait = null, isAutoLoop = false) {
+  const remoteJid = msg.key.remoteJid;
+  const user = global.db.users[sender] || {};
 
   const activeRodId = user.activeRod || 'training';
   const currentRod = rods[activeRodId] || rods['training'];
@@ -143,6 +237,7 @@ async function fishCommand(sock, msg, sender, isLnj = false, inputBait = null) {
   }
 
   for (let i = timerDuration - 1; i >= 1; i--) {
+    if (isAutoLoop && !global.activeAutoFish[sender]) return;
     await delay(1000);
     await sock.sendMessage(remoteJid, {
       text: `🎣 *Melempar kail dengan ${currentRod.name}* (${baits[baitId].name})...${buffText}\n⏱️ Menunggu ikan menyambar: *${i} detik*`,
@@ -167,7 +262,7 @@ async function fishCommand(sock, msg, sender, isLnj = false, inputBait = null) {
 │ 🪱 Sisa Umpan: ${getBaitCount(sender, baitId)}x
 │
 ╰────────────────────────╯
-_Ketik *.lnj* untuk lanjut mancing cepat!_`;
+_Ketik *.lnj* untuk manual / *.start auto* untuk AFK!_`;
 
   await sock.sendMessage(remoteJid, { text: resultText, edit: sentMsg.key });
   
@@ -331,7 +426,9 @@ async function fishingHelpCommand(sock, msg) {
 │
 │ 📌 *COMMANDS:*
 │ *.mancing <umpan>* - Mulai mancing
-│ *.lnj* - Lanjut mancing (butuh Auto-Pass)
+│ *.lnj* - Lanjut mancing manual
+│ *.start auto* - Mulai auto-mancing (AFK)
+│ *.stop auto* - Hentikan auto-mancing
 │ *.fish rod* - Cek & ganti joran aktif
 │ *.shop auto* - Beli durasi auto-mancing
 │ *.shop joran* - Beli joran baru
@@ -345,5 +442,6 @@ async function fishingHelpCommand(sock, msg) {
 
 module.exports = {
   handleFishingCommand, fishCommand, inventoryCommand, sellCommand,
-  sellAllCommand, statsCommand, fishingHelpCommand, pakaiPotionCommand, rodCommand, switchRodCommand
+  sellAllCommand, statsCommand, fishingHelpCommand, pakaiPotionCommand, rodCommand, switchRodCommand, startAutoFish, stopAutoFish
 };
+                                                                       
