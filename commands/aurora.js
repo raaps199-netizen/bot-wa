@@ -63,6 +63,6 @@ _Ayo segera pakai umpan terbaikmu dan ketik .mancing atau .lnj sekarang juga unt
     multiplier: 15, // Sesuaikan angka multiplier di sini
     expiresAt: Date.now() + (durationInSeconds * 1000)
   };
-
+}
 
 module.exports = auroraCommand;
