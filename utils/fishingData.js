@@ -107,11 +107,12 @@ function getRandomCatch(activePotionId = 'normal', userRodId = 'training') {
   let rod = rods[userRodId] || rods['training'];
   let rand = Math.random() * 100;
   
-  // 1. Cek Event Aurora Server
+  // 🌟 1. CEK EVENT AURORA SERVER & TARIK ANGKA RANDOM
   const aurora = global.serverAuroraEvent;
   if (aurora && aurora.active) {
     if (aurora.expiresAt > Date.now()) {
-      const boostFactor = 0.45;
+      // Server aurora mendongkrak hoki berdasarkan multiplier-nya
+      const boostFactor = Math.min(0.85, 0.3 * (aurora.multiplier / 5));
       rand = rand + (100 - rand) * boostFactor;
     } else {
       aurora.active = false;
@@ -138,7 +139,7 @@ function getRandomCatch(activePotionId = 'normal', userRodId = 'training') {
 
   const baseItem = items[Math.floor(Math.random() * items.length)];
 
-  // 3. Roll Mutasi dengan Memperhitungkan mutationBonus dari Joran
+  // 3. Roll Mutasi
   let chosenMutation = null;
   let mutationChanceMultiplier = rod.mutationBonus || 1.0;
 
@@ -168,6 +169,7 @@ function getRandomCatch(activePotionId = 'normal', userRodId = 'training') {
     id: `${rarity}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   };
 }
+
 
 module.exports = {
   fishingItems,
