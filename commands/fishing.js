@@ -84,11 +84,20 @@ async function fishCommand(sock, msg, sender, isLnj = false, inputBait = null) {
   const remoteJid = msg.key.remoteJid;
   const user = global.db.users[sender] || {};
 
-  // 1. Cek Joran Aktif User (Default: Training Rod)
+  // ⏱️ CEK MASA AKTIF AUTO-FISH PASS SAAT .LNJ
+  if (isLnj) {
+    const now = Date.now();
+    const isAutoActive = user.autoFishingUntil && user.autoFishingUntil > now;
+    if (!isAutoActive) {
+      return await sock.sendMessage(remoteJid, { 
+        text: `❌ *Waktu Auto-Fish kamu sudah habis!* \n\nSilakan beli pass durasi waktu terlebih dahulu di shop:\n👉 *.shop auto*\n👉 *.beli auto5m*` 
+      }, { quoted: msg });
+    }
+  }
+
   const activeRodId = user.activeRod || 'training';
   const currentRod = rods[activeRodId] || rods['training'];
 
-  // 2. Tentukan umpan yang dipakai
   let baitId = inputBait?.toLowerCase();
   if (!baitId && isLnj && user.lastBait) {
     baitId = user.lastBait;
@@ -117,7 +126,6 @@ async function fishCommand(sock, msg, sender, isLnj = false, inputBait = null) {
   const activeBuffId = getActiveBuff(sender);
   const buffText = activeBuffId ? `\n🧪 *Potion:* ${potions[activeBuffId].name}` : '';
   
-  // Gunakan Timer dari Joran Aktif!
   const timerDuration = currentRod.timer;
 
   const startingText = `🎣 *Melempar kail dengan ${currentRod.name}* (${baits[baitId].name})...${buffText}\n⏱️ Menunggu ikan menyambar: *${timerDuration} detik*`;
@@ -143,7 +151,6 @@ async function fishCommand(sock, msg, sender, isLnj = false, inputBait = null) {
   }
   await delay(1000);
   
-  // 3. Tangkap Ikan Berdasarkan Potion & Joran Aktif (Luck & Mutasi)
   const catch_item = getRandomCatch(activeBuffId || 'normal', activeRodId);
   addItem(sender, catch_item);
   
@@ -256,12 +263,13 @@ async function inventoryCommand(sock, msg, sender) {
 │ 💰 Total Nilai: ${summary.totalValue} Poin
 │
 │ ⚪ Common: ${summary.byRarity.COMMON || 0}
-│ 🟢 Uncommon: ${summary.byRarity.UNCOMMON || 0}
+│ 🟢 Uncommon: ${summary.byRanimy || summary.byRarity.UNCOMMON || 0}
 │ 🔵 Rare: ${summary.byRarity.RARE || 0}
 │ 🟣 Epic: ${summary.byRarity.EPIC || 0}
 │ 🟡 Legendary: ${summary.byRarity.LEGENDARY || 0}
 │ 🔴 Mythic: ${summary.byRarity.MYTHIC || 0}
 │ 🌟 Divine: ${summary.byRarity.DIVINE || 0}
+│ 🔮 Secret: ${summary.byRarity.SECRET || 0}
 │
 ├────────────────────────┤
 │ ${baitList.replace(/\n/g, '\n│ ')}
@@ -323,8 +331,9 @@ async function fishingHelpCommand(sock, msg) {
 │
 │ 📌 *COMMANDS:*
 │ *.mancing <umpan>* - Mulai mancing
-│ *.lnj* - Lanjut mancing cepat
+│ *.lnj* - Lanjut mancing (butuh Auto-Pass)
 │ *.fish rod* - Cek & ganti joran aktif
+│ *.shop auto* - Beli durasi auto-mancing
 │ *.shop joran* - Beli joran baru
 │ *.fish tas* - Lihat isi tas
 │ *.fish sellall* - Jual semua ikan
@@ -338,4 +347,3 @@ module.exports = {
   handleFishingCommand, fishCommand, inventoryCommand, sellCommand,
   sellAllCommand, statsCommand, fishingHelpCommand, pakaiPotionCommand, rodCommand, switchRodCommand
 };
-  
