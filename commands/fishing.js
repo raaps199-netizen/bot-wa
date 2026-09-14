@@ -4,10 +4,15 @@ const {
   addItem, getInventory, getInventorySummary, sellItem, sellAllItems, getUserStats,
   getActiveBuff, usePotion, getBaitCount, consumeBait
 } = require('../utils/inventoryManager');
-const { getUserData, getTotalScore, addPoints, deductPoints } = require('../utils/helper');
+const { getUserData, getTotalScore, addPoints, deductPoints, formatRupiah } = require('../utils/helper');
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 global.activeAutoFish = global.activeAutoFish || {};
+
+// 👑 Daftar JID / Nomor HP Admin & Owner (Sesuaikan dengan nomor lu)
+const ADMIN_NUMBERS = [
+  '6281234567890@s.whatsapp.net' // 👈 Ganti dengan JID/Nomor kamu!
+];
 
 async function handleFishingCommand(sock, msg, primaryCommand, args, sender) {
   let subCmd = args[0]?.toLowerCase();
@@ -145,7 +150,6 @@ async function startAutoFish(sock, msg, sender, baitInput) {
   global.activeAutoFish[sender] = true;
   const sisaMenit = Math.ceil((user.autoFishingUntil - now) / 60000);
 
-  // Kirim pesan starter dan gunakan ID pesan ini untuk di-edit berulang kali
   let sentMsg = await sock.sendMessage(remoteJid, {
     text: `🤖 ⚙️ *AUTO-FISH STARTED!*\n\n🪱 Umpan: *${baits[baitId].name}*\n⏱️ Sisa Durasi Pass: *~${sisaMenit} Menit*\n\n_Memulai pancingan..._`
   }, { quoted: msg });
@@ -239,8 +243,13 @@ async function fishCommand(sock, msg, sender, isLnj = false, inputBait = null, i
   const activeBuffId = getActiveBuff(sender);
   const buffText = activeBuffId ? `\n🧪 *Potion:* ${potions[activeBuffId].name}` : '';
   
+  const serverLuck = (global.serverAuroraEvent && global.serverAuroraEvent.active) 
+    ? global.serverAuroraEvent.multiplier 
+    : 1.0;
+  const serverLuckText = serverLuck > 1 ? `\n🔥 *Server Luck:* ${serverLuck}x` : '';
+
   const timerDuration = currentRod.timer;
-  const startingText = `🎣 *Melempar kail dengan ${currentRod.name}* (${baits[baitId].name})...${buffText}\n⏱️ Menunggu ikan menyambar: *${timerDuration} detik*`;
+  const startingText = `🎣 *Melempar kail dengan ${currentRod.name}* (${baits[baitId].name})...${buffText}${serverLuckText}\n⏱️ Menunggu ikan menyambar: *${timerDuration} detik*`;
   let sentMsg;
   
   if (editKey) {
@@ -258,7 +267,7 @@ async function fishCommand(sock, msg, sender, isLnj = false, inputBait = null, i
     if (isAutoLoop && !global.activeAutoFish[sender]) return;
     await delay(1000);
     await sock.sendMessage(remoteJid, {
-      text: `🎣 *Melempar kail dengan ${currentRod.name}* (${baits[baitId].name})...${buffText}\n⏱️ Menunggu ikan menyambar: *${i} detik*`,
+      text: `🎣 *Melempar kail dengan ${currentRod.name}* (${baits[baitId].name})...${buffText}${serverLuckText}\n⏱️ Menunggu ikan menyambar: *${i} detik*`,
       edit: sentMsg.key
     });
   }
@@ -275,7 +284,7 @@ async function fishCommand(sock, msg, sender, isLnj = false, inputBait = null, i
 │
 │ ${rarityEmoji_map} *${catch_item.rarity}* Catch
 │ 🐟 Item: ${catch_item.name} ${mutationText}
-│ 💰 Harga: ${catch_item.price} Poin
+│ 💰 Harga: ${formatRupiah(catch_item.price)}
 │ 🔱 Joran: ${currentRod.name}
 │ 🪱 Sisa Umpan: ${getBaitCount(sender, baitId)}x
 │
@@ -307,13 +316,13 @@ async function inventoryCommand(sock, msg, sender) {
   inventory.forEach((item, index) => {
     const emoji = rarityEmoji[item.rarity] || '⚪';
     const favTag = item.isFavorite ? ' ⭐ [FAVORIT]' : '';
-    fishListText += `${index + 1}. ${emoji} *${item.name}* (${item.price} Poin)${favTag}\n`;
+    fishListText += `${index + 1}. ${emoji} *${item.name}* (${formatRupiah(item.price)})${favTag}\n`;
   });
 
   let message = `╭─ 🎣 *INVENTORY ANDA* 🎣 ─╮
 │
 │ 📊 Total Ikan: ${summary.totalItems}
-│ 💰 Total Nilai: ${summary.totalValue} Poin
+│ 💰 Total Nilai: ${formatRupiah(summary.totalValue)}
 │
 ├────────────────────────┤
 ${fishListText.split('\n').map(line => line ? `│ ${line}` : '│').join('\n')}
@@ -364,7 +373,7 @@ async function sellCommand(sock, msg, sender, args) {
   const item = inventory[itemNumber];
   const result = sellItem(sender, item.id);
   if (result.success) {
-    await sock.sendMessage(remoteJid, { text: `✅ Terjual: ${result.itemName} (+${result.priceReceived} Poin)\nTotal Poin Global: ${result.totalPoints}` }, { quoted: msg });
+    await sock.sendMessage(remoteJid, { text: `✅ Terjual: ${result.itemName} (+${formatRupiah(result.priceReceived)})\nTotal Saldo Global: ${formatRupiah(result.totalPoints)}` }, { quoted: msg });
   }
 }
 
@@ -400,8 +409,39 @@ async function sellAllCommand(sock, msg, sender) {
   const keepText = itemsToKeep.length > 0 ? `\n⭐ *${itemsToKeep.length} ikan favorit* tetap tersimpan aman di tas.` : '';
 
   await sock.sendMessage(remoteJid, { 
-    text: `✅ Berhasil menjual *${itemsToSell.length} ikan*!\n💵 Total Pendapatan: *+${totalEarnings} Poin*${keepText}\n💰 Total Poin Global: *${totalPoints}*` 
+    text: `✅ Berhasil menjual *${itemsToSell.length} ikan*!\n💵 Total Pendapatan: *+${formatRupiah(totalEarnings)}*${keepText}\n💰 Total Saldo Global: *${formatRupiah(totalPoints)}*` 
   }, { quoted: msg });
+}
+
+// 🔐 KHUSUS ADMIN / OWNER
+async function handleSetLuckCommand(sock, msg, args, senderId) {
+  const remoteJid = msg.key.remoteJid;
+
+  // Validasi apakah pengirim pesan adalah Admin / Owner
+  if (!ADMIN_NUMBERS.includes(senderId)) {
+    return await sock.sendMessage(remoteJid, { 
+      text: `🚫 *Akses Ditolak!* Perintah ini hanya dapat digunakan oleh Admin Bot.` 
+    }, { quoted: msg });
+  }
+
+  const multiplier = parseFloat(args[0]);
+
+  if (isNaN(multiplier) || multiplier < 1) {
+    return await sock.sendMessage(remoteJid, { 
+      text: `⚠️ *Format Salah!*\n\nGunakan: *.setluck <angka>*\nContoh: *.setluck 2.5* (untuk 2,5x Luck) atau *.setluck 1* (reset normal).` 
+    }, { quoted: msg });
+  }
+
+  global.serverAuroraEvent = global.serverAuroraEvent || {};
+  global.serverAuroraEvent.active = multiplier > 1;
+  global.serverAuroraEvent.multiplier = multiplier;
+  global.serverAuroraEvent.expiresAt = Date.now() + (24 * 60 * 60 * 1000); 
+
+  const statusText = multiplier > 1 
+    ? `🔥 *SERVER LUCK BOOST AKTIF!*\n\nMultiplier server berhasil diubah menjadi *${multiplier}x* hoki!` 
+    : `🔄 *SERVER LUCK NORMAL!*\n\nMultiplier server telah di-reset ke *1x* (Normal).`;
+
+  await sock.sendMessage(remoteJid, { text: statusText }, { quoted: msg });
 }
 
 async function rodCommand(sock, msg, sender) {
@@ -474,12 +514,12 @@ async function pakaiPotionCommand(sock, msg, sender, args) {
 async function statsCommand(sock, msg, sender) {
   const remoteJid = msg.key.remoteJid;
   const stats = getUserStats(sender);
-  let bestCatchText = stats.bestCatch ? `${stats.bestCatch.name} (${stats.bestCatch.price} Poin)` : 'Belum ada';
+  let bestCatchText = stats.bestCatch ? `${stats.bestCatch.name} (${formatRupiah(stats.bestCatch.price)})` : 'Belum ada';
   
   const message = `
 ╭─ 📊 *FISHING STATISTICS* 📊 ─╮
 │
-│ 💰 Poin Global: ${stats.totalPoints}
+│ 💰 Saldo Global: ${formatRupiah(stats.totalPoints)}
 │ 🎣 Total Ikan: ${stats.totalFish}
 │ 🎒 Isi Tas: ${stats.inventoryCount} item
 │ 🏆 Tangkapan Terbaik: ${bestCatchText}
@@ -501,6 +541,7 @@ async function fishingHelpCommand(sock, msg) {
 │ *.fish tas* - Lihat daftar ikan & umpan
 │ *.fish sellall* - Jual semua ikan (kecuali favorit)
 │ *.shop* - Toko Umpan, Potion, Rod, & Pass Waktu
+│ *.setluck <angka>* - Set multiplier server luck (Admin Only)
 │
 ╰────────────────────────╯`;
   await sock.sendMessage(msg.key.remoteJid, { text: helpText }, { quoted: msg });
@@ -508,6 +549,5 @@ async function fishingHelpCommand(sock, msg) {
 
 module.exports = {
   handleFishingCommand, fishCommand, inventoryCommand, sellCommand,
-  sellAllCommand, statsCommand, fishingHelpCommand, pakaiPotionCommand, rodCommand, switchRodCommand, startAutoFish, stopAutoFish, favoritCommand
+  sellAllCommand, statsCommand, fishingHelpCommand, pakaiPotionCommand, rodCommand, switchRodCommand, startAutoFish, stopAutoFish, favoritCommand, handleSetLuckCommand
 };
-        
