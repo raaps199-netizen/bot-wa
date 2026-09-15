@@ -37,13 +37,29 @@ async function handleEventCommand(sock, msg, args, senderId) {
 
     let selectedBoss;
     if (subCmd === 'kraken') {
-      selectedBoss = { name: '🐙 The Ancient Kraken', hp: 500000, maxHp: 500000, reward: 15000000 };
+      selectedBoss = { 
+        name: '🐙 The Ancient Kraken', 
+        hp: 500000, 
+        maxHp: 500000, 
+        reward: 15000000,
+        material: 'Kraken Tentacle',
+        minMat: 1, maxMat: 4,
+        minFrag: 2, maxFrag: 5
+      };
     } else if (subCmd === 'megalodon') {
-      selectedBoss = { name: '🦈 Megalodon Purba Raksasa', hp: 750000, maxHp: 750000, reward: 22000000 };
+      selectedBoss = { 
+        name: '🦈 Megalodon Purba Raksasa', 
+        hp: 750000, 
+        maxHp: 750000, 
+        reward: 22000000,
+        material: 'Megalodon Tooth',
+        minMat: 1, maxMat: 10,
+        minFrag: 5, maxFrag: 10
+      };
     } else {
       const bossList = [
-        { name: '🐙 The Ancient Kraken', hp: 500000, maxHp: 500000, reward: 15000000 },
-        { name: '🦈 Megalodon Purba Raksasa', hp: 750000, maxHp: 750000, reward: 22000000 }
+        { name: '🐙 The Ancient Kraken', hp: 500000, maxHp: 500000, reward: 15000000, material: 'Kraken Tentacle', minMat: 1, maxMat: 4, minFrag: 2, maxFrag: 5 },
+        { name: '🦈 Megalodon Purba Raksasa', hp: 750000, maxHp: 750000, reward: 22000000, material: 'Megalodon Tooth', minMat: 1, maxMat: 10, minFrag: 5, maxFrag: 10 }
       ];
       selectedBoss = bossList[Math.floor(Math.random() * bossList.length)];
     }
@@ -53,6 +69,11 @@ async function handleEventCommand(sock, msg, args, senderId) {
       hp: selectedBoss.hp,
       maxHp: selectedBoss.maxHp,
       reward: selectedBoss.reward,
+      material: selectedBoss.material,
+      minMat: selectedBoss.minMat,
+      maxMat: selectedBoss.maxMat,
+      minFrag: selectedBoss.minFrag,
+      maxFrag: selectedBoss.maxFrag,
       damagers: {},
       participants: {},
       hasEvolved: false
@@ -84,11 +105,12 @@ async function handleEventCommand(sock, msg, args, senderId) {
     }, 5 * 60 * 1000);
 
     let announcement = `🚨 *WORLD BOSS MUNCUL DI PERAIRAN!* 🚨\n\n`;
-    announcement += `⚠️ Monster legendaris *${selectedBoss.name}* menampakkan diri dan mengunci seluruh aktivitas!\n`;
+    announcement += `⚠️ Monster legendaris *${selectedBoss.name}* menampakkan diri!\n`;
     announcement += `⏱️ Batas Waktu: *5 Menit*\n`;
     announcement += `❤️ Total HP Boss: *${selectedBoss.hp.toLocaleString()}*\n`;
+    announcement += `🎁 Drop Material: *${selectedBoss.material}* & *Rebirth Fragments*\n`;
     announcement += `💰 Hadiah Utama: *${formatRupiah(selectedBoss.reward)}*\n\n`;
-    announcement += `🔒 *Semua aktivitas game dibekukan!* Warga wajib mengetik *.serang* untuk melawan atau harta kalian dijarah 40%!\n\n`;
+    announcement += `🔒 *Semua aktivitas game dibekukan!* Warga wajib mengetik *.serang* untuk melawan atau harta dijarah 40%!\n\n`;
     announcement += `_Segera angkat senjata!_`;
 
     return await sock.sendMessage(remoteJid, {
@@ -205,10 +227,27 @@ async function handleAttackBossCommand(sock, msg, senderId) {
     }
 
     if (topAttacker) {
+      // 1. Berikan Poin Utama & Kills ke Top Attacker
       addPoints(global.db, topAttacker, bossData.reward);
-      
       const topUserData = getUserData(global.db, topAttacker);
       topUserData.bossKills = (topUserData.bossKills || 0) + 1;
+
+      // 2. DISTRIBUSI LOOT RANDOM KE SEMUA PARTISIPAN (MASUK INVENTORY)
+      const allDamagers = Object.keys(bossData.damagers);
+      allDamagers.forEach(uid => {
+        const uData = getUserData(global.db, uid);
+        
+        uData.inventory = uData.inventory || {};
+        uData.inventory.materials = uData.inventory.materials || {};
+
+        // Random jumlah material (Kraken: 1-4, Megalodon: 1-10)
+        const matEarned = Math.floor(Math.random() * (bossData.maxMat - bossData.minMat + 1)) + bossData.minMat;
+        // Random jumlah fragments
+        const fragEarned = Math.floor(Math.random() * (bossData.maxFrag - bossData.minFrag + 1)) + bossData.minFrag;
+
+        uData.inventory.materials[bossData.material] = (uData.inventory.materials[bossData.material] || 0) + matEarned;
+        uData.inventory.rebirthFragments = (uData.inventory.rebirthFragments || 0) + fragEarned;
+      });
 
       if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
@@ -217,9 +256,9 @@ async function handleAttackBossCommand(sock, msg, senderId) {
         text: `🎉 *VICTORY! BOSS TERKUAT BERHASIL DIKALAHKAN!* 🎉\n\n` +
               `💥 Pukulan pemungkas oleh @${userNum}!\n` +
               `🏆 *Top Damage:* @${topNum} (${maxDmg.toLocaleString()} Total Damage)\n` +
-              `🎖️ *Top Attacker Mendapat Poin & Progress Gelar Boss Slayer!*\n` +
-              `💰 Hadiah jumbo *${formatRupiah(bossData.reward)}* langsung dikirim ke pemenang!\n` +
-              `🔓 *Lockdown dicabut, harta warga aman dari jarahan!*`,
+              `💰 Hadiah Utama *${formatRupiah(bossData.reward)}* dikirim ke Top Attacker!\n` +
+              `🎁 *Bonus Loot:* Material & Rebirth Fragments berhasil masuk ke Inventory (.inv) masing-masing partisipan!\n` +
+              `🔓 *Lockdown dicabut, harta warga aman!*`,
         mentions: [senderId, topAttacker]
       }, { quoted: msg });
     }
