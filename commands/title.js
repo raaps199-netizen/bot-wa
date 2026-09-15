@@ -90,6 +90,18 @@ const TITLES_CONFIG = {
       { min: 5,  name: 'Titan Destroyer' },
       { min: 10, name: 'Legendary Conqueror' }
     ]
+  },
+  rebirth: {
+    label: '✨ REBIRTH (Prestige)',
+    unit: 'Tier',
+    list: [
+      { min: 0,  name: 'Novice' },
+      { min: 1,  name: 'Reborn I' },
+      { min: 2,  name: 'Reborn II' },
+      { min: 3,  name: 'Reborn III' },
+      { min: 5,  name: 'Transcendent' },
+      { min: 10, name: 'God of Rebirth' }
+    ]
   }
 };
 
@@ -145,7 +157,8 @@ module.exports = async function titleCommand(sock, msg, args) {
       trivia: user.triviaCount || 0,
       math: user.mathCount || 0,
       mancing: user.totalFish || 0,
-      boss: user.bossKills || 0
+      boss: user.bossKills || 0,
+      rebirth: user.rebirthLevel || 0
     };
 
     const subCommand = args[0] ? args[0].toLowerCase() : null;
@@ -158,8 +171,8 @@ module.exports = async function titleCommand(sock, msg, args) {
         return await sock.sendMessage(remoteJid, {
           text: `⚠️ *Format Salah, Bre!*\n\n` +
                 `📌 Cara Pakai: *.title pakai <kategori> <nomor_gelar>*\n` +
-                `💡 Contoh: *.title pakai boss 2*\n` +
-                `💡 Cek list & nomornya via: *.title boss*`
+                `💡 Contoh: *.title pakai rebirth 2*\n` +
+                `💡 Cek list & nomornya via: *.title rebirth*`
         }, { quoted: msg });
       }
 
@@ -263,7 +276,7 @@ module.exports = async function titleCommand(sock, msg, args) {
     caption += `🔍 *Lihat List Gelar:* Ketik *.title <kategori>*\n`;
     caption += `👉 *Pasang Gelar:* Ketik *.title pakai <kategori> <nomor>*\n`;
     caption += `❌ *Lepas Gelar:* Ketik *.title lepas*\n`;
-    caption += `📌 Contoh: *.title boss* lalu *.title pakai boss 2*`;
+    caption += `📌 Contoh: *.title rebirth* lalu *.title pakai rebirth 2*`;
 
     await sock.sendMessage(remoteJid, {
       text: caption,
@@ -277,3 +290,4 @@ module.exports = async function titleCommand(sock, msg, args) {
     }, { quoted: msg });
   }
 };
+        
