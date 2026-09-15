@@ -92,14 +92,7 @@ function acakArray(array) {
 // ==========================================
 // 🚨 DAFTAR KATA TERLARANG (FULL LIST)
 // ==========================================
-const BAD_WORDS = [
-  'g0bl0k', 'b3g0', 't0l0l', 'k0nt0l', 'm3m3k', 'rule34', 'ng3nt0t', 'j4nc0k',
-  'b4ngs4t', 't4i', 'p4nt3k', 'asuuu', 'kontooool', 'memekk', 'jancokkktai',
-  'kontol', 'memek', 'ngentot', 'jancok', 'cok', 'fuck', 'kintil', 'pantek',
-  'anjing', 'monyet', 'kimak', 'lonte', 'sundal', 'nekopoi', 'porno', 'porn',
-  'pornografi', 'ph', 'pornhub', 'porn hub', 'brutal sez', 'brutal sex',
-  'gay porn', 'nhentai', 'xvideos', 'xnxx', 'sex', 'anj', 'anjg', 'ngewe', 'tai', 'bokep'
-];
+ 
 
 async function handleMessage(sock, msg) {
   try {
