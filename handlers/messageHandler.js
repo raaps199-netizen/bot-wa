@@ -46,10 +46,11 @@ const tfCommand = require('../commands/tf');
 const { duelCommand, handleDuelAnswer } = require('../commands/duel');
 const titleCommand = require('../commands/title');
 
-// 🎣 Import Command Fishing & Shop
+// 🎣 Import Command Fishing, Shop, & Event World Boss
 const { handleFishingCommand } = require('../commands/fishing');
 const { handleShopCommand, handleBeliCommand } = require('../commands/shop');
 const auroraCommand = require('../commands/aurora');
+const { handleEventCommand, handleAttackBossCommand } = require('../commands/event');
 
 // Command Reme & QQ Kasino
 const remeCommand = require('../commands/reme');
@@ -89,10 +90,14 @@ function acakArray(array) {
   return arr;
 }
 
-// ==========================================
-// 🚨 DAFTAR KATA TERLARANG (FULL LIST)
-// ==========================================
- 
+const BAD_WORDS = [
+  'g0bl0k', 'b3g0', 't0l0l', 'k0nt0l', 'm3m3k', 'rule34', 'ng3nt0t', 'j4nc0k',
+  'b4ngs4t', 't4i', 'p4nt3k', 'asuuu', 'kontooool', 'memekk', 'jancokkktai',
+  'kontol', 'memek', 'ngentot', 'jancok', 'cok', 'fuck', 'kintil', 'pantek',
+  'anjing', 'monyet', 'kimak', 'lonte', 'sundal', 'nekopoi', 'porno', 'porn',
+  'pornografi', 'ph', 'pornhub', 'porn hub', 'brutal sez', 'brutal sex',
+  'gay porn', 'nhentai', 'xvideos', 'xnxx', 'sex', 'anj', 'anjg', 'ngewe', 'tai', 'bokep'
+];
 
 async function handleMessage(sock, msg) {
   try {
@@ -148,36 +153,10 @@ async function handleMessage(sock, msg) {
     const remoteJid = msg.key.remoteJid;
     const senderId = msg.key.participant || remoteJid;
 
-    // ===================================================
-    // 🔥 AUTO FILTER & AUTO DELETE KATA TERLARANG 🔥
-    // ===================================================
+    // Owner checks
     const ownerPhone = '6289531307627';
     const ownerLid = '66477638029541';
     const isOwner = senderId.includes(ownerPhone) || senderId.includes(ownerLid);
-
-    if (!isOwner) {
-      const lowerText = cleanText.toLowerCase();
-      const normalizedText = lowerText.replace(/[^a-z0-9]/g, '');
-
-      const isBadWordDetected = BAD_WORDS.some(word => {
-        const cleanWord = word.toLowerCase().replace(/[^a-z0-9]/g, '');
-        return lowerText.includes(word) || normalizedText.includes(cleanWord);
-      });
-
-      if (isBadWordDetected) {
-        try {
-          await sock.sendMessage(remoteJid, { delete: msg.key });
-          await sock.sendMessage(remoteJid, {
-            text: `_pesan telah *dihapus otomatis* karena mengandung kata terlarang_`,
-            mentions: [senderId]
-          });
-        } catch (delErr) {
-          console.error('Gagal auto delete pesan:', delErr);
-        }
-        return;
-      }
-    }
-    // ===================================================
 
     if (cleanText.toLowerCase() === '.spin' || cleanText.toLowerCase() === 'spin') {
       const gameType = global.db?.game?.[remoteJid]?.type;
@@ -213,47 +192,70 @@ async function handleMessage(sock, msg) {
     const args = cleanText.slice(prefixUsed.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
+    // ===================================================
+    // 🚨 KUNCI LOCKDOWN KRAKEN (INTERCEPTOR)
+    // ===================================================
+    if (global.activeBoss) {
+      const allowedCommands = ['serang', 'hit', 'event', 'status', 'boss'];
+
+      if (!allowedCommands.includes(command)) {
+        return await sock.sendMessage(remoteJid, { 
+          text: `🚨 *DARURAT! KRAKEN MENGAMUK DI PERAIRAN!* 🐙\n\n` +
+                `Semua aktivitas (*.${command}*) dibekukan sementara oleh monster!\n` +
+                `⚠️ Segera ketik *.serang* untuk membela diri, atau harta kekayaanmu bakal dijarah habis-habisan oleh Kraken!` 
+        }, { quoted: msg });
+      }
+    }
+
     switch (command) {
 
-        
-                // 🎣 COMMAND FISHING & SHOP
-    case 'fish':
-    case 'mancing':
+      // 🎣 COMMAND FISHING & SHOP
+      case 'fish':
+      case 'mancing':
         await handleFishingCommand(sock, msg, command, args, senderId);
         break;
 
-    case 'lnj':
-    case 'lanjut':
+      case 'lnj':
+      case 'lanjut':
         await handleFishingCommand(sock, msg, 'fish', ['lnj', ...args], senderId);
         break;
 
-    case 'start':
-    case 'stop':
-    case 'autofish':
-    case 'auto':
+      case 'start':
+      case 'stop':
+      case 'autofish':
+      case 'auto':
         await handleFishingCommand(sock, msg, command, args, senderId);
         break;
 
-    case 'favorit':
-    case 'fav':
+      case 'favorit':
+      case 'fav':
         await handleFishingCommand(sock, msg, command, args, senderId);
         break;
 
-    case 'shop':
-    case 'toko':
+      case 'shop':
+      case 'toko':
         await handleShopCommand(sock, msg, args, senderId);
         break;
 
-    case 'beli':
-    case 'buy':
+      case 'beli':
+      case 'buy':
         await handleBeliCommand(sock, msg, args, senderId);
         break;
 
-    case 'setluck':
-case 'setmultiplier':
-    await handleSetLuckCommand(sock, msg, args, senderId);
-    break;
+      case 'setluck':
+      case 'setmultiplier':
+        await handleSetLuckCommand(sock, msg, args, senderId);
+        break;
 
+      // 🐙 COMMAND EVENT WORLD BOSS
+      case 'event':
+        await handleEventCommand(sock, msg, args, senderId);
+        break;
+
+      case 'serang':
+      case 'hit':
+        await handleAttackBossCommand(sock, msg, senderId);
+        break;
 
       // ==========================================
       // 📅 COMMAND JADWAL & PIKET KELAS
@@ -423,14 +425,14 @@ case 'setmultiplier':
         break;
       }
 
-        case 'aurora': {
+      case 'aurora': {
         if (!isOwner) {
           await sock.sendMessage(remoteJid, { text: `❌ Lu bukan owner, gak usah sok asik mau aktifin event Aurora wkwk!\n(ID terdeteksi: ${senderId})` }, { quoted: msg });
           break;
         }
         await auroraCommand(sock, msg, args);
         break;
-        }
+      }
 
       case 'claim':
       case 'daily':
@@ -594,7 +596,7 @@ case 'setmultiplier':
         await handleGameAnswer(sock, msg, '.nyerah');
         break;
 
-       case 'promote':
+      case 'promote':
       case 'pm':
         await groupCommand(sock, msg, args, 'promote');
         break;
@@ -748,6 +750,8 @@ case 'setmultiplier':
 ┣⌬ ${prefixUsed}reme @user <taruhan> (PvP)
 ┣⌬ ${prefixUsed}qq <taruhan> (Lawan Bot)
 ┣⌬ ${prefixUsed}qq @user <taruhan> (PvP)
+┣⌬ ${prefixUsed}event kraken (World Boss)
+┣⌬ ${prefixUsed}serang (Serang Monster)
 ┣⌬ ${prefixUsed}batal
 ┣⌬ ${prefixUsed}claim (Ambil Poin Harian)
 ┣⌬ ${prefixUsed}tf @user <nominal>
@@ -830,6 +834,8 @@ case 'setmultiplier':
 ┃  • ${prefixUsed}reme @user <taruhan> (PvP)
 ┃  • ${prefixUsed}qq <taruhan> (Lawan Bot)
 ┃  • ${prefixUsed}qq @user <taruhan> (PvP)
+┃  • ${prefixUsed}event kraken (World Boss)
+┃  • ${prefixUsed}serang (Serang Monster)
 ┃  • ${prefixUsed}batal
 ┃  • ${prefixUsed}claim (Ambil Poin Harian)
 ┃  • ${prefixUsed}tf @user <nominal>
@@ -881,12 +887,12 @@ case 'setmultiplier':
 ┃
 ┣⌬ ɢᴀᴍᴇꜱ
 ┣⌬ ᴛᴏᴏʟꜱ
-┣⌬ ɢʀᴏᴜᴘ
+┣⌬ ɢʀᴏᴜ𝚙
 ┣⌬ ᴀʟʟᴍᴇɴᴜ
 ┗━━━━━━━◧
 
 _ᴋᴇᴛɪᴋ ɴᴀᴍᴀ ᴋᴀᴛᴇɢᴏʀɪ ᴜɴᴛᴜᴋ ᴍᴇʟɪʜᴀᴛ ɪꜱɪɴʏᴀ._
-_ᴄᴏɴᴛᴏʜ: *.menu_game* ᴀᴛᴀᴜ *.allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍᴘɪʟᴋᴀɴ ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ_`;
+_ᴄᴏɴᴛᴏ🇭: *.menu_game* ᴀᴛᴀᴜ *.allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍᴘɪʟᴋᴀɴ ꜱᴇᴍᴜ🇦 ᴍᴇɴᴜ_`;
 
         await sock.sendMessage(remoteJid, { text: menuText }, { quoted: msg });
         break;
