@@ -55,7 +55,8 @@ async function finishGame(sock, remoteJid, game, isVsBot) {
 
     const bet = game.bet || 0;
     const potReward = bet * 2;
-    const formatRp = helper.formatRupiah || (val => `Rp${val.toLocaleString()}`);
+    // Memastikan helper.formatRupiah digunakan dengan benar agar ada format titik/koma ribuan
+    const formatRp = helper.formatRupiah || (val => `Rp${Number(val || 0).toLocaleString('id-ID')}`);
 
     if (scoreP1 > scoreP2) {
       if (typeof helper.getUserData === 'function') {
@@ -251,4 +252,4 @@ async function spinCommand(sock, msg) {
 }
 
 module.exports = spinCommand;
-    
+                      
