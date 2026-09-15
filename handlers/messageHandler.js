@@ -6,7 +6,7 @@ const { getUserData, getTotalScore, addPoints, deductPoints } = require('../util
 const { handleBankCommand } = require('../commands/bank');
 const { handleInventoryCommand } = require('../commands/inventory'); // 🎒 Import Inventory
 const { getSenderId } = require('../utils/jid-utils');
-const { handleRebirthCommand } = require('./commands/rebirth');
+const { handleRebirthCommand } = require('../commands/rebirth'); // ✅ Path sudah dibenerin ke parent folder
 
 
 // Command Media & Utility
@@ -509,7 +509,6 @@ async function handleMessage(sock, msg) {
       case 'transendensi':
         await handleRebirthCommand(sock, msg, senderId);
         break;
-        
 
       case 'title':
       case 'gelar':
@@ -559,7 +558,7 @@ async function handleMessage(sock, msg) {
         await stickerCommand(sock, msg);
         break;
 
-      case 'tt':
+       case 'tt':
       case 'tiktok':
         await tiktokCommand(sock, msg, args);
         break;
@@ -573,7 +572,7 @@ async function handleMessage(sock, msg) {
         await bratCommand(sock, msg, args);
         break;
 
-       case 'bratvid':
+      case 'bratvid':
         await bratvidCommand(sock, msg, args);
         break;
 
@@ -763,6 +762,7 @@ async function handleMessage(sock, msg) {
 ┣⌬ ${prefixUsed}qq @user <taruhan> (PvP)
 ┣⌬ ${prefixUsed}event kraken (World Boss)
 ┣⌬ ${prefixUsed}serang (Serang Monster)
+┣⌬ ${prefixUsed}rebirth / ${prefixUsed}transendensi (Prestige System)
 ┣⌬ ${prefixUsed}batal
 ┣⌬ ${prefixUsed}claim (Ambil Poin Harian)
 ┣⌬ ${prefixUsed}tf @user <nominal>
@@ -848,6 +848,7 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}qq @user <taruhan> (PvP)
 ┃  • ${prefixUsed}event kraken (World Boss)
 ┃  • ${prefixUsed}serang (Serang Monster)
+┃  • ${prefixUsed}rebirth (Prestige System)
 ┃  • ${prefixUsed}batal
 ┃  • ${prefixUsed}claim (Ambil Poin Harian)
 ┃  • ${prefixUsed}tf @user <nominal>
@@ -880,7 +881,7 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}rvo
 ┃  • ${prefixUsed}ncode
 ┃
-┣⌬ *ɢʀᴏᴜᴘ*
+┣⌬ *ɢʀᴏᴜ𝚙*
 ┃  • ${prefixUsed}open
 ┃  • ${prefixUsed}close
 ┃  • ${prefixUsed}online
@@ -904,7 +905,7 @@ async function handleMessage(sock, msg) {
 ┗━━━━━━━◧
 
 _ᴋᴇᴛɪᴋ ɴᴀᴍᴀ ᴋᴀᴛᴇɢᴏʀɪ ᴜɴᴛᴜᴋ ᴍᴇʟɪʜᴀᴛ ɪꜱɪɴʏᴀ._
-_ᴄᴏɴᴛᴏ🇭: *.menu_game* ᴀᴛᴀᴜ *.allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍᴘɪʟᴋᴀɴ ꜱᴇᴍᴜ🇦 ᴍᴇɴᴜ_`;
+_ᴄᴏɴᴛᴏ🇭: *.menu_game* ᴀᴛᴀᴜ *.allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍpilkan ꜱᴇᴍᴜ🇦 ᴍᴇɴᴜ_`;
 
         await sock.sendMessage(remoteJid, { text: menuText }, { quoted: msg });
         break;
