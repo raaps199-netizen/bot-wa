@@ -6,6 +6,8 @@ const { getUserData, getTotalScore, addPoints, deductPoints } = require('../util
 const { handleBankCommand } = require('../commands/bank');
 const { handleInventoryCommand } = require('../commands/inventory'); // 🎒 Import Inventory
 const { getSenderId } = require('../utils/jid-utils');
+const { handleRebirthCommand } = require('./commands/rebirth');
+
 
 // Command Media & Utility
 const stickerCommand = require('../commands/sticker');
@@ -502,6 +504,12 @@ async function handleMessage(sock, msg) {
         await handleGameAnswer(sock, msg, userAnswer);
         break;
       }
+
+      case 'rebirth':
+      case 'transendensi':
+        await handleRebirthCommand(sock, msg, senderId);
+        break;
+        
 
       case 'title':
       case 'gelar':
