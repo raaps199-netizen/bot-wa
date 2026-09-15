@@ -3,6 +3,8 @@
 const config = require('../config');
 const handleGameAnswer = require('./gameHandler');
 const { getUserData, getTotalScore, addPoints, deductPoints } = require('../utils/helper');
+const { handleEventCommand, handleAttackBossCommand } = require('../commands/event');
+
 
 // Command Media & Utility
 const stickerCommand = require('../commands/sticker');
