@@ -11,11 +11,11 @@ const rarityEmoji = {
 };
 
 const baits = {
-  roti: { name: '🍞 Roti', price: 100, luckBonus: 1 },
-  cacing: { name: '🪱 Cacing', price: 500, luckBonus: 1.2 },
-  pelet: { name: '🟢 Pelet Super', price: 1000, luckBonus: 1.5 },
-  udang: { name: '🦐 Udang Segar', price: 3000, luckBonus: 2.0 },
-  cumi: { name: '🦑 Cumi Impor', price: 5000, luckBonus: 4.0 }
+  roti: { name: '🍞 Roti', price: 5000, luckBonus: 1 },
+  cacing: { name: '🪱 Cacing', price: 15000, luckBonus: 1.2 },
+  pelet: { name: '🟢 Pelet Super', price: 50000, luckBonus: 1.5 },
+  udang: { name: '🦐 Udang Segar', price: 70000, luckBonus: 2.0 },
+  cumi: { name: '🦑 Cumi Impor', price: 100000, luckBonus: 4.0 }
 };
 
 const potions = {
