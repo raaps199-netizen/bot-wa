@@ -1,5 +1,5 @@
 // File: commands/reme.js
-const { getUserData, getTotalScore, parseBetAmount, formatRupiah } = require('../utils/helper');
+const { getUserData, getTotalScore, parseNumber, parseBetAmount, formatRupiah } = require('../utils/helper');
 const { isPersonalJid, getSenderId } = require('../utils/jid-utils');
 
 function ensureDB() {
@@ -56,23 +56,20 @@ async function remeCommand(sock, msg, args) {
     const filteredArgs = args.filter(a => a !== targetArgStr && !a.includes('@'));
     
     let betAmount = 0;
-    const rawBet = filteredArgs.find(a => {
+    const rawBetArg = filteredArgs.find(a => {
       const lower = a.toLowerCase();
-      return lower === 'all' || lower === 'max' || (!isNaN(lower) && parseInt(lower) > 0);
+      return lower === 'all' || lower === 'max' || lower === 'semua' || /[0-9]+([kKjJtTmM])?/.test(lower);
     });
 
-    if (rawBet) {
-      if (rawBet.toLowerCase() === 'all' || rawBet.toLowerCase() === 'max') {
-        betAmount = senderScore;
-      } else {
-        betAmount = parseInt(rawBet);
-      }
+    if (rawBetArg) {
+      // Gunakan parseNumber agar support format '50k', '50jt', 'all', dll
+      betAmount = parseNumber(rawBetArg, senderScore);
     } else if (typeof parseBetAmount === 'function') {
       betAmount = parseBetAmount(filteredArgs, senderScore);
     }
 
     if (isNaN(betAmount) || !betAmount || betAmount <= 0) {
-      betAmount = 15000; // default fallback taruhan
+      betAmount = 15000; // default fallback taruhan jika tidak diisi
     }
 
     if (senderScore < betAmount) {
