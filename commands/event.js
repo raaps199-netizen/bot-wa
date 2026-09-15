@@ -37,8 +37,8 @@ async function handleEventCommand(sock, msg, args, senderId) {
     const participantJids = participants.map(p => p.id);
 
     const bossList = [
-      { name: '🐙 The Ancient Kraken', hp: 35000, maxHp: 35000, reward: 3000000 },
-      { name: '🦈 Megalodon Purba Raksasa', hp: 30000, maxHp: 30000, reward: 2500000 }
+      { name: '🐙 The Ancient Kraken', hp: 500000, maxHp: 500000, reward: 5000000 },
+      { name: '🦈 Megalodon Purba Raksasa', hp: 900000, maxHp: 900000, reward: 7500000 }
     ];
     const selectedBoss = bossList[Math.floor(Math.random() * bossList.length)];
 
