@@ -3,6 +3,9 @@
 const config = require('../config');
 const handleGameAnswer = require('./gameHandler');
 const { getUserData, getTotalScore, addPoints, deductPoints } = require('../utils/helper');
+const { handleBankCommand } = require('../commands/bank');
+
+
 
 // Command Media & Utility
 const stickerCommand = require('../commands/sticker');
@@ -512,6 +515,12 @@ async function handleMessage(sock, msg) {
         await titleCommand(sock, msg, args);
         break;
 
+      case 'bank':
+case 'atm':
+case 'tabungan':
+  await handleBankCommand(sock, msg, args, senderId);
+  break;
+        
       case 'reme':
         await remeCommand(sock, msg, args);
         break;
