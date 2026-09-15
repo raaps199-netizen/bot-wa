@@ -1,12 +1,12 @@
 // File: commands/event.js
-const { deductPoints, addPoints, formatRupiah } = require('../utils/helper');
+const { deductPoints, addPoints, formatRupiah, getUserData, getTotalScore } = require('../utils/helper');
 const { getSenderId } = require('../utils/jid-utils');
 const { rods } = require('../utils/fishingData');
 
 global.activeBoss = global.activeBoss || null;
 
 // ==========================================
-// 1.HANDLER UTAMA EVENT (.event kraken / status)
+// 1. HANDLER UTAMA EVENT (.event kraken / status)
 // ==========================================
 async function handleEventCommand(sock, msg, args, senderId) {
   const remoteJid = msg.key.remoteJid;
@@ -37,8 +37,8 @@ async function handleEventCommand(sock, msg, args, senderId) {
     const participantJids = participants.map(p => p.id);
 
     const bossList = [
-      { name: '🐙 The Ancient Kraken', hp: 500000, maxHp: 500000, reward: 5000000 },
-      { name: '🦈 Megalodon Purba Raksasa', hp: 900000, maxHp: 900000, reward: 7500000 }
+      { name: '🐙 The Ancient Kraken', hp: 500000, maxHp: 500000, reward: 10000000 },
+      { name: '🦈 Megalodon Purba Raksasa', hp: 750000, maxHp: 750000, reward: 25000000 }
     ];
     const selectedBoss = bossList[Math.floor(Math.random() * bossList.length)];
 
@@ -51,15 +51,14 @@ async function handleEventCommand(sock, msg, args, senderId) {
       participants: {}
     };
 
-        // ⏱️ TIMER 3 MENIT OTOMATIS (Denda 40% untuk SEMUA jika gagal)
+    // ⏱️ TIMER 3 MENIT OTOMATIS (Denda 40% untuk SEMUA jika gagal)
     global.activeBoss.timer = setTimeout(async () => {
       if (global.activeBoss) {
-        // Hapus pengecekan partisipasi, potong 40% untuk SEMUA user di database
         for (const uid of Object.keys(global.db.users)) {
           const userData = getUserData(global.db, uid);
           const totalScore = getTotalScore(userData);
 
-          if (totalScore > 10000) { // Hanya menyasar player yang punya saldo di atas 10k
+          if (totalScore > 10000) {
             const penalty = Math.floor(totalScore * 0.40); // Potong 40%
             deductPoints(global.db, uid, penalty);
           }
@@ -76,7 +75,6 @@ async function handleEventCommand(sock, msg, args, senderId) {
         });
       }
     }, 3 * 60 * 1000); // 3 Menit
-
 
     let announcement = `🚨 *WORLD BOSS LOCKDOWN DIMULAI!* 🚨\n\n`;
     announcement += `⚠️ Monster *${selectedBoss.name}* muncul dan mengunci seluruh perairan!\n`;
@@ -107,7 +105,7 @@ async function handleEventCommand(sock, msg, args, senderId) {
 }
 
 // ==========================================
-// 2. HANDLER SERANGAN BOSS (.serang / .hit)[span_2](start_span)[span_2](end_span)
+// 2. HANDLER SERANGAN BOSS (.serang)
 // ==========================================
 async function handleAttackBossCommand(sock, msg, senderId) {
   const remoteJid = msg.key.remoteJid;
@@ -130,7 +128,7 @@ async function handleAttackBossCommand(sock, msg, senderId) {
   global.activeBoss.cooldowns[senderId] = now;
 
   // Ambil data user & joran aktifnya untuk scaling damage
-  const user = global.db.users[senderId] || {};
+  const user = getUserData(global.db, senderId);
   const activeRodId = user.activeRod || 'training';
   const currentRod = rods[activeRodId] || rods['training'];
 
@@ -199,4 +197,5 @@ module.exports = {
   handleEventCommand,
   handleAttackBossCommand
 };
+                                                     
       
