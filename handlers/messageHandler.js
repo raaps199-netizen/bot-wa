@@ -260,6 +260,49 @@ async function handleMessage(sock, msg) {
         await handleAttackBossCommand(sock, msg, senderId);
         break;
 
+        // File: messageHandler.js
+const { handleInventoryCommand } = require('./commands/inventory');
+const { getSenderId } = require('./utils/jid-utils');
+
+async function handleIncomingMessage(sock, msg) {
+  try {
+    if (!msg.message) return;
+    const remoteJid = msg.key.remoteJid;
+    
+    // Ambil teks pesan dari berbagai jenis teks/caption
+    const messageContent = msg.message.conversation || 
+                           msg.message.extendedTextMessage?.text || 
+                           msg.message.imageMessage?.caption || '';
+                           
+    // Pastikan pesan diawali dengan titik (.)
+    if (!messageContent.startsWith('.')) return;
+
+    const args = messageContent.slice(1).trim().split(/ +/);
+    const command = args.shift().toLowerCase();
+    
+    // Ambil ID sender yang akurat
+    const senderId = getSenderId(msg, remoteJid);
+
+    switch (command) {
+      // 🎒 FITUR INVENTORY / TAS
+      case 'inv':
+      case 'inventory':
+      case 'tas':
+        await handleInventoryCommand(sock, msg, senderId);
+        break;
+
+      default:
+        // Command lain di luar inventory diabaikan dulu biar aman
+        break;
+    }
+  } catch (err) {
+    console.error('❌ Error di messageHandler:', err);
+  }
+}
+
+module.exports = { handleIncomingMessage };
+        
+
       // ==========================================
       // 📅 COMMAND JADWAL & PIKET KELAS
       // ==========================================
