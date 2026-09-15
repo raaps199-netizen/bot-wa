@@ -10,15 +10,15 @@ async function handleRebirthCommand(sock, msg, senderId) {
   user.inventory.rebirthFragments = user.inventory.rebirthFragments || 0;
   user.rebirthLevel = user.rebirthLevel || 0;
 
-  const REQUIRED_FRAGMENTS = 10;
+  const REQUIRED_FRAGMENTS = 50; // Syarat minimal fragment dinaikkan jadi 50
 
   if (user.inventory.rebirthFragments < REQUIRED_FRAGMENTS) {
     return await sock.sendMessage(remoteJid, {
       text: `⚠️ *REBIRTH GAGAL!*\n\n` +
-            `Fragment Rebirth kamu belum cukup!\n` +
+            `Fragment Rebirth kamu belum cukup untuk melakukan transendensi!\n` +
             `• Dimiliki: *${user.inventory.rebirthFragments} Buah*\n` +
             `• Dibutuhkan: *${REQUIRED_FRAGMENTS} Buah*\n\n` +
-            `_Kumpulkankan Rebirth Fragments lewat World Boss (.event / .serang)!_`
+            `_Kumpulkan Rebirth Fragments lewat World Boss (.event / .serang) sampai 50 buah ya, bre!_`
     }, { quoted: msg });
   }
 
@@ -35,11 +35,6 @@ async function handleRebirthCommand(sock, msg, senderId) {
   user.bank = 0;
   user.activeRod = 'training';
 
-  // Otomatis set title awal rebirth jika belum punya title khusus
-  if (!user.title) {
-    user.title = `Reborn ${user.rebirthLevel}`;
-  }
-
   if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
   const userNum = senderId.split('@')[0];
@@ -51,7 +46,7 @@ async function handleRebirthCommand(sock, msg, senderId) {
           `🎁 *Benefit Permanen Aktif*:\n` +
           `• 💰 Bonus Uang: *x${user.moneyMultiplier}*\n` +
           `• ⚔️ Bonus Damage Boss: *x${user.bossDamageMultiplier}*\n\n` +
-          `⚠️ *Catatan:* Dompet, Bank, dan Joran di-reset. Cek gelar baru kamu pakai *.title list*!`,
+          `⚠️ *Catatan:* Dompet, Bank, dan Joran di-reset ke awal. Cek gelar baru kamu pakai *.title rebirth*!`,
     mentions: [senderId]
   }, { quoted: msg });
 }
