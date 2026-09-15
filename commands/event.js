@@ -51,16 +51,17 @@ async function handleEventCommand(sock, msg, args, senderId) {
       participants: {}
     };
 
-    // ⏱️ TIMER 3 MENIT OTOMATIS (Denda 40% jika gagal)
+        // ⏱️ TIMER 3 MENIT OTOMATIS (Denda 40% untuk SEMUA jika gagal)
     global.activeBoss.timer = setTimeout(async () => {
       if (global.activeBoss) {
+        // Hapus pengecekan partisipasi, potong 40% untuk SEMUA user di database
         for (const uid of Object.keys(global.db.users)) {
-          if (!global.activeBoss.participants[uid]) {
-            const user = global.db.users[uid];
-            if (user.points && user.points > 10000) {
-              const penalty = Math.floor(user.points * 0.40); // Potong 40%
-              user.points -= penalty;
-            }
+          const userData = getUserData(global.db, uid);
+          const totalScore = getTotalScore(userData);
+
+          if (totalScore > 10000) { // Hanya menyasar player yang punya saldo di atas 10k
+            const penalty = Math.floor(totalScore * 0.40); // Potong 40%
+            deductPoints(global.db, uid, penalty);
           }
         }
         if (typeof global.saveDatabase === 'function') global.saveDatabase();
@@ -69,12 +70,13 @@ async function handleEventCommand(sock, msg, args, senderId) {
 
         await sock.sendMessage(remoteJid, {
           text: `⏰ *WAKTU HABIS (3 MENIT) KRAKEN MENANG!* 🐙💥\n\n` +
-                `Monster berhasil menghancurkan perairan karena gagal dikalahkan tepat waktu!\n` +
-                `⚠️ Seluruh warga yang **mangkir dan tidak ikut menyerang** telah dijarah Kraken sebesar **40% dari total harta kekayaan** mereka!\n\n` +
+                `Monster berhasil menghancurkan perairan karena kalian gagal membunuhnya tepat waktu!\n` +
+                `⚠️ Hukuman telak! **Seluruh harta kekayaan warga** dijarah Kraken sebesar **40%** karena gagal total!\n\n` +
                 `_Semua aktivitas kembali normal._`
         });
       }
     }, 3 * 60 * 1000); // 3 Menit
+
 
     let announcement = `🚨 *WORLD BOSS LOCKDOWN DIMULAI!* 🚨\n\n`;
     announcement += `⚠️ Monster *${selectedBoss.name}* muncul dan mengunci seluruh perairan!\n`;
