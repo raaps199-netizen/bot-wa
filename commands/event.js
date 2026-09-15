@@ -18,11 +18,10 @@ async function handleEventCommand(sock, msg, args, senderId) {
 
   const subCmd = args[0]?.toLowerCase();
 
-  // CEK APAKAH PERINTAH MEMULAI EVENT BOSS
   if (['kraken', 'megalodon', 'boss', 'start'].includes(subCmd)) {
     if (global.activeBoss) {
       return await sock.sendMessage(remoteJid, { 
-        text: `⚠️ *EVENT BOSS SEDANG BERLANGSUNG!*\n\nMonster *${global.activeBoss.name}* masih mengamuk!\nHP Tersisa: *${global.activeBoss.hp} / ${global.activeBoss.maxHp}*\n\nKetik *.serang* sekarang!` 
+        text: `⚠️ *EVENT BOSS SEDANG BERLANGSUNG!*\n\nMonster *${global.activeBoss.name}* masih mengamuk!\nHP Tersisa: *${global.activeBoss.hp.toLocaleString()} / ${global.activeBoss.maxHp.toLocaleString()}*\n\nKetik *.serang* sekarang!` 
       }, { quoted: msg });
     }
 
@@ -36,14 +35,12 @@ async function handleEventCommand(sock, msg, args, senderId) {
     const participants = metadata.participants || [];
     const participantJids = participants.map(p => p.id);
 
-    // Tentukan boss berdasarkan apa yang diketik user
     let selectedBoss;
     if (subCmd === 'kraken') {
       selectedBoss = { name: '🐙 The Ancient Kraken', hp: 500000, maxHp: 500000, reward: 15000000 };
     } else if (subCmd === 'megalodon') {
       selectedBoss = { name: '🦈 Megalodon Purba Raksasa', hp: 750000, maxHp: 750000, reward: 22000000 };
     } else {
-      // Kalau cuma ketik .event boss / .event start, pilih random antara keduanya
       const bossList = [
         { name: '🐙 The Ancient Kraken', hp: 500000, maxHp: 500000, reward: 15000000 },
         { name: '🦈 Megalodon Purba Raksasa', hp: 750000, maxHp: 750000, reward: 22000000 }
@@ -57,10 +54,11 @@ async function handleEventCommand(sock, msg, args, senderId) {
       maxHp: selectedBoss.maxHp,
       reward: selectedBoss.reward,
       damagers: {},
-      participants: {}
+      participants: {},
+      hasEvolved: false
     };
 
-    // ⏱️ TIMER 3 MENIT OTOMATIS (Denda 40% untuk SEMUA jika gagal)
+    // ⏱️ TIMER 5 MENIT (Denda 40% untuk SEMUA jika gagal)
     global.activeBoss.timer = setTimeout(async () => {
       if (global.activeBoss) {
         for (const uid of Object.keys(global.db.users)) {
@@ -68,7 +66,7 @@ async function handleEventCommand(sock, msg, args, senderId) {
           const totalScore = getTotalScore(userData);
 
           if (totalScore > 10000) {
-            const penalty = Math.floor(totalScore * 0.40); // Potong 40%
+            const penalty = Math.floor(totalScore * 0.40);
             deductPoints(global.db, uid, penalty);
           }
         }
@@ -77,17 +75,17 @@ async function handleEventCommand(sock, msg, args, senderId) {
         global.activeBoss = null;
 
         await sock.sendMessage(remoteJid, {
-          text: `⏰ *WAKTU HABIS (3 MENIT) BOSS MENANG!* 💀💥\n\n` +
+          text: `⏰ *WAKTU HABIS (5 MENIT) BOSS MENANG!* 💀💥\n\n` +
                 `Monster berhasil menghancurkan perairan karena kalian gagal membunuhnya tepat waktu!\n` +
                 `⚠️ Hukuman telak! **Seluruh harta kekayaan warga** dijarah monster sebesar **40%** karena gagal total!\n\n` +
                 `_Semua aktivitas kembali normal._`
         });
       }
-    }, 3 * 60 * 1000); // 3 Menit
+    }, 5 * 60 * 1000);
 
-    let announcement = `🚨 *WORLD BOSS LOCKDOWN DIMULAI!* 🚨\n\n`;
-    announcement += `⚠️ Monster *${selectedBoss.name}* muncul dan mengunci seluruh perairan!\n`;
-    announcement += `⏱️ Batas Waktu: *3 Menit*\n`;
+    let announcement = `🚨 *WORLD BOSS MUNCUL DI PERAIRAN!* 🚨\n\n`;
+    announcement += `⚠️ Monster legendaris *${selectedBoss.name}* menampakkan diri dan mengunci seluruh aktivitas!\n`;
+    announcement += `⏱️ Batas Waktu: *5 Menit*\n`;
     announcement += `❤️ Total HP Boss: *${selectedBoss.hp.toLocaleString()}*\n`;
     announcement += `💰 Hadiah Utama: *${formatRupiah(selectedBoss.reward)}*\n\n`;
     announcement += `🔒 *Semua aktivitas game dibekukan!* Warga wajib mengetik *.serang* untuk melawan atau harta kalian dijarah 40%!\n\n`;
@@ -136,7 +134,6 @@ async function handleAttackBossCommand(sock, msg, senderId) {
   }
   global.activeBoss.cooldowns[senderId] = now;
 
-  // Ambil data user & joran aktifnya untuk scaling damage
   const user = getUserData(global.db, senderId);
   const activeRodId = user.activeRod || 'training';
   const currentRod = rods[activeRodId] || rods['training'];
@@ -151,6 +148,37 @@ async function handleAttackBossCommand(sock, msg, senderId) {
   global.activeBoss.damagers[senderId] = (global.activeBoss.damagers[senderId] || 0) + finalDamage;
 
   const userNum = senderId.split('@')[0];
+
+  // ⚡ CHANCE EVOLUSI 1/5 (20%) KETIKA HP <= 50%
+  if (!global.activeBoss.hasEvolved && global.activeBoss.hp <= global.activeBoss.maxHp * 0.5) {
+    global.activeBoss.hasEvolved = true;
+
+    if (Math.random() < 0.20) {
+      if (global.activeBoss.name.includes('Kraken')) {
+        global.activeBoss.name = '🐙 NIGHTMARE ANCIENT KRAKEN (EVOLVED!)';
+        global.activeBoss.maxHp += 300000;
+        global.activeBoss.hp += 300000;
+        global.activeBoss.reward += 10000000;
+      } else {
+        global.activeBoss.name = '🦈 ABYSSAL MEGALODON LORD (EVOLVED!)';
+        global.activeBoss.maxHp += 400000;
+        global.activeBoss.hp += 400000;
+        global.activeBoss.reward += 15000000;
+      }
+
+      await sock.sendMessage(remoteJid, {
+        text: `⚡ *PERINGATAN DARURAT! BOSS BEREVOLASI!* 🩸🔥\n\n` +
+              `Monster menyerap energi lautan dan bangkit ke bentuk terkuatnya:\n👉 *${global.activeBoss.name}*!\n\n` +
+              `❤️ Darahnya kembali menebal secara drastis!\n` +
+              `💰 Karena tingkat bahaya meningkat, **Hadiah Utama** melonjak menjadi *${formatRupiah(global.activeBoss.reward)}*!\n\n` +
+              `_Hajar terus, jangan kasih ampun!_`
+      });
+    } else {
+      await sock.sendMessage(remoteJid, {
+        text: `🌀 *Cahaya gelap sempat berputar di tubuh ${global.activeBoss.name}, namun gagal memicu evolusi!* Lanjutkan gempuran!`
+      });
+    }
+  }
 
   const attackActions = [
     'menebas tentakel/tubuh dengan kekuatan penuh',
@@ -186,11 +214,11 @@ async function handleAttackBossCommand(sock, msg, senderId) {
 
       const topNum = topAttacker.split('@')[0];
       return await sock.sendMessage(remoteJid, {
-        text: `🎉 *VICTORY! BOSS BERHASIL DIKALAHKAN!* 🎉\n\n` +
+        text: `🎉 *VICTORY! BOSS TERKUAT BERHASIL DIKALAHKAN!* 🎉\n\n` +
               `💥 Pukulan pemungkas oleh @${userNum}!\n` +
               `🏆 *Top Damage:* @${topNum} (${maxDmg.toLocaleString()} Total Damage)\n` +
               `🎖️ *Top Attacker Mendapat Poin & Progress Gelar Boss Slayer!*\n` +
-              `💰 Hadiah *${formatRupiah(bossData.reward)}* langsung dikirim ke pemenang!\n` +
+              `💰 Hadiah jumbo *${formatRupiah(bossData.reward)}* langsung dikirim ke pemenang!\n` +
               `🔓 *Lockdown dicabut, harta warga aman dari jarahan!*`,
         mentions: [senderId, topAttacker]
       }, { quoted: msg });
@@ -211,4 +239,3 @@ module.exports = {
   handleEventCommand,
   handleAttackBossCommand
 };
-                                             
