@@ -130,29 +130,44 @@ async function handleBankCommand(sock, msg, args, senderId) {
       }, { quoted: msg });
     }
 
-    case 'bayar':
+        case 'bayar':
     case 'payloan': {
-      const amount = parseCustomNumber(amountArg, Math.min(totalWealth, user.debt));
-      
-      if (amount <= 0) {
-        return await sock.sendMessage(remoteJid, { text: `⚠️ Format pembayaran salah!\nContoh: *.bank bayar 500k* atau *.bank bayar all*` }, { quoted: msg });
-      }
       if (user.debt <= 0) {
         return await sock.sendMessage(remoteJid, { text: `🎉 Mantap, kamu tidak punya hutang sama sekali di bank!` }, { quoted: msg });
       }
-      if (totalWealth < amount) {
-        return await sock.sendMessage(remoteJid, { text: `❌ Saldo kamu tidak cukup buat bayar hutang sebesar *${formatRupiah(amount)}*!` }, { quoted: msg });
+
+      let payAmount = 0;
+      const lowerArg = amountArg?.toString().toLowerCase();
+
+      // Kalau user ketik 'all', 'semua', atau kosong, langsung bayar LUNAS sejumlah sisa hutang!
+      if (!amountArg || ['all', 'allin', 'semua'].includes(lowerArg)) {
+        payAmount = user.debt;
+      } else {
+        payAmount = parseNumber(amountArg, user.debt);
       }
 
-      const payAmount = Math.min(amount, user.debt);
-      deductPoints(global.db, senderId, payAmount);[span_6](start_span)[span_6](end_span)
-      user.debt -= payAmount;
+      if (isNaN(payAmount) || payAmount <= 0) {
+        return await sock.sendMessage(remoteJid, { text: `⚠️ Format pembayaran salah!\nContoh: *.bank bayar 500k* atau *.bank bayar all*` }, { quoted: msg });
+      }
+
+      if (totalWealth < payAmount) {
+        return await sock.sendMessage(remoteJid, { text: `❌ Saldo kamu tidak cukup buat bayar hutang sebesar *${formatRupiah(payAmount)}*!` }, { quoted: msg });
+      }
+
+      const finalPay = Math.min(payAmount, user.debt);
+      deductPoints(global.db, senderId, finalPay);
+      user.debt -= finalPay;
+
+      // Pengaman mutlak: Jika sisa hutang tinggal di bawah Rp100 (sisa pembulatan), langsung set jadi 0!
+      if (user.debt < 100) {
+        user.debt = 0;
+      }
       
       if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
       return await sock.sendMessage(remoteJid, {
-        text: `✅ Sukses membayar hutang sebesar *${formatRupiah(payAmount)}*!\n` +
-              `${user.debt > 0 ? `Sisa hutang: *${formatRupiah(user.debt)}*` : `🎉 *Hutang kamu lunas sepenuhnya!*`}`
+        text: `✅ Sukses membayar hutang sebesar *${formatRupiah(finalPay)}*!\n` +
+              `${user.debt > 0 ? `Sisa hutang: *${formatRupiah(user.debt)}*` : `🎉 *Hutang kamu lunas sepenuhnya tanpa sisa!*`}`
       }, { quoted: msg });
     }
 
