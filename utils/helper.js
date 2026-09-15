@@ -7,7 +7,7 @@ function getUserData(db, userId) {
 
   if (!db.users[userId]) {
     db.users[userId] = {
-      score: 0,         // Dompet utama untuk taruhan (Reme, QQ, Duel) & admin add
+      score: 0,         // Dompet utama untuk taruhan & admin add
       mathCount: 0,     // Statistik jumlah soal math yang diselesaikan
       triviaCount: 0,   // Statistik jumlah soal trivia yang diselesaikan
       nickname: null
@@ -61,6 +61,31 @@ function parseBetAmount(arg, userTotalScore) {
   return parsed;
 }
 
+// 🔢 Helper Parser Angka Singkat (Contoh: 500k, 5jt, atau all)
+function parseNumber(input, maxAvailable = 0) {
+  if (!input) return 0;
+  let str = input.toString().toLowerCase().trim();
+
+  if (str === 'all' || str === 'allin' || str === 'semua') {
+    return maxAvailable;
+  }
+
+  let multiplier = 1;
+  if (str.endsWith('k')) {
+    multiplier = 1000;
+    str = str.slice(0, -1);
+  } else if (str.endsWith('jt') || str.endsWith('juta')) {
+    multiplier = 1000000;
+    str = str.replace(/(jt|juta)$/, '');
+  } else if (str.endsWith('m')) {
+    multiplier = 1000000000;
+    str = str.slice(0, -1);
+  }
+
+  const num = parseFloat(str);
+  return isNaN(num) ? 0 : Math.floor(num * multiplier);
+}
+
 // 💵 Format angka ke tampilan Rupiah (contoh: 5000 -> Rp5.000)
 function formatRupiah(amount) {
   return `Rp${Number(amount || 0).toLocaleString('id-ID')}`;
@@ -72,5 +97,6 @@ module.exports = {
   addPoints,
   deductPoints,
   parseBetAmount,
+  parseNumber,
   formatRupiah
 };
