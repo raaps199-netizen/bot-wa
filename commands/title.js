@@ -8,59 +8,59 @@ const TITLES_CONFIG = {
     label: '💰 EKONOMI (Poin)',
     unit: 'Poin',
     list: [
-      { min: 0,      name: '[The Initiate]' },
-      { min: 500,    name: '[The Rising One]' },
-      { min: 1000,   name: '[Knight of Dawn]' },
-      { min: 3000,   name: '[Noble Knight]' },
-      { min: 5000,   name: '[Lord of Valor]' },
-      { min: 10000,  name: '[Duke of Honor]' },
-      { min: 50000,  name: '[Prince of the Realm]' },
-      { min: 100000, name: '[Emperor of the Realm]' }
+      { min: 0,      name: 'The Initiate' },
+      { min: 500,    name: 'The Rising One' },
+      { min: 1000,   name: 'Knight of Dawn' },
+      { min: 3000,   name: 'Noble Knight' },
+      { min: 5000,   name: 'Lord of Valor' },
+      { min: 10000,  name: 'Duke of Honor' },
+      { min: 50000,  name: 'Prince of the Realm' },
+      { min: 100000, name: 'Emperor of the Realm' }
     ]
   },
   reme: {
     label: '🎰 KASINO (Reme)',
     unit: 'Win',
     list: [
-      { min: 0,   name: '[Reme Initiate]' },
-      { min: 5,   name: '[Reme Adept]' },
-      { min: 10,  name: '[Reme Virtuoso]' },
-      { min: 20,  name: '[Reme Highmaster]' },
-      { min: 50,  name: '[The King of Spin]' },
-      { min: 100, name: '[The God of Reme]' }
+      { min: 0,   name: 'Reme Initiate' },
+      { min: 5,   name: 'Reme Adept' },
+      { min: 10,  name: 'Reme Virtuoso' },
+      { min: 20,  name: 'Reme Highmaster' },
+      { min: 50,  name: 'The King of Spin' },
+      { min: 100, name: 'The God of Reme' }
     ]
   },
   qq: {
     label: '🎴 KASINO (QiuQiu)',
     unit: 'Win',
     list: [
-      { min: 0,   name: '[QQ Initiate]' },
-      { min: 10,  name: '[QQ Adept]' },
-      { min: 20,  name: '[QQ Virtuoso]' },
-      { min: 50,  name: '[The Luck Hand]' },
-      { min: 100, name: '[The God of QQ]' }
+      { min: 0,   name: 'QQ Initiate' },
+      { min: 10,  name: 'QQ Adept' },
+      { min: 20,  name: 'QQ Virtuoso' },
+      { min: 50,  name: 'The Luck Hand' },
+      { min: 100, name: 'The God of QQ' }
     ]
   },
   trivia: {
     label: '🧠 KUIS (Trivia)',
     unit: 'Soal',
     list: [
-      { min: 0,   name: '[The Initiate]' },
-      { min: 10,  name: '[The Quizer]' },
-      { min: 30,  name: '[The Scholar]' },
-      { min: 50,  name: '[The Learned]' },
-      { min: 100, name: '[The Trivia King]' }
+      { min: 0,   name: 'The Initiate' },
+      { min: 10,  name: 'The Quizer' },
+      { min: 30,  name: 'The Scholar' },
+      { min: 50,  name: 'The Learned' },
+      { min: 100, name: 'The Trivia King' }
     ]
   },
   math: {
     label: '📐 KUIS (Matematika)',
     unit: 'Soal',
     list: [
-      { min: 0,   name: '[The Initiate]' },
-      { min: 10,  name: '[The Counter]' },
-      { min: 30,  name: '[The Mathematician]' },
-      { min: 50,  name: '[The Human Calculator]' },
-      { min: 100, name: '[The Einstein]' }
+      { min: 0,   name: 'The Initiate' },
+      { min: 10,  name: 'The Counter' },
+      { min: 30,  name: 'The Mathematician' },
+      { min: 50,  name: 'The Human Calculator' },
+      { min: 100, name: 'The Einstein' }
     ]
   },
   // 👇 KATEGORI MANCING DIPERLUAS SAMPAI 10.000 👇
@@ -68,17 +68,17 @@ const TITLES_CONFIG = {
     label: '🎣 MANCING (Fishing)',
     unit: 'Tangkapan',
     list: [
-      { min: 0,     name: '[Rookie Angler]' },
-      { min: 10,    name: '[Patient Fisher]' },
-      { min: 50,    name: '[River Master]' },
-      { min: 100,   name: '[Ocean Conqueror]' },
-      { min: 300,   name: '[Poseidon\'s Heir]' },
-      { min: 500,   name: '[The God of Seas]' },
-      { min: 1000,  name: '[Leviathan Tamer]' },
-      { min: 2500,  name: '[Abyssal Hunter]' },
-      { min: 5000,  name: '[Ruler of the Tides]' },
-      { min: 7500,  name: '[Neptune\'s Avatar]' },
-      { min: 10000, name: '[The Ultimate Angler]' }
+      { min: 0,     name: 'Rookie Angler' },
+      { min: 10,    name: 'Patient Fisher' },
+      { min: 50,    name: 'River Master' },
+      { min: 100,   name: 'Ocean Conqueror' },
+      { min: 300,   name: 'Poseidon\'s Heir' },
+      { min: 500,   name: 'The God of Seas' },
+      { min: 1000,  name: 'Leviathan Tamer' },
+      { min: 2500,  name: 'Abyssal Hunter' },
+      { min: 5000,  name: 'Ruler of the Tides' },
+      { min: 7500,  name: 'Neptune\'s Avatar' },
+      { min: 10000, name: 'The Ultimate Angler' }
     ]
   }
 };
@@ -130,14 +130,13 @@ module.exports = async function titleCommand(sock, msg, args) {
       qq: user.qqWin || 0,
       trivia: user.triviaCount || 0,
       math: user.mathCount || 0,
-      mancing: user.totalFish || 0 // 👈 Mengambil data total tangkapan ikan
+      mancing: user.totalFish || 0
     };
 
     const subCommand = args[0] ? args[0].toLowerCase() : null;
 
     // ===================================================
     // 🎯 MODE 1: MEMAKAI / MEMILIH GELAR
-    // (Contoh: .title pakai trivia 2)
     // ===================================================
     if (['pakai', 'set', 'use', 'select'].includes(subCommand)) {
       const categoryKey = args[1] ? args[1].toLowerCase() : null;
@@ -164,26 +163,25 @@ module.exports = async function titleCommand(sock, msg, args) {
       const userVal = stats[categoryKey];
       if (userVal < selectedTitle.min) {
         return await sock.sendMessage(remoteJid, {
-          text: `🔒 Gelar *${selectedTitle.name}* masih terkunci!\n` +
+          text: `🔒 Gelar *[${selectedTitle.name}]* masih terkunci!\n` +
                 `Capaian kamu baru *${userVal}/${selectedTitle.min} ${catConfig.unit}*.`
         }, { quoted: msg });
       }
 
-      // Simpan gelar aktif ke DB
+      // Simpan gelar aktif ke DB (tanpa kurung siku agar fleksibel saat digabung command lain)
       user.equippedTitle = selectedTitle.name;
       user.title = selectedTitle.name;
 
       if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
       return await sock.sendMessage(remoteJid, {
-        text: `✅ Berhasil memasang gelar: *${selectedTitle.name}*!\n\n` +
+        text: `✅ Berhasil memasang gelar: *[${selectedTitle.name}]*!\n\n` +
               `Gelar ini akan otomatis muncul saat bot me-mention kamu di game/command.`
       }, { quoted: msg });
     }
 
     // ===================================================
     // ❌ MODE 2: MELEPAS GELAR
-    // (Contoh: .title lepas)
     // ===================================================
     if (['lepas', 'reset', 'off', 'remove'].includes(subCommand)) {
       delete user.equippedTitle;
@@ -216,9 +214,9 @@ module.exports = async function titleCommand(sock, msg, args) {
 
         if (val >= t.min) {
           const statusBadge = isEquipped ? ' 📌 *[DIPAKAI]*' : ' ✅ *[TERBUKA]*';
-          caption += `${no}. *${t.name}*${statusBadge}\n   └ Syarat: ${t.min} ${catConfig.unit}\n`;
+          caption += `${no}. *[${t.name}]*${statusBadge}\n   └ Syarat: ${t.min} ${catConfig.unit}\n`;
         } else {
-          caption += `${no}. 🔒 *${t.name}*\n   └ Progress: *${val}/${t.min} ${catConfig.unit}*\n`;
+          caption += `${no}. 🔒 *[${t.name}]*\n   └ Progress: *${val}/${t.min} ${catConfig.unit}*\n`;
         }
       });
 
@@ -236,11 +234,12 @@ module.exports = async function titleCommand(sock, msg, args) {
     // 🏠 MODE 4: MENU UTAMA (Ringkasan Semua Kategori)
     // ===================================================
     const userNum = senderId.split('@')[0];
-    const currentEquipped = user.equippedTitle || user.title || 'Belum Ada (Otomatis)';
+    const rawEquipped = user.equippedTitle || user.title;
+    const currentEquipped = rawEquipped ? `*[${rawEquipped}]*` : 'Belum Ada (Otomatis)';
 
     let caption = `🎖️ *STATUS & MENU GELAR PENGGUNA*\n`;
     caption += `👤 User: @${userNum}\n`;
-    caption += `📌 Gelar Dipakai: *${currentEquipped}*\n`;
+    caption += `📌 Gelar Dipakai: ${currentEquipped}\n`;
     caption += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
     for (const key in TITLES_CONFIG) {
@@ -248,12 +247,12 @@ module.exports = async function titleCommand(sock, msg, args) {
       const prog = getCategoryProgress(cat, stats[key]);
 
       caption += `${cat.label}\n`;
-      caption += `├ Gelar Tertinggi: *${prog.currentTitle}*\n`;
+      caption += `├ Gelar Tertinggi: *[${prog.currentTitle}]*\n`;
 
       if (prog.isMax) {
         caption += `└ Progress: *MAX LEVEL (Tercapai)* 👑\n\n`;
       } else {
-        caption += `└ Progress: *${prog.currentVal}/${prog.nextMin} ${cat.unit}* (Menuju ${prog.nextTitle})\n\n`;
+        caption += `└ Progress: *${prog.currentVal}/${prog.nextMin} ${cat.unit}* (Menuju *[${prog.nextTitle}]*)\n\n`;
       }
     }
 
@@ -275,4 +274,4 @@ module.exports = async function titleCommand(sock, msg, args) {
     }, { quoted: msg });
   }
 };
-  
+            
