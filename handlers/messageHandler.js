@@ -4,8 +4,8 @@ const config = require('../config');
 const handleGameAnswer = require('./gameHandler');
 const { getUserData, getTotalScore, addPoints, deductPoints } = require('../utils/helper');
 const { handleBankCommand } = require('../commands/bank');
-
-
+const { handleInventoryCommand } = require('../commands/inventory'); // 🎒 Import Inventory
+const { getSenderId } = require('../utils/jid-utils');
 
 // Command Media & Utility
 const stickerCommand = require('../commands/sticker');
@@ -93,7 +93,6 @@ function acakArray(array) {
   return arr;
 }
 
-
 async function handleMessage(sock, msg) {
   try {
     const messageContent = msg.message;
@@ -146,7 +145,7 @@ async function handleMessage(sock, msg) {
     if (!cleanText) return;
 
     const remoteJid = msg.key.remoteJid;
-    const senderId = msg.key.participant || remoteJid;
+    const senderId = getSenderId(msg, remoteJid);
 
     // Owner checks
     const ownerPhone = '6289531307627';
@@ -204,6 +203,13 @@ async function handleMessage(sock, msg) {
 
     switch (command) {
 
+      // 🎒 FITUR INVENTORY / TAS
+      case 'inv':
+      case 'inventory':
+      case 'tas':
+        await handleInventoryCommand(sock, msg, senderId);
+        break;
+
       // 🎣 COMMAND FISHING & SHOP
       case 'fish':
       case 'mancing':
@@ -237,11 +243,6 @@ async function handleMessage(sock, msg) {
         await handleBeliCommand(sock, msg, args, senderId);
         break;
 
-      case 'setluck':
-      case 'setmultiplier':
-        await handleSetLuckCommand(sock, msg, args, senderId);
-        break;
-
       // 🐙 COMMAND EVENT WORLD BOSS
       case 'event':
         await handleEventCommand(sock, msg, args, senderId);
@@ -251,49 +252,6 @@ async function handleMessage(sock, msg) {
       case 'hit':
         await handleAttackBossCommand(sock, msg, senderId);
         break;
-
-        // File: messageHandler.js
-const { handleInventoryCommand } = require('./commands/inventory');
-const { getSenderId } = require('./utils/jid-utils');
-
-async function handleIncomingMessage(sock, msg) {
-  try {
-    if (!msg.message) return;
-    const remoteJid = msg.key.remoteJid;
-    
-    // Ambil teks pesan dari berbagai jenis teks/caption
-    const messageContent = msg.message.conversation || 
-                           msg.message.extendedTextMessage?.text || 
-                           msg.message.imageMessage?.caption || '';
-                           
-    // Pastikan pesan diawali dengan titik (.)
-    if (!messageContent.startsWith('.')) return;
-
-    const args = messageContent.slice(1).trim().split(/ +/);
-    const command = args.shift().toLowerCase();
-    
-    // Ambil ID sender yang akurat
-    const senderId = getSenderId(msg, remoteJid);
-
-    switch (command) {
-      // 🎒 FITUR INVENTORY / TAS
-      case 'inv':
-      case 'inventory':
-      case 'tas':
-        await handleInventoryCommand(sock, msg, senderId);
-        break;
-
-      default:
-        // Command lain di luar inventory diabaikan dulu biar aman
-        break;
-    }
-  } catch (err) {
-    console.error('❌ Error di messageHandler:', err);
-  }
-}
-
-module.exports = { handleIncomingMessage };
-        
 
       // ==========================================
       // 📅 COMMAND JADWAL & PIKET KELAS
@@ -551,10 +509,10 @@ module.exports = { handleIncomingMessage };
         break;
 
       case 'bank':
-case 'atm':
-case 'tabungan':
-  await handleBankCommand(sock, msg, args, senderId);
-  break;
+      case 'atm':
+      case 'tabungan':
+        await handleBankCommand(sock, msg, args, senderId);
+        break;
         
       case 'reme':
         await remeCommand(sock, msg, args);
@@ -607,7 +565,7 @@ case 'tabungan':
         await bratCommand(sock, msg, args);
         break;
 
-      case 'bratvid':
+       case 'bratvid':
         await bratvidCommand(sock, msg, args);
         break;
 
@@ -779,6 +737,7 @@ case 'tabungan':
 ┣⌬ ${prefixUsed}mancing
 ┣⌬ ${prefixUsed}lnj (Lanjut Mancing)
 ┣⌬ ${prefixUsed}fish [tas|sell|sellall|pakai|stats|help]
+┣⌬ ${prefixUsed}inv / ${prefixUsed}tas (Cek Inventory)
 ┣⌬ ${prefixUsed}shop (Beli Potion Mancing)
 ┣⌬ ${prefixUsed}beli <item> <jumlah>
 ┣⌬ ${prefixUsed}math [mudah|sedang|hard|max]
@@ -864,6 +823,7 @@ case 'tabungan':
 ┃  • ${prefixUsed}mancing
 ┃  • ${prefixUsed}lnj (Lanjut Mancing)
 ┃  • ${prefixUsed}fish [tas|sell|sellall|pakai|stats|help]
+┃  • ${prefixUsed}inv / ${prefixUsed}tas
 ┃  • ${prefixUsed}shop
 ┃  • ${prefixUsed}beli <item> <jumlah>
 ┃  • ${prefixUsed}math [mudah|sedang|hard|max]
