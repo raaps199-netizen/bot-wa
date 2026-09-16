@@ -5,9 +5,9 @@ const { addBait, addPotion } = require('../utils/inventoryManager');
 
 // Fallback aman jika autoPasses belum terdaftar di fishingData.js
 const defaultAutoPasses = {
-  'auto5m': { name: 'Auto-Fish Pass (5 Menit)', price: 5000, duration: 5 * 60 * 1000, desc: 'Pass untuk mancing otomatis selama 5 menit.' },
-  'auto15m': { name: 'Auto-Fish Pass (15 Menit)', price: 12000, duration: 15 * 60 * 1000, desc: 'Pass untuk mancing otomatis selama 15 menit.' },
-  'auto1h': { name: 'Auto-Fish Pass (1 Jam)', price: 40000, duration: 60 * 60 * 1000, desc: 'Pass untuk mancing otomatis selama 1 jam.' }
+  'auto5m': { name: 'Auto-Fish Pass (5 Menit)', price: 5000000, duration: 5 * 60 * 1000, desc: 'Pass untuk mancing otomatis selama 5 menit.' },
+  'auto15m': { name: 'Auto-Fish Pass (15 Menit)', price: 15000000, duration: 15 * 60 * 1000, desc: 'Pass untuk mancing otomatis selama 15 menit.' },
+  'auto1h': { name: 'Auto-Fish Pass (1 Jam)', price: 100000000, duration: 60 * 60 * 1000, desc: 'Pass untuk mancing otomatis selama 1 jam.' }
 };
 
 async function handleShopCommand(sock, msg, args, senderId) {
