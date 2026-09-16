@@ -22,7 +22,7 @@ function generateMathProblem(level) {
       }
       expression = `${num1} ${operator} ${num2}`;
       answer = eval(expression);
-      reward = 25;
+      reward = 200000;
       break;
 
     case 'hard':
@@ -34,7 +34,7 @@ function generateMathProblem(level) {
       operator = ['+', '-', '*'][getRandomInt(0, 2)];
       expression = `${num1} ${operator} ${num2} + ${num3}`;
       answer = eval(expression);
-      reward = 50;
+      reward = 500000;
       break;
 
     case 'extreme':
@@ -43,7 +43,7 @@ function generateMathProblem(level) {
       num3 = getRandomInt(2, 10);
       expression = `${num1} + ${num2} * ${num3}`;
       answer = eval(expression);
-      reward = 100;
+      reward = 750000;
       break;
 
     case 'max':
@@ -52,7 +52,7 @@ function generateMathProblem(level) {
       num3 = getRandomInt(10, 30);
       expression = `(${num1} + ${num2}) * ${num3}`;
       answer = eval(expression);
-      reward = 200;
+      reward = 1000000;
       break;
 
     case 'mudah':
@@ -62,7 +62,7 @@ function generateMathProblem(level) {
       operator = ['+', '-'][getRandomInt(0, 1)];
       expression = `${num1} ${operator} ${num2}`;
       answer = eval(expression);
-      reward = 10;
+      reward = 100000;
       break;
   }
 
