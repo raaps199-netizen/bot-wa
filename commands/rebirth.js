@@ -10,7 +10,7 @@ async function handleRebirthCommand(sock, msg, senderId) {
   user.inventory.rebirthFragments = user.inventory.rebirthFragments || 0;
   user.rebirthLevel = user.rebirthLevel || 0;
 
-  const REQUIRED_FRAGMENTS = 50; // Syarat minimal fragment dinaikkan jadi 50
+  const REQUIRED_FRAGMENTS = 25; // Syarat minimal fragment dinaikkan jadi 50
 
   if (user.inventory.rebirthFragments < REQUIRED_FRAGMENTS) {
     return await sock.sendMessage(remoteJid, {
