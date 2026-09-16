@@ -11,17 +11,17 @@ const rarityEmoji = {
 };
 
 const baits = {
-  roti: { name: '🍞 Roti', price: 5000, luckBonus: 1 },
-  cacing: { name: '🪱 Cacing', price: 15000, luckBonus: 1.2 },
-  pelet: { name: '🟢 Pelet Super', price: 50000, luckBonus: 1.5 },
-  udang: { name: '🦐 Udang Segar', price: 70000, luckBonus: 2.0 },
-  cumi: { name: '🦑 Cumi Impor', price: 100000, luckBonus: 4.0 }
+  roti: { name: '🍞 Roti', price: 50000, luckBonus: 1 },
+  cacing: { name: '🪱 Cacing', price: 75000, luckBonus: 1.2 },
+  pelet: { name: '🟢 Pelet Super', price: 100000, luckBonus: 1.5 },
+  udang: { name: '🦐 Udang Segar', price: 125000, luckBonus: 2.0 },
+  cumi: { name: '🦑 Cumi Impor', price: 2000000, luckBonus: 4.0 }
 };
 
 const potions = {
-  minor: { name: '🧪 Minor Luck Potion', price: 20000, multiplier: 1.25, duration: 15 * 60 * 1000 },
-  major: { name: '🧪 Major Luck Potion', price: 50000, multiplier: 1.5, duration: 30 * 60 * 1000 },
-  divine: { name: '🧪 Divine Luck Potion', price: 100000, multiplier: 3.0, duration: 60 * 60 * 1000 }
+  minor: { name: '🧪 Minor Luck Potion', price: 200000, multiplier: 1.25, duration: 15 * 60 * 1000 },
+  major: { name: '🧪 Major Luck Potion', price: 500000, multiplier: 1.5, duration: 30 * 60 * 1000 },
+  divine: { name: '🧪 Divine Luck Potion', price: 1000000, multiplier: 3.0, duration: 60 * 60 * 1000 }
 };
 
 // Total 10 Joran: 5 Joran awal (Timer 10-6s) & 5 Joran Sultan (Timer 5-1s)
@@ -47,37 +47,37 @@ const fishPool = {
     { name: 'Ikan Sepat', price: 100 }
   ],
   UNCOMMON: [
-    { name: 'Ikan Gurame', price: 750 },
-    { name: 'Ikan Bawal', price: 1000 },
-    { name: 'Ikan Patin', price: 1250 },
-    { name: 'Ikan Gabus', price: 1500 }
+    { name: 'Ikan Gurame', price: 100 },
+    { name: 'Ikan Bawal', price: 200 },
+    { name: 'Ikan Patin', price: 500 },
+    { name: 'Ikan Gabus', price: 700 }
   ],
   RARE: [
-    { name: 'Ikan Salmon', price: 4000 },
+    { name: 'Ikan Salmon', price: 400 },
     { name: 'Ikan Tuna', price: 5500 },
-    { name: 'Ikan Kakap Merah', price: 7000 },
-    { name: 'Ikan Tenggiri', price: 9000 }
+    { name: 'Ikan Kakap Merah', price: 700 },
+    { name: 'Ikan Tenggiri', price: 900 }
   ],
   EPIC: [
-    { name: 'Ikan Hiu Martil', price: 25000 },
-    { name: 'Ikan Pari Manta', price: 35000 },
-    { name: 'Ikan Swordfish', price: 45000 },
-    { name: 'Ikan Marlin Biru', price: 60000 }
+    { name: 'Ikan Hiu Martil', price: 2500 },
+    { name: 'Ikan Pari Manta', price: 3500 },
+    { name: 'Ikan Swordfish', price: 4500 },
+    { name: 'Ikan Marlin Biru', price: 6000 }
   ],
   LEGENDARY: [
-    { name: 'Ikan Hiu Putih', price: 150000 },
-    { name: 'Ikan Paus Biru', price: 250000 },
-    { name: 'Ikan Coelacanth Purba', price: 400000 }
+    { name: 'Ikan Hiu Putih', price: 15000 },
+    { name: 'Ikan Paus Biru', price: 25000 },
+    { name: 'Ikan Coelacanth Purba', price: 40000 }
   ],
   MYTHIC: [
-    { name: 'Kraken Junior', price: 1000000 },
-    { name: 'Naga Laut Dalam', price: 1750000 },
-    { name: 'Leviathan Samudra', price: 2500000 }
+    { name: 'Kraken Junior', price: 100000 },
+    { name: 'Naga Laut Dalam', price: 175000 },
+    { name: 'Leviathan Samudra', price: 250000 }
   ],
   SECRET: [
-    { name: 'The Celestial Leviathan', price: 10000000 },
-    { name: 'The Void Sovereign', price: 25000000 },
-    { name: 'The Eternal Neptune', price: 50000000 }
+    { name: 'The Celestial Leviathan', price: 1000000 },
+    { name: 'The Void Sovereign', price: 2500000 },
+    { name: 'The Eternal Neptune', price: 5000000 }
   ]
 };
 
