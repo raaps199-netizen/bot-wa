@@ -2,5 +2,5 @@ module.exports = {
   prefix: '.',
   botName: 'Bot WA',
   ownerNumbers: ['6289531307627'],
-  groqKey: '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'
+  groqKey: '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'
 };
