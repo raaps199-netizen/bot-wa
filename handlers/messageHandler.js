@@ -7,6 +7,7 @@ const { handleBankCommand } = require('../commands/bank');
 const { handleInventoryCommand } = require('../commands/inventory'); // 🎒 Import Inventory
 const { getSenderId } = require('../utils/jid-utils');
 const { handleRebirthCommand } = require('../commands/rebirth'); // ✅ Path sudah dibenerin ke parent folder
+const handleResetCommand = require('../commands/reset'); // 🔄 Import Command Reset Season Admin
 
 
 // Command Media & Utility
@@ -510,6 +511,11 @@ async function handleMessage(sock, msg) {
         await handleRebirthCommand(sock, msg, senderId);
         break;
 
+      case 'reset':
+      case 'resetseason':
+        await handleResetCommand(sock, msg, args);
+        break;
+
       case 'title':
       case 'gelar':
         await titleCommand(sock, msg, args);
@@ -558,7 +564,7 @@ async function handleMessage(sock, msg) {
         await stickerCommand(sock, msg);
         break;
 
-       case 'tt':
+      case 'tt':
       case 'tiktok':
         await tiktokCommand(sock, msg, args);
         break;
@@ -905,7 +911,7 @@ async function handleMessage(sock, msg) {
 ┗━━━━━━━◧
 
 _ᴋᴇᴛɪᴋ ɴᴀᴍᴀ ᴋᴀᴛᴇɢᴏʀɪ ᴜɴᴛᴜᴋ ᴍᴇʟɪʜᴀᴛ ɪꜱɪɴʏᴀ._
-_ᴄᴏɴᴛᴏ🇭: *.menu_game* ᴀᴛᴀᴜ *.allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍpilkan ꜱᴇᴍᴜ🇦 ᴍᴇɴᴜ_`;
+_ᴄᴏɴᴛᴏʜ: *.menu_game* ᴀᴛᴀᴜ *.allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍᴘɪʟᴋᴀɴ ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ_`;
 
         await sock.sendMessage(remoteJid, { text: menuText }, { quoted: msg });
         break;
