@@ -23,7 +23,7 @@ async function handleResetCommand(sock, msg, args) {
     return await sock.sendMessage(remoteJid, {
       text: `⚠️ *PERINGATAN: MENUJU ERA BARU SEASON 1!* ⚠️\n\n` +
             `Perintah admin ini bakal mereset *SELURUH PLAYER* dari nol:\n` +
-            `• Dompet & Bank seluruh pemain diset jadi 0\n` +
+            `• Saldo, Dompet, & Bank seluruh pemain diset jadi 0\n` +
             `• Semua joran, tas, ikan, & item ludes\n` +
             `• Level Rebirth, title, & statistik dibersihkan total!\n\n` +
             `Kalau yakin mau buka lembaran baru, ketik:\n` +
@@ -31,58 +31,35 @@ async function handleResetCommand(sock, msg, args) {
     }, { quoted: msg });
   }
 
-  // Fungsi helper untuk mereset data user secara menyeluruh
-  function resetUserObj(user) {
-    if (user && typeof user === 'object') {
-      user.points = 0;
-      user.bank = 0;
-      user.balance = 0;
-      user.money = 0;
-      user.activeRod = 'training';
-      user.rods = { training: true };
-      user.inventory = {};
-      user.rebirthLevel = 0;
-      user.moneyMultiplier = 1;
-      user.bossDamageMultiplier = 1;
-      user.title = 'Novice';
-      delete user.equippedTitle;
-      user.maxPoin = 0;
-      user.remeWin = 0;
-      user.qqWin = 0;
-      user.triviaCount = 0;
-      user.mathCount = 0;
-      user.totalFish = 0;
-      user.bossKills = 0;
-    }
-  }
-
-  // Eksekusi pembersihan database
+  // --- EKSEKUSI RESET TOTAL (BERSIHKAN DATABASE USER) ---
   if (global.db) {
     // 1. Jika data user disimpan di dalam objek global.db.users
     if (global.db.users && typeof global.db.users === 'object') {
-      for (const uid in global.db.users) {
-        resetUserObj(global.db.users[uid]);
-      }
+      global.db.users = {}; // Kosongkan total object users
     }
 
-    // 2. Jika data user disimpan langsung sebagai key di global.db
+    // 2. Jika data user disimpan langsung sebagai key di root global.db (berdasarkan JID/Nomor)
     for (const key in global.db) {
+      // Jangan hapus properti sistem penting
       if (['game', 'settings', 'group', 'users'].includes(key)) continue;
-      const user = global.db[key];
-      if (user && typeof user === 'object') {
-        resetUserObj(user);
+      
+      // Jika key terlihat seperti ID user (mengandung angka panjang atau @)
+      if (key.includes('@') || !isNaN(key) || typeof global.db[key] === 'object') {
+        delete global.db[key];
       }
     }
   }
 
+  // Simpan perubahan ke database file
   if (typeof global.saveDatabase === 'function') {
     global.saveDatabase();
   }
 
   return await sock.sendMessage(remoteJid, {
     text: `🚀 *SEASON 1 RESMI DIBUKA!* 🏆\n\n` +
-          `Lembaran baru telah dimulai! Seluruh kekayaan, joran, dan statistik server telah dibersihkan dari nol.\n\n` +
-          `_Sudah saatnya buktikan siapa yang bakal jadi legenda terkuat di **Season 1** ini. Selamat berjuang kembali dari garis start, para ksatria!_ ✨`,
+          `Database pemain telah dibersihkan secara total!\n` +
+          `Semua saldo, joran, dan statistik sekarang kembali bersih dari nol.\n\n` +
+          `_Selamat menyambut **Season 1**! Silakan cek leaderboard atau ketik .score untuk mulai berpetualang lagi._ ✨`,
     quoted: msg
   }, { quoted: msg });
 }
