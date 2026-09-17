@@ -37,13 +37,13 @@ async function triviaCommand(sock, msg, args) {
   let targetTopic = inputKategori.toUpperCase();
 
   let difficulty = 'mudah';
-  let points = 150000;
+  let points = 500;
   if (['sedang', 'medium'].includes(inputLevel)) {
     difficulty = 'sedang';
-    points = 300000;
+    points = 1000;
   } else if (['hard', 'sulit', 'susah'].includes(inputLevel)) {
     difficulty = 'sulit';
-    points = 600000;
+    points = 2500;
   }
 
   try {
