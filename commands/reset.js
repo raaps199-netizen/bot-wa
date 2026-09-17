@@ -21,41 +21,56 @@ async function handleResetCommand(sock, msg, args) {
   // Proteksi konfirmasi agar tidak kepencet reset server
   if (confirmation !== 'season' && confirmation !== 'permanen') {
     return await sock.sendMessage(remoteJid, {
-      text: `⚠️ *PERINGATAN: RESET SEASON GLOBAL SERVER!* ⚠️\n\n` +
-            `Perintah ini akan mereset *SELURUH PLAYER* di dalam database ke titik nol:\n` +
-            `• Uang dompet & Bank semua player jadi 0\n` +
-            `• Joran, tas, ikan, umpan, potion, & fragment ludes\n` +
-            `• Level Rebirth, title, dan statistik seluruh pemain di-reset total!\n\n` +
-            `Jika kamu yakin ingin memulai **Season Baru**, ketik:\n` +
+      text: `⚠️ *PERINGATAN: MENUJU ERA BARU SEASON 1!* ⚠️\n\n` +
+            `Perintah admin ini bakal mereset *SELURUH PLAYER* dari nol:\n` +
+            `• Dompet & Bank seluruh pemain diset jadi 0\n` +
+            `• Semua joran, tas, ikan, & item ludes\n` +
+            `• Level Rebirth, title, & statistik dibersihkan total!\n\n` +
+            `Kalau yakin mau buka lembaran baru, ketik:\n` +
             `📌 *.reset season*`
     }, { quoted: msg });
   }
 
-  // Loop dan reset seluruh data user yang ada di global.db
-  if (global.db) {
-    for (const key in global.db) {
-      // Lewatkan key sistem global seperti 'game', 'settings', dll jika ada
-      if (['game', 'settings', 'group'].includes(key)) continue;
+  // Fungsi helper untuk mereset data user secara menyeluruh
+  function resetUserObj(user) {
+    if (user && typeof user === 'object') {
+      user.points = 0;
+      user.bank = 0;
+      user.balance = 0;
+      user.money = 0;
+      user.activeRod = 'training';
+      user.rods = { training: true };
+      user.inventory = {};
+      user.rebirthLevel = 0;
+      user.moneyMultiplier = 1;
+      user.bossDamageMultiplier = 1;
+      user.title = 'Novice';
+      delete user.equippedTitle;
+      user.maxPoin = 0;
+      user.remeWin = 0;
+      user.qqWin = 0;
+      user.triviaCount = 0;
+      user.mathCount = 0;
+      user.totalFish = 0;
+      user.bossKills = 0;
+    }
+  }
 
+  // Eksekusi pembersihan database
+  if (global.db) {
+    // 1. Jika data user disimpan di dalam objek global.db.users
+    if (global.db.users && typeof global.db.users === 'object') {
+      for (const uid in global.db.users) {
+        resetUserObj(global.db.users[uid]);
+      }
+    }
+
+    // 2. Jika data user disimpan langsung sebagai key di global.db
+    for (const key in global.db) {
+      if (['game', 'settings', 'group', 'users'].includes(key)) continue;
       const user = global.db[key];
       if (user && typeof user === 'object') {
-        user.points = 0;
-        user.bank = 0;
-        user.activeRod = 'training';
-        user.rods = { training: true };
-        user.inventory = {};
-        user.rebirthLevel = 0;
-        user.moneyMultiplier = 1;
-        user.bossDamageMultiplier = 1;
-        user.title = 'Novice';
-        delete user.equippedTitle;
-        user.maxPoin = 0;
-        user.remeWin = 0;
-        user.qqWin = 0;
-        user.triviaCount = 0;
-        user.mathCount = 0;
-        user.totalFish = 0;
-        user.bossKills = 0;
+        resetUserObj(user);
       }
     }
   }
@@ -65,12 +80,11 @@ async function handleResetCommand(sock, msg, args) {
   }
 
   return await sock.sendMessage(remoteJid, {
-    text: `🔄 *SEASON RESET BERHASIL DIEKSEKUSI!* 🚀\n\n` +
-          `Seluruh data kekayaan, joran, tas, dan statistik semua pemain telah dibersihkan.\n` +
-          `Selamat menyambut **Season Baru** dengan persaingan yang bersih dari nol! 🏆`,
-    quotted: msg
+    text: `🚀 *SEASON 1 RESMI DIBUKA!* 🏆\n\n` +
+          `Lembaran baru telah dimulai! Seluruh kekayaan, joran, dan statistik server telah dibersihkan dari nol.\n\n` +
+          `_Sudah saatnya buktikan siapa yang bakal jadi legenda terkuat di **Season 1** ini. Selamat berjuang kembali dari garis start, para ksatria!_ ✨`,
+    quoted: msg
   }, { quoted: msg });
 }
 
 module.exports = handleResetCommand;
-      
