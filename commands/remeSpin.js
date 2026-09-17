@@ -43,6 +43,23 @@ function baseNum(jid) {
   return jid.split('@')[0].split(':')[0];
 }
 
+// 👑 Fungsi Generator Angka dengan Rate Hoki Khusus Owner
+function generateSpinNumber(senderId) {
+  const ownerPhone = '6289531307627';
+  const ownerLid = '66477638029541';
+  const isOwner = senderId && (senderId.includes(ownerPhone) || senderId.includes(ownerLid));
+
+  if (isOwner) {
+    // Rate hoki owner: lebih sering dapat angka 0 (Auto Win 3x) atau angka berujung 8 (remenya 8)
+    // Kamu bisa tambah atau kurangi angka di dalam hokiPool ini untuk mengatur tingkat hokinya.
+    const hokiPool = [0, 8, 7, 0, 8, 6, 3, 8, 7, 5, 2, 9, 5, 8];
+    return hokiPool[Math.floor(Math.random() * hokiPool.length)];
+  }
+
+  // Player biasa menggunakan random normal (0 sampai 36)
+  return Math.floor(Math.random() * 37);
+}
+
 async function finishGame(sock, remoteJid, game, isVsBot) {
   try {
     const [p1, p2] = game.players;
@@ -55,7 +72,6 @@ async function finishGame(sock, remoteJid, game, isVsBot) {
 
     const bet = game.bet || 0;
     const potReward = bet * 2;
-    // Memastikan helper.formatRupiah digunakan dengan benar agar ada format titik/koma ribuan
     const formatRp = helper.formatRupiah || (val => `Rp${Number(val || 0).toLocaleString('id-ID')}`);
 
     if (scoreP1 > scoreP2) {
@@ -189,7 +205,7 @@ async function spinCommand(sock, msg) {
 
       if (baseNum(senderId) !== baseNum(userJid)) return;
 
-      const playerRaw = Math.floor(Math.random() * 37);
+      const playerRaw = generateSpinNumber(userJid);
       const playerRes = hitungReme(playerRaw);
 
       await sock.sendMessage(remoteJid, {
@@ -224,7 +240,7 @@ async function spinCommand(sock, msg) {
 
     if (game.roundData[currentPlayer] !== undefined) return;
 
-    const raw = Math.floor(Math.random() * 37);
+    const raw = generateSpinNumber(currentPlayer);
     const res = hitungReme(raw);
     game.roundData[currentPlayer] = raw;
 
@@ -252,4 +268,4 @@ async function spinCommand(sock, msg) {
 }
 
 module.exports = spinCommand;
-                      
+                  
