@@ -175,7 +175,7 @@ async function handleAttackBossCommand(sock, msg, senderId) {
   if (!global.activeBoss.hasEvolved && global.activeBoss.hp <= global.activeBoss.maxHp * 0.5) {
     global.activeBoss.hasEvolved = true;
 
-    if (Math.random() < 0.20) {
+    if (Math.random() < 0.50) {
       if (global.activeBoss.name.includes('Kraken')) {
         global.activeBoss.name = '🐙 NIGHTMARE ANCIENT KRAKEN (EVOLVED!)';
         global.activeBoss.maxHp += 300000;
