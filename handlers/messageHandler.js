@@ -8,7 +8,8 @@ const { handleInventoryCommand } = require('../commands/inventory'); // 🎒 Imp
 const { getSenderId } = require('../utils/jid-utils');
 const { handleRebirthCommand } = require('../commands/rebirth'); // ✅ Path sudah dibenerin ke parent folder
 const handleResetCommand = require('../commands/reset'); // 🔄 Import Command Reset Season Admin
-const handleDungeonCommand = require('../commands/dungeon'); // 🕳️ Import Zork Dungeon Command
+const handleDungeonCommand = require('../commands/dungeon'); // 🕳️ Import Dungeon Command Lama (jika masih dipakai)
+const handleZorkCommand = require('../commands/zork'); // 🎮 Import Zork Text Adventure Engine
 
 // Command Media & Utility
 const stickerCommand = require('../commands/sticker');
@@ -156,25 +157,17 @@ async function handleMessage(sock, msg) {
     const isOwner = senderId.includes(ownerPhone) || senderId.includes(ownerLid);
 
     // ===================================================
-    // 🕳️ DUNGEON SESSION INTERCEPTOR (ZORK TEXT ADVENTURE)
+    // 🎮 ZORK SESSION INTERCEPTOR (NATURAL INPUT)
     // ===================================================
     const user = global.db?.users?.[senderId];
-    if (user && user.dungeon && user.dungeon.active) {
-      const bodyLower = cleanText.toLowerCase();
-      
-      // Jika player ingin keluar dari dungeon
-      if (bodyLower === '.keluar' || bodyLower === 'keluar' || bodyLower === '/keluar') {
-        await handleDungeonCommand(sock, msg, ['keluar']);
+    if (user && user.zork && user.zork.active) {
+      // Jika user sedang dalam sesi Zork dan mengirim pesan TANPA prefix bot,
+      // tangkap pesan tersebut sebagai command Zork (contoh: look, north, inventory)
+      if (!cleanText.startsWith(config.prefix) && !cleanText.startsWith('/')) {
+        const zorkArgs = cleanText.trim().split(/ +/);
+        await handleZorkCommand(sock, msg, zorkArgs, true);
         return;
       }
-
-      // Tangkap input sebagai aksi penjelajahan dungeon
-      let dungeonArgs = cleanText.startsWith(config.prefix) || cleanText.startsWith('/') 
-        ? [cleanText.slice(1).trim()] 
-        : cleanText.trim().split(/ +/);
-      
-      await handleDungeonCommand(sock, msg, dungeonArgs);
-      return;
     }
 
     if (cleanText.toLowerCase() === '.spin' || cleanText.toLowerCase() === 'spin') {
@@ -228,6 +221,11 @@ async function handleMessage(sock, msg) {
 
     switch (command) {
 
+      // 🎮 ZORK TEXT ADVENTURE COMMAND (.zork, .zork restart, .zork quit)
+      case 'zork':
+        await handleZorkCommand(sock, msg, args, false);
+        break;
+
       // 🎒 FITUR INVENTORY / TAS
       case 'inv':
       case 'inventory':
@@ -235,7 +233,7 @@ async function handleMessage(sock, msg) {
         await handleInventoryCommand(sock, msg, senderId);
         break;
 
-      // 🕳️ DUNGEON ZORK TEXT ADVENTURE
+      // 🕳️ DUNGEON LAMA (Opsional jika masih ingin dipertahankan)
       case 'dungeon':
       case 'jelajah':
         await handleDungeonCommand(sock, msg, args);
@@ -767,15 +765,15 @@ async function handleMessage(sock, msg) {
         break;
 
       // ==========================================
-      // 📋 SISTEM MENU (dipindah dari command lama)
+      // 📋 SISTEM MENU
       // ==========================================
       case 'menu_game':
       case 'games': {
         const gameText =
 `┏━I *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* I
 ┃
+┣⌬ ${prefixUsed}zork (Zork Text Adventure RPG)
 ┣⌬ ${prefixUsed}bj
-┣⌬ ${prefixUsed}dungeon / ${prefixUsed}jelajah (Zork RPG Text Adventure)
 ┣⌬ ${prefixUsed}mancing
 ┣⌬ ${prefixUsed}lnj (Lanjut Mancing)
 ┣⌬ ${prefixUsed}fish [tas|sell|sellall|pakai|stats|help]
@@ -862,8 +860,8 @@ async function handleMessage(sock, msg) {
 `┏━I *ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ* I
 ┃
 ┣⌬ *ɢᴀᴍᴇꜱ*
+┃  • ${prefixUsed}zork (Zork Text Adventure RPG)
 ┃  • ${prefixUsed}bj
-┃  • ${prefixUsed}dungeon / ${prefixUsed}jelajah (Zork RPG Text Adventure)
 ┃  • ${prefixUsed}mancing
 ┃  • ${prefixUsed}lnj (Lanjut Mancing)
 ┃  • ${prefixUsed}fish [tas|sell|sellall|pakai|stats|help]
