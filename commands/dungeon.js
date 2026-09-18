@@ -4,11 +4,13 @@ const config = require('../config');
 const { getSenderId } = require('../utils/jid-utils');
 
 function getGroqClient() {
-  const apiKey = (global.config && global.config.groqKey) || (config && config.groqKey) || process.env.GROQ_API_KEY;
+  // Menyesuaikan dengan config.js lu yang pakai 'groqkey' (huruf kecil)
+  const apiKey = process.env.GROQ_API_KEY || (config && (config.groqkey || config.groqKey)) || (global.config && (global.config.groqkey || global.config.groqKey));
   if (!apiKey) return null;
   return new Groq({ apiKey });
 }
 
+// Default State awal Dungeon untuk player baru
 const getDefaultDungeonState = () => ({
   active: false,
   location: "living_room",
@@ -39,6 +41,7 @@ async function handleDungeonCommand(sock, msg, args) {
 
   const subCommand = args[0]?.toLowerCase();
 
+  // Handle .dungeon quit / keluar
   if (subCommand === 'quit' || subCommand === 'keluar') {
     user.dungeon.active = false;
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
@@ -48,6 +51,7 @@ async function handleDungeonCommand(sock, msg, args) {
     });
   }
 
+  // Handle .dungeon restart / mulai ulang
   if (subCommand === 'restart') {
     user.dungeon = getDefaultDungeonState();
     user.dungeon.active = true;
@@ -58,6 +62,7 @@ async function handleDungeonCommand(sock, msg, args) {
     });
   }
 
+  // Jika mengetik `.dungeon` pertama kali atau saat belum aktif
   if (!user.dungeon.active) {
     user.dungeon.active = true;
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
@@ -71,6 +76,7 @@ async function handleDungeonCommand(sock, msg, args) {
     });
   }
 
+  // Jika user mengetik .dungeon doang saat game sudah aktif, anggap sebagai 'look'
   if (user.dungeon.active && !subCommand) {
     args = ['look'];
   }
@@ -83,10 +89,11 @@ async function handleDungeonCommand(sock, msg, args) {
     });
   }
 
+  // Proses aksi menggunakan Groq AI sebagai Game Engine & Rule Enforcer
   try {
     const groq = getGroqClient();
     if (!groq) {
-      return await sock.sendMessage(remoteJid, { text: `⚠️ Groq API Key belum dikonfigurasi untuk Dungeon Engine.`, quoted: msg });
+      return await sock.sendMessage(remoteJid, { text: `⚠️ Groq API Key tidak terbaca dari config.js (pastikan properti groqkey terisi).`, quoted: msg });
     }
 
     const systemPrompt = `Kamu adalah Zork Game Engine dan Rule Narrator yang ketat. 
@@ -117,7 +124,6 @@ async function handleDungeonCommand(sock, msg, args) {
     let rawContent = completion.choices[0]?.message?.content || '{}';
     let responseText = rawContent;
     
-    // Parser aman dengan fallback agar tidak crash jika AI gagal format JSON
     try {
       const jsonMatch = rawContent.match(/```json([\s\S]*?)```/) || rawContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
@@ -130,7 +136,7 @@ async function handleDungeonCommand(sock, msg, args) {
         }
       }
     } catch (parseErr) {
-      console.error('Warning: Gagal parse JSON dari Groq, menggunakan raw text:', parseErr);
+      console.error('Warning: Gagal parse JSON dari Groq:', parseErr);
       responseText = rawContent;
     }
     
@@ -142,12 +148,13 @@ async function handleDungeonCommand(sock, msg, args) {
     });
 
   } catch (err) {
-    console.error('Dungeon Engine Fatal Error:', err);
+    console.error('Dungeon Engine Fatal Error Detail:', err);
     return await sock.sendMessage(remoteJid, {
-      text: `⚠️ Terjadi kesalahan pada koneksi Dungeon Engine. Silakan ulangi aksimu.`,
+      text: `⚠️ Groq Error: ${err.message || 'Gagal memproses aksi.'}`,
       quoted: msg
     });
   }
 }
 
 module.exports = handleDungeonCommand;
+                    
