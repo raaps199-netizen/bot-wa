@@ -1,4 +1,4 @@
-// File: commands/zork.js
+// File: commands/dungeon.js
 const Groq = require('groq-sdk');
 const config = require('../config');
 
@@ -8,8 +8,8 @@ function getGroqClient() {
   return new Groq({ apiKey });
 }
 
-// Default State awal Zork untuk player baru
-const getDefaultZorkState = () => ({
+// Default State awal Dungeon untuk player baru
+const getDefaultDungeonState = () => ({
   active: false,
   location: "living_room",
   inventory: ["brass_lantern"],
@@ -27,59 +27,63 @@ const getDefaultZorkState = () => ({
   }
 });
 
-async function handleZorkCommand(sock, msg, args, isInSession = false) {
+async function handleDungeonCommand(sock, msg, args, isInSession = false) {
   const remoteJid = msg.key.remoteJid;
-  // Sesuaikan dengan fungsi pengambil sender JID di project kamu
   const senderId = remoteJid; 
 
   if (!global.db.users) global.db.users = {};
   if (!global.db.users[senderId]) global.db.users[senderId] = {};
   
   const user = global.db.users[senderId];
-  if (!user.zork) user.zork = getDefaultZorkState();
+  if (!user.dungeon) user.dungeon = getDefaultDungeonState();
 
   const subCommand = args[0]?.toLowerCase();
 
-  // Handle .zork quit / keluar
+  // Handle .dungeon quit / keluar
   if (subCommand === 'quit' || subCommand === 'keluar') {
-    user.zork.active = false;
+    user.dungeon.active = false;
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
     return await sock.sendMessage(remoteJid, {
-      text: `🚪 *ZORK GAME QUIT*\nGame session dihentikan. Ketik .zork untuk memulai kembali kapan saja.`,
+      text: `🚪 *DUNGEON GAME QUIT*\nGame session dihentikan. Ketik .dungeon untuk memulai kembali kapan saja.`,
       quoted: msg
     });
   }
 
-  // Handle .zork restart / mulai ulang
+  // Handle .dungeon restart / mulai ulang
   if (subCommand === 'restart') {
-    user.zork = getDefaultZorkState();
-    user.zork.active = true;
+    user.dungeon = getDefaultDungeonState();
+    user.dungeon.active = true;
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
     return await sock.sendMessage(remoteJid, {
-      text: `🔄 *ZORK RESTARTED*\nGame baru dimulai!\n\nWelcome to Zork...\nYou are standing in a living room.`,
+      text: `🔄 *DUNGEON RESTARTED*\nGame baru dimulai!\n\nWelcome to Zork Dungeon...\nYou are standing in a living room.`,
       quoted: msg
     });
   }
 
-  // Jika mengetik `.zork` pertama kali atau saat belum aktif
-  if (!user.zork.active && !isInSession) {
-    user.zork.active = true;
+  // Jika mengetik `.dungeon` pertama kali atau saat belum aktif
+  if (!user.dungeon.active && !isInSession) {
+    user.dungeon.active = true;
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
     return await sock.sendMessage(remoteJid, {
-      text: `🎮 *WELCOME TO ZORK TEXT ADVENTURE*\n` +
+      text: `🎮 *WELCOME TO ZORK TEXT ADVENTURE DUNGEON*\n` +
             `_Ketik perintah seperti 'look', 'north', 'take brass_lantern', 'inventory', dll tanpa prefix._\n` +
-            `_Ketik '.zork quit' untuk keluar atau '.zork restart' untuk mengulang._\n\n` +
+            `_Ketik '.dungeon quit' untuk keluar atau '.dungeon restart' untuk mengulang._\n\n` +
             `----------------------------------------\n\n` +
             `*Living Room*\nYou are standing in a living room. A brass lantern is on the table.\n\nExits: north, west, down\n\n> `,
       quoted: msg
     });
   }
 
+  // Jika user mengetik .dungeon doang saat game sudah aktif, anggap sebagai 'look'
+  if (user.dungeon.active && !isInSession && !subCommand) {
+    args = ['look'];
+  }
+
   // Jika user sedang dalam sesi dan mengirim aksi game (misal: "look", "north", "take lamp")
-  const actionText = isInSession ? args.join(' ') : args.slice(1).join(' ');
+  const actionText = isInSession ? args.join(' ') : args.join(' ');
   if (!actionText) {
     return await sock.sendMessage(remoteJid, {
-      text: `Game Zork kamu sedang aktif. Ketik aksi yang ingin kamu lakukan (contoh: \`look\`, \`inventory\`, \`north\`).`,
+      text: `Game Dungeon kamu sedang aktif. Ketik aksi yang ingin kamu lakukan (contoh: \`look\`, \`inventory\`, \`north\`).`,
       quoted: msg
     });
   }
@@ -88,7 +92,7 @@ async function handleZorkCommand(sock, msg, args, isInSession = false) {
   try {
     const groq = getGroqClient();
     if (!groq) {
-      return await sock.sendMessage(remoteJid, { text: `⚠️ Groq API Key belum dikonfigurasi untuk Zork Engine.`, quoted: msg });
+      return await sock.sendMessage(remoteJid, { text: `⚠️ Groq API Key belum dikonfigurasi untuk Dungeon Engine.`, quoted: msg });
     }
 
     // Kirim state saat ini ke AI agar konsisten
@@ -96,7 +100,7 @@ async function handleZorkCommand(sock, msg, args, isInSession = false) {
     Ikuti state pemain saat ini secara mutlak dan jangan mengarang atau melanggar aturan game.
     
     Current Player State:
-    ${JSON.stringify(user.zork, null, 2)}
+    ${JSON.stringify(user.dungeon, null, 2)}
     
     Instruksi:
     1. Evaluasi command pemain: "${actionText}".
@@ -124,7 +128,7 @@ async function handleZorkCommand(sock, msg, args, isInSession = false) {
     if (jsonMatch) {
       const parsedData = JSON.parse(jsonMatch[1] || jsonMatch[0]);
       if (parsedData.updated_state) {
-        user.zork = parsedData.updated_state;
+        user.dungeon = parsedData.updated_state;
       }
       
       if (typeof global.saveDatabase === 'function') global.saveDatabase();
@@ -141,13 +145,12 @@ async function handleZorkCommand(sock, msg, args, isInSession = false) {
     }
 
   } catch (err) {
-    console.error('Zork Engine Error:', err);
+    console.error('Dungeon Engine Error:', err);
     return await sock.sendMessage(remoteJid, {
-      text: `⚠️ Terjadi kesalahan pada Zork Engine dunia lain. Coba ulangi aksimu.`,
+      text: `⚠️ Terjadi kesalahan pada Dungeon Engine. Coba ulangi aksimu.`,
       quoted: msg
     });
   }
 }
 
-module.exports = handleZorkCommand;
-
+module.exports = handleDungeonCommand;
