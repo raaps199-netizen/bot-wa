@@ -8,7 +8,6 @@ const { handleInventoryCommand } = require('../commands/inventory'); // 🎒 Imp
 const { getSenderId } = require('../utils/jid-utils');
 const { handleRebirthCommand } = require('../commands/rebirth'); // ✅ Path sudah dibenerin ke parent folder
 const handleResetCommand = require('../commands/reset'); // 🔄 Import Command Reset Season Admin
-const handleDungeonCommand = require('../commands/dungeon'); // 🕳️ Import Dungeon Command Lama (jika masih dipakai)
 const handleZorkCommand = require('../commands/zork'); // 🎮 Import Zork Text Adventure Engine
 
 // Command Media & Utility
@@ -161,8 +160,6 @@ async function handleMessage(sock, msg) {
     // ===================================================
     const user = global.db?.users?.[senderId];
     if (user && user.zork && user.zork.active) {
-      // Jika user sedang dalam sesi Zork dan mengirim pesan TANPA prefix bot,
-      // tangkap pesan tersebut sebagai command Zork (contoh: look, north, inventory)
       if (!cleanText.startsWith(config.prefix) && !cleanText.startsWith('/')) {
         const zorkArgs = cleanText.trim().split(/ +/);
         await handleZorkCommand(sock, msg, zorkArgs, true);
@@ -221,25 +218,16 @@ async function handleMessage(sock, msg) {
 
     switch (command) {
 
-      // 🎮 ZORK TEXT ADVENTURE COMMAND (.zork, .zork restart, .zork quit)
       case 'zork':
         await handleZorkCommand(sock, msg, args, false);
         break;
 
-      // 🎒 FITUR INVENTORY / TAS
       case 'inv':
       case 'inventory':
       case 'tas':
         await handleInventoryCommand(sock, msg, senderId);
         break;
 
-      // 🕳️ DUNGEON LAMA (Opsional jika masih ingin dipertahankan)
-      case 'dungeon':
-      case 'jelajah':
-        await handleDungeonCommand(sock, msg, args);
-        break;
-
-      // 🎣 COMMAND FISHING & SHOP
       case 'fish':
       case 'mancing':
         await handleFishingCommand(sock, msg, command, args, senderId);
@@ -272,7 +260,6 @@ async function handleMessage(sock, msg) {
         await handleBeliCommand(sock, msg, args, senderId);
         break;
 
-      // 🐙 COMMAND EVENT WORLD BOSS
       case 'event':
         await handleEventCommand(sock, msg, args, senderId);
         break;
@@ -282,9 +269,6 @@ async function handleMessage(sock, msg) {
         await handleAttackBossCommand(sock, msg, senderId);
         break;
 
-      // ==========================================
-      // 📅 COMMAND JADWAL & PIKET KELAS
-      // ==========================================
       case 'jadwal':
       case 'jsn':
       case 'jsl':
@@ -894,7 +878,7 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}truth
 ┃  • ${prefixUsed}dare
 ┃
-┣⌬ *ᴛᴏᴏls & ᴊᴀᴅᴡᴀʟ*
+┣⌬ *ᴛᴏᴏʟꜱ & ᴊᴀᴅᴡᴀʟ*
 ┃  • ${prefixUsed}jadwal [hari]
 ┃  • ${prefixUsed}jsn / .jsl / .jrb / .jkm / .jjt
 ┃  • ${prefixUsed}ping
@@ -939,7 +923,7 @@ async function handleMessage(sock, msg) {
 ┗━━━━━━━◧
 
 _ᴋᴇᴛɪᴋ ɴᴀᴍᴀ ᴋᴀᴛᴇɢᴏʀɪ ᴜɴᴛᴜᴋ ᴍᴇʟɪʜᴀᴛ ɪꜱɪɴʏᴀ._
-_ᴄᴏɴᴛᴏ🇭: *.menu_game* ᴀᴛᴀᴜ *.allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍᴘɪʟᴋᴀɴ ꜱᴇᴍᴜ🇦 ᴍᴇɴᴜ_`;
+_ᴄᴏɴᴛᴏʜ: *.menu_game* ATAU *.allmenu* UNTUK MENAMPILKAN SEMUA MENU_`;
 
         await sock.sendMessage(remoteJid, { text: menuText }, { quoted: msg });
         break;
