@@ -1,7 +1,7 @@
 // File: commands/dungeon.js
 const Groq = require('groq-sdk');
 const config = require('../config');
-const { getSenderId } = require('../utils/jid-utils'); // ✅ Import helper JID agar konsisten dengan messageHandler
+const { getSenderId } = require('../utils/jid-utils');
 
 function getGroqClient() {
   const apiKey = (global.config && global.config.groqKey) || (config && config.groqKey) || process.env.GROQ_API_KEY;
@@ -9,7 +9,6 @@ function getGroqClient() {
   return new Groq({ apiKey });
 }
 
-// Default State awal Dungeon untuk player baru
 const getDefaultDungeonState = () => ({
   active: false,
   location: "living_room",
@@ -30,7 +29,7 @@ const getDefaultDungeonState = () => ({
 
 async function handleDungeonCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
-  const senderId = getSenderId(msg, remoteJid); // ✅ Mengambil JID user secara akurat (support group & private)
+  const senderId = getSenderId(msg, remoteJid); 
 
   if (!global.db.users) global.db.users = {};
   if (!global.db.users[senderId]) global.db.users[senderId] = {};
@@ -40,7 +39,6 @@ async function handleDungeonCommand(sock, msg, args) {
 
   const subCommand = args[0]?.toLowerCase();
 
-  // Handle .dungeon quit / keluar
   if (subCommand === 'quit' || subCommand === 'keluar') {
     user.dungeon.active = false;
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
@@ -50,7 +48,6 @@ async function handleDungeonCommand(sock, msg, args) {
     });
   }
 
-  // Handle .dungeon restart / mulai ulang
   if (subCommand === 'restart') {
     user.dungeon = getDefaultDungeonState();
     user.dungeon.active = true;
@@ -61,7 +58,6 @@ async function handleDungeonCommand(sock, msg, args) {
     });
   }
 
-  // Jika mengetik `.dungeon` / `.zork` pertama kali atau saat belum aktif
   if (!user.dungeon.active) {
     user.dungeon.active = true;
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
@@ -75,7 +71,6 @@ async function handleDungeonCommand(sock, msg, args) {
     });
   }
 
-  // Jika user mengetik .dungeon doang saat game sudah aktif, anggap sebagai 'look'
   if (user.dungeon.active && !subCommand) {
     args = ['look'];
   }
@@ -88,7 +83,6 @@ async function handleDungeonCommand(sock, msg, args) {
     });
   }
 
-  // Proses aksi menggunakan Groq AI sebagai Game Engine & Rule Enforcer
   try {
     const groq = getGroqClient();
     if (!groq) {
@@ -121,31 +115,36 @@ async function handleDungeonCommand(sock, msg, args) {
     });
 
     let rawContent = completion.choices[0]?.message?.content || '{}';
+    let responseText = rawContent;
     
-    const jsonMatch = rawContent.match(/```json([\s\S]*?)```/) || rawContent.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsedData = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-      if (parsedData.updated_state) {
-        user.dungeon = parsedData.updated_state;
+    // Parser aman dengan fallback agar tidak crash jika AI gagal format JSON
+    try {
+      const jsonMatch = rawContent.match(/```json([\s\S]*?)```/) || rawContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsedData = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+        if (parsedData.updated_state) {
+          user.dungeon = parsedData.updated_state;
+        }
+        if (parsedData.response_text) {
+          responseText = parsedData.response_text;
+        }
       }
-      
-      if (typeof global.saveDatabase === 'function') global.saveDatabase();
-
-      return await sock.sendMessage(remoteJid, {
-        text: `${parsedData.response_text || rawContent}\n\n> `,
-        quoted: msg
-      });
-    } else {
-      return await sock.sendMessage(remoteJid, {
-        text: `${rawContent}\n\n> `,
-        quoted: msg
-      });
+    } catch (parseErr) {
+      console.error('Warning: Gagal parse JSON dari Groq, menggunakan raw text:', parseErr);
+      responseText = rawContent;
     }
+    
+    if (typeof global.saveDatabase === 'function') global.saveDatabase();
+
+    return await sock.sendMessage(remoteJid, {
+      text: `${responseText}\n\n> `,
+      quoted: msg
+    });
 
   } catch (err) {
-    console.error('Dungeon Engine Error:', err);
+    console.error('Dungeon Engine Fatal Error:', err);
     return await sock.sendMessage(remoteJid, {
-      text: `⚠️ Terjadi kesalahan pada Dungeon Engine. Coba ulangi aksimu.`,
+      text: `⚠️ Terjadi kesalahan pada koneksi Dungeon Engine. Silakan ulangi aksimu.`,
       quoted: msg
     });
   }
