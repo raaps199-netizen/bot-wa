@@ -4,11 +4,14 @@ const config = require('../config');
 const handleGameAnswer = require('./gameHandler');
 const { getUserData, getTotalScore, addPoints, deductPoints } = require('../utils/helper');
 const { handleBankCommand } = require('../commands/bank');
-const { handleInventoryCommand } = require('../commands/inventory'); // 🎒 Import Inventory
+const { handleInventoryCommand } = require('../commands/inventory');
 const { getSenderId } = require('../utils/jid-utils');
-const { handleRebirthCommand } = require('../commands/rebirth'); // ✅ Path sudah dibenerin ke parent folder
-const handleResetCommand = require('../commands/reset'); // 🔄 Import Command Reset Season Admin
-const handleDungeonCommand = require('../commands/dungeon'); // 🕳️ Import Dungeon Text Adventure Engine
+const { handleRebirthCommand } = require('../commands/rebirth');
+const handleResetCommand = require('../commands/reset');
+const handleDungeonCommand = require('../commands/dungeon');
+
+// ⛏️ Import Mining
+const handleMiningCommand = require('../commands/mining');
 
 // Command Media & Utility
 const stickerCommand = require('../commands/sticker');
@@ -109,40 +112,64 @@ async function handleMessage(sock, msg) {
       get(target, prop) {
         if (prop === 'sendMessage') {
           return async (jid, content, options) => {
-            if (content && typeof content.text === 'string' && Array.isArray(content.mentions) && content.mentions.length > 0) {
+            if (
+              content &&
+              typeof content.text === 'string' &&
+              Array.isArray(content.mentions) &&
+              content.mentions.length > 0
+            ) {
               let text = content.text;
+
               content.mentions.forEach(mJid => {
                 const userData = getUserData(global.db, mJid);
-                const title = userData?.title || userData?.activeTitle || userData?.gelar || userData?.equippedTitle;
+                const title =
+                  userData?.title ||
+                  userData?.activeTitle ||
+                  userData?.gelar ||
+                  userData?.equippedTitle;
 
                 if (title) {
                   const num = mJid.split('@')[0];
                   const nick = userData?.nickname || userData?.name;
                   const titleTag = `[${title}] `;
 
-                  if (nick && text.includes(`@${nick}`) && !text.includes(`${titleTag}@${nick}`)) {
+                  if (
+                    nick &&
+                    text.includes(`@${nick}`) &&
+                    !text.includes(`${titleTag}@${nick}`)
+                  ) {
                     text = text.split(`@${nick}`).join(`${titleTag}@${nick}`);
                   }
-                  if (text.includes(`@${num}`) && !text.includes(`${titleTag}@${num}`)) {
+
+                  if (
+                    text.includes(`@${num}`) &&
+                    !text.includes(`${titleTag}@${num}`)
+                  ) {
                     text = text.split(`@${num}`).join(`${titleTag}@${num}`);
                   }
                 }
               });
+
               content.text = text;
             }
+
             return originalSendMessage(jid, content, options);
           };
         }
+
         return Reflect.get(target, prop);
       }
     });
+
     // ===================================================
 
-    let text = messageContent.conversation ||
-               messageContent.extendedTextMessage?.text ||
-               messageContent.imageMessage?.caption ||
-               messageContent.videoMessage?.caption ||
-               messageContent.editedMessage?.message?.protocolMessage?.extendedTextMessage?.text || '';
+    let text =
+      messageContent.conversation ||
+      messageContent.extendedTextMessage?.text ||
+      messageContent.imageMessage?.caption ||
+      messageContent.videoMessage?.caption ||
+      messageContent.editedMessage?.message?.protocolMessage?.extendedTextMessage?.text ||
+      '';
 
     const cleanText = text.trim();
     if (!cleanText) return;
@@ -153,132 +180,254 @@ async function handleMessage(sock, msg) {
     // Owner checks
     const ownerPhone = '6289531307627';
     const ownerLid = '66477638029541';
-    const isOwner = senderId.includes(ownerPhone) || senderId.includes(ownerLid);
+    const isOwner =
+      senderId.includes(ownerPhone) ||
+      senderId.includes(ownerLid);
 
     // ===================================================
     // 🕳️ DUNGEON SESSION INTERCEPTOR (NATURAL INPUT)
     // ===================================================
     const user = global.db?.users?.[senderId];
+
     if (user && user.dungeon && user.dungeon.active) {
-      if (!cleanText.startsWith(config.prefix) && !cleanText.startsWith('/')) {
+      if (
+        !cleanText.startsWith(config.prefix) &&
+        !cleanText.startsWith('/')
+      ) {
         const dungeonArgs = cleanText.trim().split(/ +/);
         await handleDungeonCommand(sock, msg, dungeonArgs);
         return;
       }
     }
 
-    if (cleanText.toLowerCase() === '.spin' || cleanText.toLowerCase() === 'spin') {
+    // ===================================================
+    // 🎰 SPIN INTERCEPTOR
+    // ===================================================
+    if (
+      cleanText.toLowerCase() === '.spin' ||
+      cleanText.toLowerCase() === 'spin'
+    ) {
       const gameType = global.db?.game?.[remoteJid]?.type;
+
       if (gameType === 'reme') {
         await spinCommand(sock, msg);
         return;
-      } else if (gameType === 'qq') {
+      }
+
+      if (gameType === 'qq') {
         await qqSpinCommand(sock, msg);
         return;
       }
     }
 
+    // ===================================================
+    // 🎮 GAME ANSWER INTERCEPTOR
+    // ===================================================
     try {
-      const isGameAnswered = await handleGameAnswer(sock, msg, cleanText);
+      const isGameAnswered =
+        await handleGameAnswer(sock, msg, cleanText);
+
       if (isGameAnswered) return;
     } catch (gameErr) {
-      console.error('Error saat handleGameAnswer:', gameErr);
+      console.error(
+        'Error saat handleGameAnswer:',
+        gameErr
+      );
     }
 
+    // ===================================================
+    // ⚔️ DUEL ANSWER INTERCEPTOR
+    // ===================================================
     try {
-      const isDuelAnswered = await handleDuelAnswer(sock, msg, cleanText);
+      const isDuelAnswered =
+        await handleDuelAnswer(sock, msg, cleanText);
+
       if (isDuelAnswered) return;
     } catch (duelErr) {
-      console.error('Error saat handleDuelAnswer:', duelErr);
+      console.error(
+        'Error saat handleDuelAnswer:',
+        duelErr
+      );
     }
 
+    // ===================================================
+    // PREFIX
+    // ===================================================
     let prefixUsed = '';
-    if (cleanText.startsWith(config.prefix)) prefixUsed = config.prefix;
-    else if (cleanText.startsWith('/')) prefixUsed = '/';
+
+    if (cleanText.startsWith(config.prefix)) {
+      prefixUsed = config.prefix;
+    } else if (cleanText.startsWith('/')) {
+      prefixUsed = '/';
+    }
 
     if (!prefixUsed) return;
 
-    const args = cleanText.slice(prefixUsed.length).trim().split(/ +/);
+    const args =
+      cleanText
+        .slice(prefixUsed.length)
+        .trim()
+        .split(/ +/);
+
     const command = args.shift().toLowerCase();
 
     // ===================================================
-    // 🚨 KUNCI LOCKDOWN KRAKEN (INTERCEPTOR)
+    // 🚨 KUNCI LOCKDOWN KRAKEN
     // ===================================================
     if (global.activeBoss) {
-      const allowedCommands = ['serang', 'hit', 'event', 'status', 'boss'];
+      const allowedCommands = [
+        'serang',
+        'hit',
+        'event',
+        'status',
+        'boss'
+      ];
 
       if (!allowedCommands.includes(command)) {
-        return await sock.sendMessage(remoteJid, { 
-          text: `🚨 *DARURAT! KRAKEN MENGAMUK DI PERAIRAN!* 🐙\n\n` +
-                `Semua aktivitas (*.${command}*) dibekukan sementara oleh monster!\n` +
-                `⚠️ Segera ketik *.serang* untuk membela diri, atau harta kekayaanmu bakal dijarah habis-habisan oleh Kraken!` 
-        }, { quoted: msg });
+        return await sock.sendMessage(
+          remoteJid,
+          {
+            text:
+              `🚨 *DARURAT! KRAKEN MENGAMUK DI PERAIRAN!* 🐙\n\n` +
+              `Semua aktivitas (*.${command}*) dibekukan sementara oleh monster!\n` +
+              `⚠️ Segera ketik *.serang* untuk membela diri, atau harta kekayaanmu bakal dijarah habis-habisan oleh Kraken!`
+          },
+          { quoted: msg }
+        );
       }
     }
 
+    // ===================================================
+    // COMMAND ROUTER
+    // ===================================================
     switch (command) {
-      // 🎮 Menerima command .zork, .dungeon, atau .jelajah sekaligus
+
+      // ==========================================
+      // 🎮 DUNGEON / ZORK
+      // ==========================================
       case 'zork':
       case 'dungeon':
       case 'jelajah':
         await handleDungeonCommand(sock, msg, args);
         break;
 
-      // 🎒 FITUR INVENTORY / TAS
+      // ==========================================
+      // ⛏️ MINING
+      // ==========================================
+      case 'mining':
+      case 'mine':
+      case 'tambang':
+        await handleMiningCommand(sock, msg, args);
+        break;
+
+      // ==========================================
+      // 🎒 INVENTORY
+      // ==========================================
       case 'inv':
       case 'inventory':
       case 'tas':
-        await handleInventoryCommand(sock, msg, senderId);
+        await handleInventoryCommand(
+          sock,
+          msg,
+          senderId
+        );
         break;
-      
-      // ... (lanjutan case command lainnya tetap sama)
 
-
-      // 🎣 COMMAND FISHING & SHOP
+      // ==========================================
+      // 🎣 FISHING
+      // ==========================================
       case 'fish':
       case 'mancing':
-        await handleFishingCommand(sock, msg, command, args, senderId);
+        await handleFishingCommand(
+          sock,
+          msg,
+          command,
+          args,
+          senderId
+        );
         break;
 
       case 'lnj':
       case 'lanjut':
-        await handleFishingCommand(sock, msg, 'fish', ['lnj', ...args], senderId);
+        await handleFishingCommand(
+          sock,
+          msg,
+          'fish',
+          ['lnj', ...args],
+          senderId
+        );
         break;
 
       case 'start':
       case 'stop':
       case 'autofish':
       case 'auto':
-        await handleFishingCommand(sock, msg, command, args, senderId);
+        await handleFishingCommand(
+          sock,
+          msg,
+          command,
+          args,
+          senderId
+        );
         break;
 
       case 'favorit':
       case 'fav':
-        await handleFishingCommand(sock, msg, command, args, senderId);
+        await handleFishingCommand(
+          sock,
+          msg,
+          command,
+          args,
+          senderId
+        );
         break;
 
+      // ==========================================
+      // 🛒 FISHING SHOP
+      // ==========================================
       case 'shop':
       case 'toko':
-        await handleShopCommand(sock, msg, args, senderId);
+        await handleShopCommand(
+          sock,
+          msg,
+          args,
+          senderId
+        );
         break;
 
       case 'beli':
       case 'buy':
-        await handleBeliCommand(sock, msg, args, senderId);
+        await handleBeliCommand(
+          sock,
+          msg,
+          args,
+          senderId
+        );
         break;
 
-      // 🐙 COMMAND EVENT WORLD BOSS
+      // ==========================================
+      // 🐙 WORLD BOSS
+      // ==========================================
       case 'event':
-        await handleEventCommand(sock, msg, args, senderId);
+        await handleEventCommand(
+          sock,
+          msg,
+          args,
+          senderId
+        );
         break;
 
       case 'serang':
       case 'hit':
-        await handleAttackBossCommand(sock, msg, senderId);
+        await handleAttackBossCommand(
+          sock,
+          msg,
+          senderId
+        );
         break;
 
       // ==========================================
-      // 📅 COMMAND JADWAL & PIKET KELAS
+      // 📅 JADWAL & PIKET
       // ==========================================
       case 'jadwal':
       case 'jsn':
@@ -292,475 +441,978 @@ async function handleMessage(sock, msg) {
       case 'kamis':
       case 'jumat': {
         const aliasHari = {
-          senin: 'jsn', jsn: 'jsn',
-          selasa: 'jsl', jsl: 'jsl',
-          rabu: 'jrb', jrb: 'jrb',
-          kamis: 'jkm', jkm: 'jkm',
-          jumat: 'jjt', jjt: 'jjt'
+          senin: 'jsn',
+          jsn: 'jsn',
+          selasa: 'jsl',
+          jsl: 'jsl',
+          rabu: 'jrb',
+          jrb: 'jrb',
+          kamis: 'jkm',
+          jkm: 'jkm',
+          jumat: 'jjt',
+          jjt: 'jjt'
         };
 
-        let rawKey = (command === 'jadwal' ? args[0] : command) || '';
-        let key = aliasHari[rawKey.toLowerCase()];
+        let rawKey =
+          (command === 'jadwal'
+            ? args[0]
+            : command) || '';
+
+        let key =
+          aliasHari[rawKey.toLowerCase()];
 
         if (!key) {
           const todayIdx = new Date().getDay();
-          const dayMap = { 1: 'jsn', 2: 'jsl', 3: 'jrb', 4: 'jkm', 5: 'jjt' };
+
+          const dayMap = {
+            1: 'jsn',
+            2: 'jsl',
+            3: 'jrb',
+            4: 'jkm',
+            5: 'jjt'
+          };
+
           key = dayMap[todayIdx] || 'jsn';
         }
 
-        const dataMapel = jadwalPelajaran[key];
-        const anggotaPiket = daftarPiket[key] || [];
+        const dataMapel =
+          jadwalPelajaran[key];
+
+        const anggotaPiket =
+          daftarPiket[key] || [];
 
         if (dataMapel) {
-          let pesan = `📅 *JADWAL PELAJARAN — HARI ${dataMapel.hari.toUpperCase()}*\n`;
-          pesan += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+          let pesan =
+            `📅 *JADWAL PELAJARAN — HARI ${dataMapel.hari.toUpperCase()}*\n`;
 
-          dataMapel.mapel.forEach((mapel, index) => {
-            pesan += `📖 *Jam ke-${index + 1}:* ${mapel}\n`;
-          });
+          pesan +=
+            `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+          dataMapel.mapel.forEach(
+            (mapel, index) => {
+              pesan +=
+                `📖 *Jam ke-${index + 1}:* ${mapel}\n`;
+            }
+          );
 
           if (anggotaPiket.length >= 10) {
-            const piketKelas = acakArray(anggotaPiket);
+            const piketKelas =
+              acakArray(anggotaPiket);
 
-            pesan += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-            pesan += `🧹 *PEMBAGIAN PIKET KELAS (${dataMapel.hari.toUpperCase()})*\n`;
-            pesan += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            pesan +=
+              `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
 
-            pesan += `🧹 *Menyapu (2 Orang):*\n  1. ${piketKelas[0]}\n  2. ${piketKelas[1]}\n\n`;
-            pesan += `🧽 *Mengepel (2 Orang):*\n  1. ${piketKelas[2]}\n  2. ${piketKelas[3]}\n\n`;
-            pesan += `🪟 *Mengelap Kaca (2 Orang):*\n  1. ${piketKelas[4]}\n  2. ${piketKelas[5]}\n\n`;
-            pesan += `🪑 *Mengangkat Bangku (2 Orang):*\n  1. ${piketKelas[6]}\n  2. ${piketKelas[7]}\n\n`;
-            pesan += `🗑️ *Cek Kolong & Buang Sampah (1 Orang):*\n  1. ${piketKelas[8]}\n\n`;
-            pesan += `🖊️ *Isi Spidol & Hapus Papan (1 Orang):*\n  1. ${piketKelas[9]}\n`;
+            pesan +=
+              `🧹 *PEMBAGIAN PIKET KELAS (${dataMapel.hari.toUpperCase()})*\n`;
 
-            const piketMbg = acakArray(anggotaPiket);
-            const pengambilMbg = piketMbg.slice(0, 5);
-            const pengembaliMbg = piketMbg.slice(5, 10);
+            pesan +=
+              `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
-            const piketHp = acakArray(anggotaPiket);
-            const petugasHp = piketHp.slice(0, 2);
+            pesan +=
+              `🧹 *Menyapu (2 Orang):*\n` +
+              `  1. ${piketKelas[0]}\n` +
+              `  2. ${piketKelas[1]}\n\n`;
 
-            pesan += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-            pesan += `🍱 *PEMBAGIAN TUGAS KHUSUS (${dataMapel.hari.toUpperCase()})*\n`;
-            pesan += `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            pesan +=
+              `🧽 *Mengepel (2 Orang):*\n` +
+              `  1. ${piketKelas[2]}\n` +
+              `  2. ${piketKelas[3]}\n\n`;
 
-            pesan += `🚚 *Tim Pengambil MBG (5 Orang):*\n`;
-            pengambilMbg.forEach((nama, idx) => {
-              pesan += `  ${idx + 1}. ${nama}\n`;
-            });
+            pesan +=
+              `🪟 *Mengelap Kaca (2 Orang):*\n` +
+              `  1. ${piketKelas[4]}\n` +
+              `  2. ${piketKelas[5]}\n\n`;
 
-            pesan += `\n🔄 *Tim Pengembali MBG (5 Orang):*\n`;
-            pengembaliMbg.forEach((nama, idx) => {
-              pesan += `  ${idx + 1}. ${nama}\n`;
-            });
+            pesan +=
+              `🪑 *Mengangkat Bangku (2 Orang):*\n` +
+              `  1. ${piketKelas[6]}\n` +
+              `  2. ${piketKelas[7]}\n\n`;
 
-            pesan += `\n📱 *Tim Kumpul HP ke Ruang Guru (2 Orang):*\n`;
-            petugasHp.forEach((nama, idx) => {
-              pesan += `  ${idx + 1}. ${nama}\n`;
-            });
+            pesan +=
+              `🗑️ *Cek Kolong & Buang Sampah (1 Orang):*\n` +
+              `  1. ${piketKelas[8]}\n\n`;
 
-            pesan += `\n✨ *Catatan:* Diharapkan teman-teman yang bertugas bisa menjalankan kewajibannya tepat waktu ya. Semangat belajar! 🤝`;
+            pesan +=
+              `🖊️ *Isi Spidol & Hapus Papan (1 Orang):*\n` +
+              `  1. ${piketKelas[9]}\n`;
+
+            const piketMbg =
+              acakArray(anggotaPiket);
+
+            const pengambilMbg =
+              piketMbg.slice(0, 5);
+
+            const pengembaliMbg =
+              piketMbg.slice(5, 10);
+
+            const piketHp =
+              acakArray(anggotaPiket);
+
+            const petugasHp =
+              piketHp.slice(0, 2);
+
+            pesan +=
+              `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+            pesan +=
+              `🍱 *PEMBAGIAN TUGAS KHUSUS (${dataMapel.hari.toUpperCase()})*\n`;
+
+            pesan +=
+              `━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+            pesan +=
+              `🚚 *Tim Pengambil MBG (5 Orang):*\n`;
+
+            pengambilMbg.forEach(
+              (nama, idx) => {
+                pesan +=
+                  `  ${idx + 1}. ${nama}\n`;
+              }
+            );
+
+            pesan +=
+              `\n🔄 *Tim Pengembali MBG (5 Orang):*\n`;
+
+            pengembaliMbg.forEach(
+              (nama, idx) => {
+                pesan +=
+                  `  ${idx + 1}. ${nama}\n`;
+              }
+            );
+
+            pesan +=
+              `\n📱 *Tim Kumpul HP ke Ruang Guru (2 Orang):*\n`;
+
+            petugasHp.forEach(
+              (nama, idx) => {
+                pesan +=
+                  `  ${idx + 1}. ${nama}\n`;
+              }
+            );
+
+            pesan +=
+              `\n✨ *Catatan:* Diharapkan teman-teman yang bertugas bisa menjalankan kewajibannya tepat waktu ya. Semangat belajar! 🤝`;
           }
 
           let mentions = [];
+
           if (remoteJid.endsWith('@g.us')) {
             try {
-              const groupMetadata = await sock.groupMetadata(remoteJid);
-              mentions = groupMetadata.participants.map(p => p.id);
+              const groupMetadata =
+                await sock.groupMetadata(remoteJid);
+
+              mentions =
+                groupMetadata.participants.map(
+                  p => p.id
+                );
             } catch (e) {
-              console.error('Gagal mengambil metadata grup:', e);
+              console.error(
+                'Gagal mengambil metadata grup:',
+                e
+              );
             }
           }
 
-          await sock.sendMessage(remoteJid, {
-            text: pesan,
-            mentions: mentions,
-            contextInfo: {
-              isForwarded: true,
-              forwardingScore: 999
-            }
-          }, { quoted: msg });
+          await sock.sendMessage(
+            remoteJid,
+            {
+              text: pesan,
+              mentions: mentions,
+              contextInfo: {
+                isForwarded: true,
+                forwardingScore: 999
+              }
+            },
+            { quoted: msg }
+          );
         }
+
         break;
       }
 
+      // ==========================================
+      // 🏓 PING
+      // ==========================================
       case 'ping': {
         const start = Date.now();
-        const sentMsg = await sock.sendMessage(remoteJid, { text: 'Pong! 🏓' }, { quoted: msg });
-        const latency = Date.now() - start;
 
-        await sock.sendMessage(remoteJid, {
-          text: `Pong! 🏓\nKecepatan respon: *${latency} ms*`
-        }, { quoted: sentMsg });
+        const sentMsg =
+          await sock.sendMessage(
+            remoteJid,
+            { text: 'Pong! 🏓' },
+            { quoted: msg }
+          );
+
+        const latency =
+          Date.now() - start;
+
+        await sock.sendMessage(
+          remoteJid,
+          {
+            text:
+              `Pong! 🏓\n` +
+              `Kecepatan respon: *${latency} ms*`
+          },
+          { quoted: sentMsg }
+        );
+
         break;
       }
 
+      // ==========================================
+      // ➕ ADD POINT
+      // ==========================================
       case 'add': {
         if (!isOwner) {
-          await sock.sendMessage(remoteJid, { text: `❌ Lu bukan owner, gak usah sok asik mau nambah poin sendiri wkwk!\n(ID terdeteksi: ${senderId})` }, { quoted: msg });
+          await sock.sendMessage(
+            remoteJid,
+            {
+              text:
+                `❌ Lu bukan owner, gak usah sok asik mau nambah poin sendiri wkwk!\n` +
+                `(ID terdeteksi: ${senderId})`
+            },
+            { quoted: msg }
+          );
           break;
         }
 
-        const mentioned = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+        const mentioned =
+          msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+
         let targetId = senderId;
         let addAmount = NaN;
 
         if (mentioned.length > 0) {
           targetId = mentioned[0];
-          const nonTagArgs = args.filter(arg => !arg.includes('@'));
-          addAmount = parseInt(nonTagArgs[0]);
+
+          const nonTagArgs =
+            args.filter(
+              arg => !arg.includes('@')
+            );
+
+          
+          addAmount =
+            parseInt(nonTagArgs[0]);
         } else {
-          addAmount = parseInt(args[0]);
+          addAmount =
+            parseInt(args[0]);
         }
 
         if (isNaN(addAmount)) {
-          await sock.sendMessage(remoteJid, {
-            text: `⚠️ Format salah, bre!\nContoh buat diri sendiri: *.add 100*\nContoh buat orang lain: *.add @user 500*`
-          }, { quoted: msg });
+          await sock.sendMessage(
+            remoteJid,
+            {
+              text:
+                `⚠️ Format salah, bre!\n` +
+                `Contoh buat diri sendiri: *.add 100*\n` +
+                `Contoh buat orang lain: *.add @user 500*`
+            },
+            { quoted: msg }
+          );
           break;
         }
 
         if (addAmount < 0) {
-          const success = deductPoints(global.db, targetId, Math.abs(addAmount));
+          const success =
+            deductPoints(
+              global.db,
+              targetId,
+              Math.abs(addAmount)
+            );
+
           if (!success) {
-            await sock.sendMessage(remoteJid, { text: `❌ Poin total user tidak mencukupi untuk dikurangi sebesar ${Math.abs(addAmount)}!` }, { quoted: msg });
+            await sock.sendMessage(
+              remoteJid,
+              {
+                text:
+                  `❌ Poin total user tidak mencukupi untuk dikurangi sebesar ${Math.abs(addAmount)}!`
+              },
+              { quoted: msg }
+            );
             break;
           }
         } else {
-          addPoints(global.db, targetId, addAmount);
+          addPoints(
+            global.db,
+            targetId,
+            addAmount
+          );
         }
 
-        if (typeof global.saveDatabase === 'function') {
+        if (
+          typeof global.saveDatabase === 'function'
+        ) {
           global.saveDatabase();
         }
 
-        const userData = getUserData(global.db, targetId);
-        const currentTotal = getTotalScore(userData);
-        const targetName = targetId.split('@')[0];
+        const userData =
+          getUserData(
+            global.db,
+            targetId
+          );
 
-        await sock.sendMessage(remoteJid, {
-          text: `✅ Sukses mengubah poin sebesar *${addAmount}* ke @${targetName}!\nTotal poin target sekarang: *${currentTotal}*`,
-          mentions: [targetId]
-        }, { quoted: msg });
+        const currentTotal =
+          getTotalScore(userData);
+
+        const targetName =
+          targetId.split('@')[0];
+
+        await sock.sendMessage(
+          remoteJid,
+          {
+            text:
+              `✅ Sukses mengubah poin sebesar *${addAmount}* ke @${targetName}!\n` +
+              `Total poin target sekarang: *${currentTotal}*`,
+            mentions: [targetId]
+          },
+          { quoted: msg }
+        );
+
         break;
       }
 
+      // ==========================================
+      // 🌌 AURORA
+      // ==========================================
       case 'aurora': {
         if (!isOwner) {
-          await sock.sendMessage(remoteJid, { text: `❌ Lu bukan owner, gak usah sok asik mau aktifin event Aurora wkwk!\n(ID terdeteksi: ${senderId})` }, { quoted: msg });
+          await sock.sendMessage(
+            remoteJid,
+            {
+              text:
+                `❌ Lu bukan owner, gak usah sok asik mau aktifin event Aurora wkwk!\n` +
+                `(ID terdeteksi: ${senderId})`
+            },
+            { quoted: msg }
+          );
           break;
         }
-        await auroraCommand(sock, msg, args);
+
+        await auroraCommand(
+          sock,
+          msg,
+          args
+        );
+
         break;
       }
 
+      // ==========================================
+      // 🎁 CLAIM
+      // ==========================================
       case 'claim':
       case 'daily':
         await claimCommand(sock, msg);
         break;
 
+      // ==========================================
+      // 💸 TRANSFER
+      // ==========================================
       case 'tf':
       case 'transfer':
-        await tfCommand(sock, msg, args);
+        await tfCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
+      // ==========================================
+      // ⚔️ DUEL
+      // ==========================================
       case 'duel':
-        await duelCommand(sock, msg, args);
+        await duelCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
+      // ==========================================
+      // 👤 NICKNAME
+      // ==========================================
       case 'nickname':
       case 'setname': {
-        const newNick = args.join(' ').trim();
+        const newNick =
+          args.join(' ').trim();
+
         if (!newNick) {
-          await sock.sendMessage(remoteJid, {
-            text: `⚠️ Masukkan nickname baru yang kamu mau!\nContoh: *${prefixUsed}nickname azalia*`
-          }, { quoted: msg });
+          await sock.sendMessage(
+            remoteJid,
+            {
+              text:
+                `⚠️ Masukkan nickname baru yang kamu mau!\n` +
+                `Contoh: *${prefixUsed}nickname azalia*`
+            },
+            { quoted: msg }
+          );
           break;
         }
 
         if (newNick.length > 20) {
-          await sock.sendMessage(remoteJid, { text: `❌ Nickname kepanjangan! Maksimal 20 karakter ya, bre.` }, { quoted: msg });
+          await sock.sendMessage(
+            remoteJid,
+            {
+              text:
+                `❌ Nickname kepanjangan! Maksimal 20 karakter ya, bre.`
+            },
+            { quoted: msg }
+          );
           break;
         }
 
-        const user = getUserData(global.db, senderId);
+        const user =
+          getUserData(
+            global.db,
+            senderId
+          );
+
         user.nickname = newNick;
         user.name = newNick;
 
-        if (typeof global.saveDatabase === 'function') {
+        if (
+          typeof global.saveDatabase === 'function'
+        ) {
           global.saveDatabase();
         }
 
-        await sock.sendMessage(remoteJid, {
-          text: `✅ Sukses mengubah nickname leaderboard kamu menjadi: *${newNick}*`
-        }, { quoted: msg });
+        await sock.sendMessage(
+          remoteJid,
+          {
+            text:
+              `✅ Sukses mengubah nickname leaderboard kamu menjadi: *${newNick}*`
+          },
+          { quoted: msg }
+        );
+
         break;
       }
 
+      // ==========================================
+      // ❌ BATAL
+      // ==========================================
       case 'batal':
       case 'cancel': {
-        const currentGame = global.db.game?.[remoteJid];
+        const currentGame =
+          global.db.game?.[remoteJid];
 
         if (!currentGame) {
-          await sock.sendMessage(remoteJid, { text: `⚠️ Lagi tidak ada sesi game aktif yang bisa dibatalkan di chat ini.` }, { quoted: msg });
+          await sock.sendMessage(
+            remoteJid,
+            {
+              text:
+                `⚠️ Lagi tidak ada sesi game aktif yang bisa dibatalkan di chat ini.`
+            },
+            { quoted: msg }
+          );
           break;
         }
 
-        if (currentGame.timer) clearTimeout(currentGame.timer);
-        delete global.db.game[remoteJid];
-        if (typeof global.saveDatabase === 'function') global.saveDatabase();
+        if (currentGame.timer) {
+          clearTimeout(
+            currentGame.timer
+          );
+        }
 
-        await sock.sendMessage(remoteJid, { text: `✅ Sesi game aktif (${currentGame.type.toUpperCase()}) berhasil dibatalkan secara paksa.` }, { quoted: msg });
+        delete global.db.game[remoteJid];
+
+        if (
+          typeof global.saveDatabase === 'function'
+        ) {
+          global.saveDatabase();
+        }
+
+        await sock.sendMessage(
+          remoteJid,
+          {
+            text:
+              `✅ Sesi game aktif (${currentGame.type.toUpperCase()}) berhasil dibatalkan secara paksa.`
+          },
+          { quoted: msg }
+        );
+
         break;
       }
 
+      // ==========================================
+      // 📝 JAWAB
+      // ==========================================
       case 'jawab':
       case 'j': {
-        const userAnswer = args.join(' ');
+        const userAnswer =
+          args.join(' ');
+
         if (!userAnswer) {
-          await sock.sendMessage(remoteJid, {
-            text: `⚠️ Masukkan jawaban kamu!\nContoh: *${prefixUsed}jawab a*`
-          }, { quoted: msg });
+          await sock.sendMessage(
+            remoteJid,
+            {
+              text:
+                `⚠️ Masukkan jawaban kamu!\n` +
+                `Contoh: *${prefixUsed}jawab a*`
+            },
+            { quoted: msg }
+          );
           break;
         }
-        await handleGameAnswer(sock, msg, userAnswer);
+
+        await handleGameAnswer(
+          sock,
+          msg,
+          userAnswer
+        );
+
         break;
       }
 
+      // ==========================================
+      // 🔥 REBIRTH
+      // ==========================================
       case 'rebirth':
       case 'transendensi':
-        await handleRebirthCommand(sock, msg, senderId);
+        await handleRebirthCommand(
+          sock,
+          msg,
+          senderId
+        );
         break;
 
+      // ==========================================
+      // 🔄 RESET
+      // ==========================================
       case 'reset':
       case 'resetseason':
-        await handleResetCommand(sock, msg, args);
+        await handleResetCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
+      // ==========================================
+      // 🏆 TITLE
+      // ==========================================
       case 'title':
       case 'gelar':
-        await titleCommand(sock, msg, args);
+        await titleCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
+      // ==========================================
+      // 🏦 BANK
+      // ==========================================
       case 'bank':
       case 'atm':
       case 'tabungan':
-        await handleBankCommand(sock, msg, args, senderId);
+        await handleBankCommand(
+          sock,
+          msg,
+          args,
+          senderId
+        );
         break;
-        
+
+      // ==========================================
+      // 🎰 REME
+      // ==========================================
       case 'reme':
-        await remeCommand(sock, msg, args);
+        await remeCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'terima':
-        await terimaCommand(sock, msg);
+        await terimaCommand(
+          sock,
+          msg
+        );
         break;
 
       case 'tolak':
-        await tolakCommand(sock, msg);
+        await tolakCommand(
+          sock,
+          msg
+        );
         break;
 
       case 'spin':
-        await spinCommand(sock, msg);
+        await spinCommand(
+          sock,
+          msg
+        );
         break;
 
+      // ==========================================
+      // 🎰 QQ
+      // ==========================================
       case 'qq':
-        await qqCommand(sock, msg, args);
+        await qqCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'terimaqq':
-        await qqAcceptCommand(sock, msg);
+        await qqAcceptCommand(
+          sock,
+          msg
+        );
         break;
 
       case 'tolakqq':
-        await qqRejectCommand(sock, msg);
+        await qqRejectCommand(
+          sock,
+          msg
+        );
         break;
 
       case 'spinqq':
-        await qqSpinCommand(sock, msg);
+        await qqSpinCommand(
+          sock,
+          msg
+        );
         break;
 
+      // ==========================================
+      // 🖼️ MEDIA
+      // ==========================================
       case 's':
       case 'sticker':
-        await stickerCommand(sock, msg);
+        await stickerCommand(
+          sock,
+          msg
+        );
         break;
 
       case 'tt':
       case 'tiktok':
-        await tiktokCommand(sock, msg, args);
+        await tiktokCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'ig':
       case 'instagram':
-        await igCommand(sock, msg, args);
+        await igCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'brat':
-        await bratCommand(sock, msg, args);
+        await bratCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'bratvid':
-        await bratvidCommand(sock, msg, args);
+        await bratvidCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'wm':
-        await wmCommand(sock, msg, args);
+        await wmCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'close':
       case 'tutup':
-        await groupCommand(sock, msg, args, 'close');
+        await groupCommand(
+          sock,
+          msg,
+          args,
+          'close'
+        );
         break;
 
       case 'open':
       case 'buka':
-        await groupCommand(sock, msg, args, 'open');
+        await groupCommand(
+          sock,
+          msg,
+          args,
+          'open'
+        );
         break;
 
       case 'online':
       case 'here':
-        await onlineCommand(sock, msg);
+        await onlineCommand(
+          sock,
+          msg
+        );
         break;
 
       case 'ncode':
       case 'nukecode':
-        await ncodeCommand(sock, msg);
+        await ncodeCommand(
+          sock,
+          msg
+        );
         break;
 
       case 'nyerah':
       case 'menyerah':
-        await handleGameAnswer(sock, msg, '.nyerah');
+        await handleGameAnswer(
+          sock,
+          msg,
+          '.nyerah'
+        );
         break;
 
       case 'promote':
       case 'pm':
-        await groupCommand(sock, msg, args, 'promote');
+        await groupCommand(
+          sock,
+          msg,
+          args,
+          'promote'
+        );
         break;
 
       case 'demote':
       case 'dm':
-        await groupCommand(sock, msg, args, 'demote');
+        await groupCommand(
+          sock,
+          msg,
+          args,
+          'demote'
+        );
         break;
 
       case 'toimg':
-        await toimgCommand(sock, msg);
+        await toimgCommand(
+          sock,
+          msg
+        );
         break;
 
       case 'tovid':
       case 'tomp4':
-        await tovidCommand(sock, msg);
+        await tovidCommand(
+          sock,
+          msg
+        );
         break;
 
       case 'quote':
       case 'q':
       case 'qc':
-        await quoteCommand(sock, msg, args);
+        await quoteCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'rvo':
       case 'viewonce':
       case 'save':
-        await rvoCommand(sock, msg);
+        await rvoCommand(
+          sock,
+          msg
+        );
         break;
 
+      // ==========================================
+      // 🤖 AI & TOOLS
+      // ==========================================
       case 'ai':
       case 'tanya':
-        await aiCommand(sock, msg, args);
+        await aiCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'hd':
       case 'remini':
       case 'enhance':
-        await hdCommand(sock, msg);
+        await hdCommand(
+          sock,
+          msg
+        );
         break;
 
       case 'ss':
       case 'ssweb':
-        await sswebCommand(sock, msg, args);
+        await sswebCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'play':
-        await playCommand(sock, msg, args);
+        await playCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'ytmp3':
       case 'yta':
-        await ytmp3Command(sock, msg, args);
+        await ytmp3Command(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'cekkhodam':
       case 'khodam':
-        await cekkhodamCommand(sock, msg, args);
+        await cekkhodamCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'truth':
-        await truthCommand(sock, msg);
+        await truthCommand(
+          sock,
+          msg
+        );
         break;
 
       case 'dare':
-        await dareCommand(sock, msg);
+        await dareCommand(
+          sock,
+          msg
+        );
         break;
 
       case 'cekbucin':
       case 'bucin':
-        await cekbucinCommand(sock, msg, args);
+        await cekbucinCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
+      // ==========================================
+      // 💰 ECONOMY
+      // ==========================================
       case 'score':
       case 'skor':
-        await scoreCommand(sock, msg, args);
+        await scoreCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'leaderboard':
       case 'lb':
       case 'top':
-        await leaderboardCommand(sock, msg);
+        await leaderboardCommand(
+          sock,
+          msg
+        );
         break;
 
+      // ==========================================
+      // 🎮 GAMES
+      // ==========================================
       case 'bj':
       case 'blackjack':
       case 'hit':
       case 'stand':
-        if (command === 'hit' || command === 'stand') {
-          await blackjackCommand(sock, msg, [command]);
+        if (
+          command === 'hit' ||
+          command === 'stand'
+        ) {
+          await blackjackCommand(
+            sock,
+            msg,
+            [command]
+          );
         } else {
-          await blackjackCommand(sock, msg, args);
+          await blackjackCommand(
+            sock,
+            msg,
+            args
+          );
         }
         break;
 
       case 'math':
       case 'matematika':
-        await mathCommand(sock, msg, args);
+        await mathCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'tebakbendera':
-        await tebakbenderaCommand(sock, msg);
+        await tebakbenderaCommand(
+          sock,
+          msg
+        );
         break;
 
       case 'tebakkata':
-        await tebakkataCommand(sock, msg);
+        await tebakkataCommand(
+          sock,
+          msg
+        );
         break;
 
       case 'tebakgambar':
-        await tebakgambarCommand(sock, msg);
+        await tebakgambarCommand(
+          sock,
+          msg
+        );
         break;
 
       case 'trivia':
       case 'kuis':
-        await triviaCommand(sock, msg, args);
+        await triviaCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'tetris':
-        await tetrisCommand(sock, msg, args);
+        await tetrisCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'claimtetris':
       case 'klaimtetris':
-        await claimTetrisCommand(sock, msg, args);
+        await claimTetrisCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       // ==========================================
-      // 📋 SISTEM MENU
+      // 📋 MENU GAME
       // ==========================================
       case 'menu_game':
       case 'games': {
@@ -768,6 +1420,7 @@ async function handleMessage(sock, msg) {
 `┏━I *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* I
 ┃
 ┣⌬ ${prefixUsed}dungeon / ${prefixUsed}jelajah (Zork Text Adventure RPG)
+┣⌬ ${prefixUsed}mining (Mining Adventure)
 ┣⌬ ${prefixUsed}bj
 ┣⌬ ${prefixUsed}mancing
 ┣⌬ ${prefixUsed}lnj (Lanjut Mancing)
@@ -802,10 +1455,19 @@ async function handleMessage(sock, msg) {
 ┣⌬ ${prefixUsed}truth
 ┣⌬ ${prefixUsed}dare
 ┗━━━━━━━◧`;
-        await sock.sendMessage(remoteJid, { text: gameText }, { quoted: msg });
+
+        await sock.sendMessage(
+          remoteJid,
+          { text: gameText },
+          { quoted: msg }
+        );
+
         break;
       }
 
+      // ==========================================
+      // 🛠️ MENU TOOLS
+      // ==========================================
       case 'menu_tools':
       case 'tools': {
         const toolsText =
@@ -831,10 +1493,19 @@ async function handleMessage(sock, msg) {
 ┣⌬ ${prefixUsed}rvo
 ┣⌬ ${prefixUsed}ncode
 ┗━━━━━━━◧`;
-        await sock.sendMessage(remoteJid, { text: toolsText }, { quoted: msg });
+
+        await sock.sendMessage(
+          remoteJid,
+          { text: toolsText },
+          { quoted: msg }
+        );
+
         break;
       }
 
+      // ==========================================
+      // 👥 MENU GROUP
+      // ==========================================
       case 'menu_group':
       case 'group': {
         const groupText =
@@ -846,16 +1517,26 @@ async function handleMessage(sock, msg) {
 ┣⌬ ${prefixUsed}promote @user
 ┣⌬ ${prefixUsed}demote @user
 ┗━━━━━━━◧`;
-        await sock.sendMessage(remoteJid, { text: groupText }, { quoted: msg });
+
+        await sock.sendMessage(
+          remoteJid,
+          { text: groupText },
+          { quoted: msg }
+        );
+
         break;
       }
 
+      // ==========================================
+      // 📋 ALL MENU
+      // ==========================================
       case 'allmenu': {
         const allText =
 `┏━I *ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ* I
 ┃
 ┣⌬ *ɢᴀᴍᴇꜱ*
 ┃  • ${prefixUsed}dungeon / ${prefixUsed}jelajah (Zork Text Adventure RPG)
+┃  • ${prefixUsed}mining (Mining Adventure)
 ┃  • ${prefixUsed}bj
 ┃  • ${prefixUsed}mancing
 ┃  • ${prefixUsed}lnj (Lanjut Mancing)
@@ -917,10 +1598,19 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}promote @user
 ┃  • ${prefixUsed}demote @user
 ┗━━━━━━━◧`;
-        await sock.sendMessage(remoteJid, { text: allText }, { quoted: msg });
+
+        await sock.sendMessage(
+          remoteJid,
+          { text: allText },
+          { quoted: msg }
+        );
+
         break;
       }
 
+      // ==========================================
+      // 📋 MENU UTAMA
+      // ==========================================
       case 'list':
       case 'menu':
       case 'help': {
@@ -936,16 +1626,27 @@ async function handleMessage(sock, msg) {
 _ᴋᴇᴛɪᴋ ɴᴀᴍᴀ ᴋᴀᴛᴇɢᴏʀɪ ᴜɴᴛᴜᴋ ᴍᴇʟɪʜᴀᴛ ɪꜱɪɴʏᴀ._
 _ᴄᴏɴᴛᴏʜ: *.menu_game* ATAU *.allmenu* UNTUK MENAMPILKAN SEMUA MENU_`;
 
-        await sock.sendMessage(remoteJid, { text: menuText }, { quoted: msg });
+        await sock.sendMessage(
+          remoteJid,
+          { text: menuText },
+          { quoted: msg }
+        );
+
         break;
       }
 
+      // ==========================================
+      // DEFAULT
+      // ==========================================
       default:
         break;
     }
 
   } catch (err) {
-    console.error('Error di handleMessage:', err);
+    console.error(
+      'Error di handleMessage:',
+      err
+    );
   }
 }
 
