@@ -10,28 +10,30 @@ function getGroqClient() {
   return new Groq({ apiKey });
 }
 
+// 🧠 AI MERANCANG SEMUA (Deskripsi, Pilihan Aksi Unik, & Encounter) SECARA DINAMIS
 async function generateDungeonRoom(theme, floor, action) {
   try {
     const groq = getGroqClient();
     if (!groq) throw new Error("API Key Groq tidak ditemukan!");
 
-    const prompt = `Kamu adalah game master teks RPG gaya klasik Zork yang sangat imajinatif dan menantang. 
+    const prompt = `Kamu adalah game master teks RPG gaya klasik Zork yang sangat imajinatif dan kreatif. 
     Kondisi: Player berada di Lantai ${floor} dari 100 dengan tema "${theme}". 
     Player baru saja melakukan aksi: "${action}".
-    Buat deskripsi ruangan/lantai saat ini yang sangat detail, menegangkan, dan penuh rahasia (3-4 kalimat).
     
-    Tentukan juga apakah ada 'encounter' atau kejadian di ruangan ini:
-    - Jika ada monster: { "type": "monster", "name": "Nama Monster", "hp": 100 }
-    - Jika ada item/obor/peti: { "type": "item", "name": "Nama Item" }
+    Buat deskripsi ruangan/lantai baru yang sangat unik, atmosferik, dan disesuaikan dengan aksi player tersebut (3-4 kalimat).
+    
+    Berikan 4 pilihan aksi atau perintah yang **SANGAT SPESIFIK dan BERVARIASI** sesuai situasi ruangan ini (Contoh: jika ada altar, beri pilihan .geser altar atau .buka kitab; jangan pakai aksi generik yang diulang-ulang!). 
+    PENTING: Pastikan dari 4 pilihan tersebut, ada minimal 1 aksi untuk pindah/naik ke lantai berikutnya (misal: .naik tangga, .buka pintu berat, .lanjut koridor).
+    
+    Tentukan juga 'encounter' acak di ruangan ini:
+    - Jika ada monster: { "type": "monster", "name": "Nama Monster Unik", "hp": 100 }
+    - Jika ada item/harta: { "type": "item", "name": "Nama Item Unik" }
     - Jika aman: { "type": "none", "name": "", "hp": 0 }
-    
-    Berikan 4 pilihan aksi yang variatif untuk player di ruangan ini. 
-    PENTING: Harus ada minimal 1 aksi untuk berinteraksi/mencari item (contoh: .ambil obor, .periksa peti), dan minimal 1 aksi untuk pindah/naik ke lantai berikutnya (contoh: .naik tangga, .buka pintu berat).
     
     Format output JSON MURNI tanpa markdown:
     {
       "description": "...",
-      "actions": [".ambil obor", ".periksa sudut", ".cari item", ".naik tangga"],
+      "actions": [".aksi_unik_1", ".aksi_unik_2", ".aksi_unik_3", ".naik tangga"],
       "encounter": {
         "type": "monster|item|none",
         "name": "...",
@@ -53,8 +55,8 @@ async function generateDungeonRoom(theme, floor, action) {
   } catch (err) {
     console.error('Groq Dungeon Error:', err);
     return {
-      description: `Kamu berada di ruangan remang-remang lantai ${floor}. Ada bau belerang dan lorong misterius di depanmu.`,
-      actions: [".ambil obor", ".periksa peti", ".cari item", ".naik tangga"],
+      description: `Kamu berada di lantai ${floor} yang diselimuti kabut misterius. Suasana terasa sunyi namun penuh ancaman.`,
+      actions: [".periksa sekitar", ".cari jalan", ".buka pintu", ".naik tangga"],
       encounter: { type: 'none', name: '', hp: 0 }
     };
   }
@@ -67,7 +69,7 @@ function calculateDamage(inventory = []) {
     const lower = item.toLowerCase();
     if (lower.includes('legendaris') || lower.includes('excalibur')) { baseDamage = 45; weaponName = item; }
     else if (lower.includes('pedang') || lower.includes('tombak')) { baseDamage = 20; weaponName = item; }
-    else if (lower.includes('karatan') || lower.includes('belati') || lower.includes('obor')) { baseDamage = 10; weaponName = item; }
+    else if (lower.includes('karatan') || lower.includes('belati') || lower.includes('obor') || lower.includes('besi')) { baseDamage = 12; weaponName = item; }
   });
   return { total: baseDamage, weapon: weaponName };
 }
@@ -89,6 +91,7 @@ async function handleDungeonCommand(sock, msg, args) {
       floor: 1,
       theme: 'Reruntuhan Benteng Kuno & Labirin Bawah Tanah',
       hp: 100,
+      maxHp: 100,
       inventory: [],
       activeMonster: null,
       monsterMsgKey: null,
@@ -96,33 +99,36 @@ async function handleDungeonCommand(sock, msg, args) {
     };
   }
 
-  // 1. Masuk dungeon
+  if (user.dungeon.hp === undefined) { user.dungeon.hp = 100; user.dungeon.maxHp = 100; }
+
+  // 1. Masuk Dungeon / Inisialisasi Awal
   if (!user.dungeon.active) {
     user.dungeon.active = true;
+    user.dungeon.hp = user.dungeon.maxHp;
     const currentFloor = user.dungeon.floor || 1;
-    const data = await generateDungeonRoom(user.dungeon.theme, currentFloor, 'Memasuki gerbang dungeon');
+    const roomData = await generateDungeonRoom(user.dungeon.theme, currentFloor, 'Memasuki gerbang dungeon');
     
-    user.dungeon.validChoices = data.actions.map(a => a.toLowerCase().replace('.', '').trim());
+    user.dungeon.validChoices = roomData.actions.map(a => a.toLowerCase().replace('.', '').trim());
     user.dungeon.validChoices.push('keluar', 'exit', 'serang');
 
     let encounterMsg = '';
-    if (data.encounter?.type === 'monster') {
-      user.dungeon.activeMonster = { name: data.encounter.name, hp: data.encounter.hp, maxHp: data.encounter.hp };
-      encounterMsg = `\n\n⚠️ *MONSTER MUNCUL: ${data.encounter.name} (HP: ${data.encounter.hp})*\n_Ketik .serang untuk bertarung!_`;
-    } else if (data.encounter?.type === 'item') {
-      user.dungeon.inventory.push(data.encounter.name);
-      encounterMsg = `\n\n✨ *MENEMUKAN ITEM:* Mendapatkan **${data.encounter.name}** masuk ke tas!`;
+    if (roomData.encounter?.type === 'monster') {
+      user.dungeon.activeMonster = { name: roomData.encounter.name, hp: roomData.encounter.hp, maxHp: roomData.encounter.hp };
+      encounterMsg = `\n\n⚠️ *MONSTER MUNCUL: ${roomData.encounter.name}*\n❤️ HP Monster: [ ${roomData.encounter.hp} / ${roomData.encounter.hp} ]\n_Ketik .serang untuk bertarung!_`;
+    } else if (roomData.encounter?.type === 'item') {
+      user.dungeon.inventory.push(roomData.encounter.name);
+      encounterMsg = `\n\n✨ *MENEMUKAN ITEM:* Mendapatkan **${roomData.encounter.name}** masuk ke tas!`;
     }
 
     const sent = await sock.sendMessage(remoteJid, {
-      text: `🚀 *PETUALANGAN ZORK DUNGEON DIMULAI*\n📍 Lantai ${currentFloor}/100\n\n${data.description}\n\n🧭 *Aksi Tersedia:* \n${data.actions.join(' | ')}${encounterMsg}`,
+      text: `🚀 *PETUALANGAN ZORK DUNGEON DIMULAI*\n📍 Lantai ${currentFloor}/100 | ❤️ HP Kamu: [ ${user.dungeon.hp}/${user.dungeon.maxHp} ]\n\n${roomData.description}\n\n🧭 *Aksi Tersedia (Gunakan titik):* \n${roomData.actions.join(' | ')}${encounterMsg}`,
       quoted: msg
     });
-    if (data.encounter?.type === 'monster') user.dungeon.monsterMsgKey = sent.key;
+    if (roomData.encounter?.type === 'monster') user.dungeon.monsterMsgKey = sent.key;
     return;
   }
 
-  // 2. Keluar dungeon
+  // 2. Keluar Dungeon
   if (subCommand === 'keluar' || subCommand === 'exit') {
     user.dungeon.active = false;
     user.dungeon.activeMonster = null;
@@ -140,11 +146,12 @@ async function handleDungeonCommand(sock, msg, args) {
       return await sock.sendMessage(remoteJid, { text: `⚠️ Tidak ada monster di ruangan ini untuk diserang!`, quoted: msg });
     }
 
-    const dmgInfo = calculateDamage(user.dungeon.inventory);
-    user.dungeon.activeMonster.hp -= dmgInfo.total;
-    if (user.dungeon.activeMonster.hp < 0) user.dungeon.activeMonster.hp = 0;
-
     const monster = user.dungeon.activeMonster;
+    const dmgInfo = calculateDamage(user.dungeon.inventory);
+    
+    monster.hp -= dmgInfo.total;
+    if (monster.hp < 0) monster.hp = 0;
+
     const formatRp = helper.formatRupiah || (val => `Rp${Number(val || 0).toLocaleString('id-ID')}`);
 
     if (monster.hp <= 0) {
@@ -155,8 +162,9 @@ async function handleDungeonCommand(sock, msg, args) {
       
       const defeatText = `⚔️ *SERANGAN TELAK! (${dmgInfo.weapon} - ${dmgInfo.total} DMG)*\n\n` +
                          `🎉 *MONSTER ${monster.name.toUpperCase()} BERHASIL DIKALAHKAN!* 💀\n` +
+                         `❤️ HP Kamu: [ ${user.dungeon.hp} / ${user.dungeon.maxHp} ]\n` +
                          `💰 Hadiah Rampasan: *+${formatRp(bounty)}* masuk ke saldo!\n\n` +
-                         `_Sekarang kamu bebas mencari item atau pilih opsi untuk naik ke lantai berikutnya._`;
+                         `_Monster sudah tumbang. Pilih aksi selanjutnya atau naik ke lantai berikutnya._`;
 
       if (user.dungeon.monsterMsgKey) {
         try { await sock.sendMessage(remoteJid, { text: defeatText, edit: user.dungeon.monsterMsgKey }); }
@@ -169,36 +177,72 @@ async function handleDungeonCommand(sock, msg, args) {
       user.dungeon.monsterMsgKey = null;
       if (typeof global.saveDatabase === 'function') global.saveDatabase();
       return;
-    } else {
-      const fightText = `⚔️ *KAMU MENYERANG DENGAN ${dmgInfo.weapon.toUpperCase()}!* (-${dmgInfo.total} DMG)\n\n` +
-                        `⚠️ *STATUS PERTARUNGAN*\n` +
-                        `👾 Monster: *${monster.name}*\n` +
-                        `❤️ HP Monster: *[ ${monster.hp} / ${monster.maxHp} ]*\n\n` +
-                        `_Ketik .serang lagi untuk menghabisinya!_`;
+    }
+
+    const monsterDmg = Math.floor(Math.random() * 10) + 7;
+    user.dungeon.hp -= monsterDmg;
+    if (user.dungeon.hp < 0) user.dungeon.hp = 0;
+
+    if (user.dungeon.hp <= 0) {
+      user.dungeon.active = false;
+      user.dungeon.floor = Math.max(1, user.dungeon.floor - 2);
+      user.dungeon.activeMonster = null;
+      if (typeof global.saveDatabase === 'function') global.saveDatabase();
+
+      const deadText = `💀 *KAMU TEWAS DI TANGAN ${monster.name.toUpperCase()}!* 🪦\n\n` +
+                       `Monster melancarkan serangan balasan fatal (${monsterDmg} DMG).\n` +
+                       `⚠️ Kamu terpental turun ke *Lantai ${user.dungeon.floor}* akibat kekalahan ini!`;
 
       if (user.dungeon.monsterMsgKey) {
-        try { await sock.sendMessage(remoteJid, { text: fightText, edit: user.dungeon.monsterMsgKey }); }
-        catch (e) { await sock.sendMessage(remoteJid, { text: fightText, quoted: msg }); }
+        try { await sock.sendMessage(remoteJid, { text: deadText, edit: user.dungeon.monsterMsgKey }); }
+        catch (e) { await sock.sendMessage(remoteJid, { text: deadText, quoted: msg }); }
+      } else {
+        await sock.sendMessage(remoteJid, { text: deadText, quoted: msg });
       }
+      user.dungeon.monsterMsgKey = null;
       return;
     }
+
+    const fightText = `⚔️ *TARUNG SENGIT!*\n` +
+                      `• Kamu menyerang dengan *${dmgInfo.weapon}* (-${dmgInfo.total} DMG)\n` +
+                      `• ${monster.name} membalas! (-${monsterDmg} DMG)\n\n` +
+                      `⚠️ *STATUS TERKINI*\n` +
+                      `👾 Monster: *${monster.name}* | HP: *[ ${monster.hp} / ${monster.maxHp} ]*\n` +
+                      `👤 Kamu | ❤️ HP: *[ ${user.dungeon.hp} / ${user.dungeon.maxHp} ]*\n\n` +
+                      `_Ketik .serang lagi untuk melanjutkan!_`;
+
+    if (user.dungeon.monsterMsgKey) {
+      try { await sock.sendMessage(remoteJid, { text: fightText, edit: user.dungeon.monsterMsgKey }); }
+      catch (e) { await sock.sendMessage(remoteJid, { text: fightText, quoted: msg }); }
+    }
+    return;
   }
 
-  // 4. Validasi aksi user
-  const userActionClean = args.join(' ').toLowerCase().replace('.', '').trim();
-
-  // Jika ada monster aktif, player wajib mengalahkan monster dulu sebelum bisa ngapa-ngapain
   if (user.dungeon.activeMonster) {
-    return await sock.sendMessage(remoteJid, { text: `⚠️ Kamu dikurung monster **${user.dungeon.activeMonster.name}**! Kalahkan dulu dengan mengetik *.serang*!`, quoted: msg });
+    return await sock.sendMessage(remoteJid, { text: `⚠️ Kamu sedang diserang oleh **${user.dungeon.activeMonster.name}**! Kalahkan dulu dengan mengetik *.serang*!`, quoted: msg });
   }
 
-  // 5. ATURAN UTAMA: CEK APAKAH AKSI ADALAH PINDAH/NAIK LANTAI ATAU HANYA INTERAKSI DI LANTAI YANG SAMA
-  const isMovingUp = userActionClean.includes('naik') || userActionClean.includes('lanjut') || userActionClean.includes('pintu') || userActionClean.includes('maju') || userActionClean.includes('koridor');
+  // 4. Validasi Ketikan User terhadap Pilihan AI
+  const userActionClean = args.join(' ').toLowerCase().replace('.', '').trim();
+  
+  // Cek apakah aksi user valid berdasarkan pilihan AI sebelumnya atau perintah umum
+  const isValid = user.dungeon.validChoices?.some(c => userActionClean.includes(c)) || ['keluar', 'exit', 'serang'].includes(userActionClean);
+
+  if (!isValid && userActionClean !== '') {
+    return await sock.sendMessage(remoteJid, {
+      text: `⚠️ *Aksi tidak dikenali di ruangan ini!* \n` +
+            `_Gunakan pilihan aksi yang tertera pada daftar opsi ruangan sebelumnya._`,
+      quoted: msg
+    });
+  }
+
+  // 5. Tentukan Apakah Aksi Ini untuk Naik Lantai atau Interaksi Biasa di Ruang yang Sama
+  const isMovingUp = userActionClean.includes('naik') || userActionClean.includes('lanjut') || userActionClean.includes('pintu') || userActionClean.includes('maju') || userActionClean.includes('koridor') || userActionClean.includes('tangga');
 
   const formatRp = helper.formatRupiah || (val => `Rp${Number(val || 0).toLocaleString('id-ID')}`);
 
   if (isMovingUp) {
-    // Pindah ke lantai berikutnya
+    // --- SKenario A: Naik ke Lantai Berikutnya ---
     user.dungeon.floor += 1;
     const earnedPrize = user.dungeon.floor * 20000;
     if (typeof helper.addPoints === 'function') {
@@ -221,28 +265,28 @@ async function handleDungeonCommand(sock, msg, args) {
       });
     }
 
-    // Generate ruangan baru di lantai baru
-    const data = await generateDungeonRoom(user.dungeon.theme, user.dungeon.floor, args.join(' '));
-    user.dungeon.validChoices = data.actions.map(a => a.toLowerCase().replace('.', '').trim());
+    // Generate ruangan baru dari AI untuk lantai baru
+    const roomData = await generateDungeonRoom(user.dungeon.theme, user.dungeon.floor, args.join(' '));
+    user.dungeon.validChoices = roomData.actions.map(a => a.toLowerCase().replace('.', '').trim());
     user.dungeon.validChoices.push('keluar', 'exit', 'serang');
 
     let encounterMsg = `\n\n🎁 *Hadiah Naik Lantai ${user.dungeon.floor}:* Mendapatkan *+${formatRp(earnedPrize)}*!`;
-    if (data.encounter?.type === 'monster') {
-      user.dungeon.activeMonster = { name: data.encounter.name, hp: data.encounter.hp, maxHp: data.encounter.hp };
-      encounterMsg += `\n\n⚠️ *MONSTER MUNCUL: ${data.encounter.name} (HP: ${data.encounter.hp})*\n_Ketik .serang untuk bertarung!_`;
-    } else if (data.encounter?.type === 'item') {
-      user.dungeon.inventory.push(data.encounter.name);
-      encounterMsg += `\n✨ *MENEMUKAN ITEM:* Mendapatkan **${data.encounter.name}**!`;
+    if (roomData.encounter?.type === 'monster') {
+      user.dungeon.activeMonster = { name: roomData.encounter.name, hp: roomData.encounter.hp, maxHp: roomData.encounter.hp };
+      encounterMsg += `\n\n⚠️ *MONSTER MUNCUL: ${roomData.encounter.name}*\n❤️ HP Monster: [ ${roomData.encounter.hp} / ${roomData.encounter.hp} ]\n_Ketik .serang untuk bertarung!_`;
+    } else if (roomData.encounter?.type === 'item') {
+      user.dungeon.inventory.push(roomData.encounter.name);
+      encounterMsg += `\n✨ *MENEMUKAN ITEM:* Mendapatkan **${roomData.encounter.name}**!`;
     }
 
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
     const sent = await sock.sendMessage(remoteJid, {
-      text: `🕳️ *ZORK DUNGEON (Lantai ${user.dungeon.floor}/100)*\n\n${data.description}\n\n🧭 *Aksi Tersedia:* \n${data.actions.join(' | ')}${encounterMsg}`,
+      text: `🕳️ *ZORK DUNGEON (Lantai ${user.dungeon.floor}/100)*\n📍 ❤️ HP Kamu: [ ${user.dungeon.hp}/${user.dungeon.maxHp} ]\n\n${roomData.description}\n\n🧭 *Aksi Tersedia:* \n${roomData.actions.join(' | ')}${encounterMsg}`,
       quoted: msg
     });
 
-    if (data.encounter?.type === 'monster') {
+    if (roomData.encounter?.type === 'monster') {
       user.dungeon.monsterMsgKey = sent.key;
     } else {
       user.dungeon.activeMonster = null;
@@ -250,32 +294,32 @@ async function handleDungeonCommand(sock, msg, args) {
     return;
 
   } else {
-    // Interaksi di lantai yang sama (misal: .ambil obor, .periksa peti, dll)
-    const rand = Math.random();
-    let interactionResult = '';
+    // --- SKenario B: Interaksi di Lantai yang Sama Berdasarkan Aksi Player ---
+    // AI merespons aksi spesifik player, lalu memunculkan peluang item atau monster
+    const roomData = await generateDungeonRoom(user.dungeon.theme, user.dungeon.floor, args.join(' '));
+    user.dungeon.validChoices = roomData.actions.map(a => a.toLowerCase().replace('.', '').trim());
+    user.dungeon.validChoices.push('keluar', 'exit', 'serang');
 
-    if (rand < 0.4) {
-      const foundItems = ['🔦 Obor Menyala', '🧪 Ramuan Kecil HP', '💎 Permata Berkilau', '🗝️ Kunci Besi Tua', '🗡️ Belati Berkarat'];
-      const newItem = foundItems[Math.floor(Math.random() * foundItems.length)];
-      user.dungeon.inventory.push(newItem);
-      interactionResult = `\n\n✨ *HASIL INTERAKSI:* Kamu berhasil menemukan dan mengambil **${newItem}** masuk ke dalam tas!`;
-    } else if (rand >= 0.4 && rand < 0.7) {
-      const foundMonster = ['Laba-laba Raksasa', 'Tikus Bawah Tanah', 'Roh Penjaga Lorong', 'Goblin Kecil'];
-      const mName = foundMonster[Math.floor(Math.random() * foundMonster.length)];
-      user.dungeon.activeMonster = { name: mName, hp: 80, maxHp: 80 };
-      interactionResult = `\n\n⚠️ *JEBAKAN TERPICU!* Saat kamu memeriksa area tersebut, tiba-tiba muncul **${mName} (HP: 80)** menyerangmu!\n_Ketik .serang untuk menghadapinya!_`;
-    } else {
-      interactionResult = `\n\n🔍 *HASIL INTERAKSI:* Kamu memeriksa sudut ruangan dengan teliti, namun hanya menemukan tumpukan debu dan tulang-belukar tua.`;
+    let encounterMsg = `\n\n🔍 *EKSPLORASI SELESAI:* _Kamu mengamati situasi setelah melakukan aksi tersebut._`;
+    if (roomData.encounter?.type === 'monster') {
+      user.dungeon.activeMonster = { name: roomData.encounter.name, hp: roomData.encounter.hp, maxHp: roomData.encounter.hp };
+      encounterMsg = `\n\n⚠️ *JEBAKAN/MONSTER TERPICU!* \n_Aksi tersebut membangunkan **${roomData.encounter.name} (HP: ${roomData.encounter.hp})** dari persembunyiannya!_\n_Ketik .serang untuk menghadapinya!_`;
+    } else if (roomData.encounter?.type === 'item') {
+      user.dungeon.inventory.push(roomData.encounter.name);
+      encounterMsg = `\n\n✨ *PENEMUAN BERHARGA:* \n_Dari aksi tersebut, kamu berhasil mengamankan item: **${roomData.encounter.name}** ke dalam tas!_`;
+      if (roomData.encounter.name.toLowerCase().includes('ramuan') || roomData.encounter.name.toLowerCase().includes('potion')) {
+        user.dungeon.hp = Math.min(user.dungeon.maxHp, user.dungeon.hp + 35);
+      }
     }
 
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
     const sent = await sock.sendMessage(remoteJid, {
-      text: `🕳️ *ZORK DUNGEON (Lantai ${user.dungeon.floor}/100)*\n\n_Kamu melakukan aksi: "${args.join(' ')}"..._${interactionResult}\n\n🧭 *Info:* _Lanjutkan eksplorasi atau pilih opsi untuk naik ke lantai berikutnya jika sudah siap._`,
+      text: `🕳️ *ZORK DUNGEON (Lantai ${user.dungeon.floor}/100)*\n📍 ❤️ HP Kamu: [ ${user.dungeon.hp}/${user.dungeon.maxHp} ]\n\n${roomData.description}${encounterMsg}\n\n🧭 *Aksi Tersedia Selanjutnya:* \n${roomData.actions.join(' | ')}`,
       quoted: msg
     });
 
-    if (user.dungeon.activeMonster) {
+    if (roomData.encounter?.type === 'monster') {
       user.dungeon.monsterMsgKey = sent.key;
     }
     return;
@@ -283,4 +327,4 @@ async function handleDungeonCommand(sock, msg, args) {
 }
 
 module.exports = handleDungeonCommand;
-                                                 
+  
