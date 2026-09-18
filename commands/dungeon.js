@@ -14,16 +14,16 @@ async function generateDungeonRoom(theme, floor, action) {
     const groq = getGroqClient();
     if (!groq) {
       return {
-        text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\nKamu berada di ruangan gelap berdebu.\n\nAksi Tersedia:\n• .maju - Lanjut ke depan\n• .periksa meja - Melihat isi meja\n• .ambil obor - Mengambil obor\n• .keluar - Pulang`,
-        choices: ['maju', 'periksa', 'ambil', 'keluar', '.maju', '.periksa', '.ambil', '.keluar']
+        text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\nKamu berada di ruangan gelap berdebu.\n\nAksi Tersedia:\n• .maju - Lanjut ke depan\n• .periksa - Memeriksa sekitar\n• .keluar - Pulang`,
+        choices: ['maju', 'periksa', 'keluar', '.maju', '.periksa', '.keluar']
       };
     }
 
     const prompt = `Kamu adalah game master teks RPG gaya klasik Zork yang sangat imajinatif. 
-    Buat deskripsi ruangan dungeon yang unik, menegangkan, dan kaya detail (3-4 kalimat) dengan tema "${theme}" di lantai ${floor} dari 100 lantai total. 
+    Buat deskripsi ruangan dungeon yang menegangkan (3 kalimat) dengan tema "${theme}" di lantai ${floor} dari 100 lantai total. 
     Player baru saja melakukan aksi: "${action}". 
-    Berikan 3 sampai 4 pilihan aksi atau arah yang sangat variatif, kreatif, dan menantang (contoh format perintah: .maju, .periksa peti, .ambil pedang, .ke kiri, .buka pintu, .panjat dinding, .keluar).
-    Pastikan format output berupa JSON murni: { "description": "...", "actions": [".maju", ".periksa peti", ".ambil kunci", ".keluar"] }`;
+    Berikan 3 pilihan aksi atau arah yang variatif (contoh format perintah: .maju, .periksa peti, .ambil item, .ke kiri, .keluar).
+    Format output JSON: { "description": "...", "actions": [".maju", ".periksa peti", ".ambil item", ".keluar"] }`;
 
     const completion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
@@ -34,7 +34,6 @@ async function generateDungeonRoom(theme, floor, action) {
     const result = JSON.parse(completion.choices[0]?.message?.content || '{}');
     const rawActions = result.actions || ['.maju', '.periksa sudut', '.keluar'];
     
-    // Ekstraksi kata kunci agar validasi input user lebih fleksibel
     const cleanChoices = rawActions.map(act => act.toLowerCase().replace('.', '').trim());
     cleanChoices.push('keluar', 'exit', 'maju', 'mundur', 'kiri', 'kanan', 'utara', 'selatan', 'timur', 'barat');
 
@@ -45,7 +44,7 @@ async function generateDungeonRoom(theme, floor, action) {
   } catch (err) {
     console.error('Groq Dungeon Error:', err);
     return {
-      text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\nSuasana tiba-tiba senyap dan bergemuruh...\n\nAksi Tersedia:\n• .maju\n• .keluar`,
+      text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\nSuasana tiba-tiba senyap...\n\nAksi Tersedia:\n• .maju\n• .keluar`,
       choices: ['maju', 'keluar', '.maju', '.keluar']
     };
   }
@@ -68,6 +67,7 @@ async function handleDungeonCommand(sock, msg, args) {
       floor: 1,
       theme: 'Gua Lembab Berbatu & Reruntuhan Kuno',
       hp: 100,
+      inventory: [],
       validChoices: ['maju', 'keluar', '.maju', '.keluar']
     };
   }
@@ -99,7 +99,7 @@ async function handleDungeonCommand(sock, msg, args) {
     });
   }
 
-  // Validasi ketikan user agar tidak bisa asal ketik command luar (anti-bug)
+  // Validasi ketikan user
   const userActionClean = args.join(' ').toLowerCase().replace('.', '').trim();
   const isValidAction = user.dungeon.validChoices?.some(choice => userActionClean.includes(choice));
 
@@ -112,15 +112,37 @@ async function handleDungeonCommand(sock, msg, args) {
     });
   }
 
-  // Jika valid, naik lantai dan berikan hadiah
+  // Naik lantai
   user.dungeon.floor += 1;
-
   const earnedPrize = user.dungeon.floor * 20000;
   if (typeof helper.addPoints === 'function') {
     try { helper.addPoints(global.db, senderId, earnedPrize); } catch (e) {}
   }
   const formatRp = helper.formatRupiah || (val => `Rp${Number(val || 0).toLocaleString('id-ID')}`);
 
+  // 🎲 SISTEM RANDOM ENCOUNTERS & ITEM DROPS (Peluang acak tiap naik lantai)
+  let encounterText = '';
+  const randEvent = Math.random();
+  
+  if (!user.dungeon.inventory) user.dungeon.inventory = [];
+
+  if (randEvent < 0.35) {
+    // Event 1: Menemukan Peti Harta Berisi Item Langka
+    const possibleItems = ['🗡️ Pedang Karatan', '🛡️ Perisai Perunggu', '🧪 Ramuan Pemulih HP', '📜 Perkamen Kuno'];
+    const foundItem = possibleItems[Math.floor(Math.random() * possibleItems.length)];
+    user.dungeon.inventory.push(foundItem);
+    encounterText = `\n\n✨ *RANDOM EVENT — PETI HARTA!* \n_Kamu menemukan peti tersembunyi di sudut ruangan dan mendapatkan item langka: **${foundItem}**!_`;
+  } else if (randEvent >= 0.35 && randEvent < 0.65) {
+    // Event 2: Encounter Monster / The Grue
+    const monsters = ['Goblin Gua', 'The Grue Bermata Merah', 'Kelelawar Raksasa'];
+    const foundMonster = monsters[Math.floor(Math.random() * monsters.length)];
+    encounterText = `\n\n⚠️ *RANDOM ENCOUNTER — MONSTER LIAR!* \n_Tiba-tiba sesosok **${foundMonster}** menyergapmu dari kegelapan! Beruntung kamu berhasil mengalahkannya dan merampas barangnya!_`;
+  } else {
+    // Event 3: Lorong Aman / Penemuan Koin Ekstra
+    encounterText = `\n\n🍀 *JALUR AMAN:* _Kamu menemukan kantong koin tambahan berserakan di tanah._`;
+  }
+
+  // Cek Kemenangan Lantai 100
   if (user.dungeon.floor >= 100) {
     const grandPrize = 50000000;
     if (typeof helper.addPoints === 'function') {
@@ -144,15 +166,15 @@ async function handleDungeonCommand(sock, msg, args) {
     global.saveDatabase();
   }
 
-  // Generate ruangan berikutnya berdasarkan aksi yang dipilih player
   const nextRoom = await generateDungeonRoom(user.dungeon.theme, user.dungeon.floor, args.join(' '));
   user.dungeon.validChoices = nextRoom.choices;
 
   return await sock.sendMessage(remoteJid, {
-    text: `${nextRoom.text}\n\n🎁 *Hadiah Lantai ${user.dungeon.floor}:* Mendapatkan *+${formatRp(earnedPrize)}* dari reruntuhan!`,
+    text: `${nextRoom.text}\n\n🎁 *Hadiah Lantai ${user.dungeon.floor}:* Mendapatkan *+${formatRp(earnedPrize)}*${encounterText}`,
     quoted: msg
   });
 }
 
 module.exports = handleDungeonCommand;
+    
       
