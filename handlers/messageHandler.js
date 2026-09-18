@@ -8,7 +8,7 @@ const { handleInventoryCommand } = require('../commands/inventory'); // 🎒 Imp
 const { getSenderId } = require('../utils/jid-utils');
 const { handleRebirthCommand } = require('../commands/rebirth'); // ✅ Path sudah dibenerin ke parent folder
 const handleResetCommand = require('../commands/reset'); // 🔄 Import Command Reset Season Admin
-
+const handleDungeonCommand = require('../commands/dungeon'); // 🕳️ Import Zork Dungeon Command
 
 // Command Media & Utility
 const stickerCommand = require('../commands/sticker');
@@ -155,6 +155,28 @@ async function handleMessage(sock, msg) {
     const ownerLid = '66477638029541';
     const isOwner = senderId.includes(ownerPhone) || senderId.includes(ownerLid);
 
+    // ===================================================
+    // 🕳️ DUNGEON SESSION INTERCEPTOR (ZORK TEXT ADVENTURE)
+    // ===================================================
+    const user = global.db?.users?.[senderId];
+    if (user && user.dungeon && user.dungeon.active) {
+      const bodyLower = cleanText.toLowerCase();
+      
+      // Jika player ingin keluar dari dungeon
+      if (bodyLower === '.keluar' || bodyLower === 'keluar' || bodyLower === '/keluar') {
+        await handleDungeonCommand(sock, msg, ['keluar']);
+        return;
+      }
+
+      // Tangkap input sebagai aksi penjelajahan dungeon
+      let dungeonArgs = cleanText.startsWith(config.prefix) || cleanText.startsWith('/') 
+        ? [cleanText.slice(1).trim()] 
+        : cleanText.trim().split(/ +/);
+      
+      await handleDungeonCommand(sock, msg, dungeonArgs);
+      return;
+    }
+
     if (cleanText.toLowerCase() === '.spin' || cleanText.toLowerCase() === 'spin') {
       const gameType = global.db?.game?.[remoteJid]?.type;
       if (gameType === 'reme') {
@@ -211,6 +233,12 @@ async function handleMessage(sock, msg) {
       case 'inventory':
       case 'tas':
         await handleInventoryCommand(sock, msg, senderId);
+        break;
+
+      // 🕳️ DUNGEON ZORK TEXT ADVENTURE
+      case 'dungeon':
+      case 'jelajah':
+        await handleDungeonCommand(sock, msg, args);
         break;
 
       // 🎣 COMMAND FISHING & SHOP
@@ -747,6 +775,7 @@ async function handleMessage(sock, msg) {
 `┏━I *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* I
 ┃
 ┣⌬ ${prefixUsed}bj
+┣⌬ ${prefixUsed}dungeon / ${prefixUsed}jelajah (Zork RPG Text Adventure)
 ┣⌬ ${prefixUsed}mancing
 ┣⌬ ${prefixUsed}lnj (Lanjut Mancing)
 ┣⌬ ${prefixUsed}fish [tas|sell|sellall|pakai|stats|help]
@@ -834,6 +863,7 @@ async function handleMessage(sock, msg) {
 ┃
 ┣⌬ *ɢᴀᴍᴇꜱ*
 ┃  • ${prefixUsed}bj
+┃  • ${prefixUsed}dungeon / ${prefixUsed}jelajah (Zork RPG Text Adventure)
 ┃  • ${prefixUsed}mancing
 ┃  • ${prefixUsed}lnj (Lanjut Mancing)
 ┃  • ${prefixUsed}fish [tas|sell|sellall|pakai|stats|help]
@@ -866,7 +896,7 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}truth
 ┃  • ${prefixUsed}dare
 ┃
-┣⌬ *ᴛᴏᴏʟꜱ & ᴊᴀᴅᴡᴀʟ*
+┣⌬ *ᴛᴏᴏls & ᴊᴀᴅᴡᴀʟ*
 ┃  • ${prefixUsed}jadwal [hari]
 ┃  • ${prefixUsed}jsn / .jsl / .jrb / .jkm / .jjt
 ┃  • ${prefixUsed}ping
@@ -911,7 +941,7 @@ async function handleMessage(sock, msg) {
 ┗━━━━━━━◧
 
 _ᴋᴇᴛɪᴋ ɴᴀᴍᴀ ᴋᴀᴛᴇɢᴏʀɪ ᴜɴᴛᴜᴋ ᴍᴇʟɪʜᴀᴛ ɪꜱɪɴʏᴀ._
-_ᴄᴏɴᴛᴏʜ: *.menu_game* ᴀᴛᴀᴜ *.allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍᴘɪʟᴋᴀɴ ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ_`;
+_ᴄᴏɴᴛᴏ🇭: *.menu_game* ᴀᴛᴀᴜ *.allmenu* ᴜɴᴛᴜᴋ ᴍᴇɴᴀᴍᴘɪʟᴋᴀɴ ꜱᴇᴍᴜ🇦 ᴍᴇɴᴜ_`;
 
         await sock.sendMessage(remoteJid, { text: menuText }, { quoted: msg });
         break;
