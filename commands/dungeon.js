@@ -82,7 +82,7 @@ async function handleDungeonCommand(sock, msg, args) {
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
     return await sock.sendMessage(remoteJid, {
-      text: `💾 *PROGRAM TERSIMPAN!*\n` +
+      text: `💾 *PROGRES TERSIMPAN!*\n` +
             `Kamu mundur dari dungeon. Posisi aman terakhir kamu tersimpan di **Lantai ${user.dungeon.floor}**. Ketik .dungeon lagi kapan pun untuk lanjut!`,
       quoted: msg
     });
@@ -92,21 +92,29 @@ async function handleDungeonCommand(sock, msg, args) {
   const actionText = args.join(' ');
   user.dungeon.floor += 1;
 
+  // 🎁 HADIAH OTOMATIS TIAP NAIK LANTAI (Makin tinggi lantai, makin besar cuannya!)
+  // Contoh: Lantai 5 dapet Rp5.000, Lantai 50 dapet Rp50.000, dst.
+  const earnedPrize = user.dungeon.floor * 20000;
+  if (typeof helper.addPoints === 'function') {
+    try { helper.addPoints(global.db, senderId, earnedPrize); } catch (e) {}
+  }
+  const formatRp = helper.formatRupiah || (val => `Rp${Number(val || 0).toLocaleString('id-ID')}`);
+
   // CEK APAKAH SUDAH MENYENTUH LANTAI 100 (KEMENANGAN UTAMA)
   if (user.dungeon.floor >= 100) {
-    user.dungeon.active = false;
-    user.dungeon.floor = 1; // Reset ke 1 untuk siklus season baru jika mau
-    
-    // Beri hadiah sultan
+    const grandPrize = 50000000;
     if (typeof helper.addPoints === 'function') {
-      try { helper.addPoints(global.db, senderId, 50000000); } catch (e) {}
+      try { helper.addPoints(global.db, senderId, grandPrize); } catch (e) {}
     }
+    
+    user.dungeon.active = false;
+    user.dungeon.floor = 1; // Reset ke 1 atau biarkan sesuai kebutuhan
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
     return await sock.sendMessage(remoteJid, {
       text: `🏆🎉 *SELAMAT! KAMU MENAKLUKKAN LANTAI 100 DUNGEON!* 🎉🏆\n\n` +
             `Setelah perjalanan panjang menembus kegelapan Zork, kamu berhasil mengalahkan Raja Kegelapan di lantai puncak!\n` +
-            `💰 Hadiah Utama Kemenangan: *+Rp50.000.000* masuk ke saldo!\n\n` +
+            `💰 Hadiah Utama Kemenangan: *+${formatRp(grandPrize)}* masuk ke saldo!\n\n` +
             `_Nama mu tercatat sebagai legenda penakluk dungeon Season 1!_ ✨`,
       quoted: msg
     });
@@ -120,10 +128,9 @@ async function handleDungeonCommand(sock, msg, args) {
   const nextRoom = await generateDungeonRoom(user.dungeon.theme, user.dungeon.floor, actionText);
 
   return await sock.sendMessage(remoteJid, {
-    text: nextRoom.text,
+    text: `${nextRoom.text}\n\n🎁 *Hadiah Lantai ${user.dungeon.floor}:* Mendapatkan *+${formatRp(earnedPrize)}* dari reruntuhan!`,
     quoted: msg
   });
 }
 
 module.exports = handleDungeonCommand;
-  
