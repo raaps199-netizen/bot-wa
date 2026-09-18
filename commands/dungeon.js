@@ -2,7 +2,7 @@
 const { getSenderId } = require('../utils/jid-utils');
 const helper = require('../utils/helper');
 const Groq = require('groq-sdk');
-const config = require('../config'); // ✅ Load config secara langsung agar aman
+const config = require('../config');
 
 function getGroqClient() {
   const apiKey = (global.config && global.config.groqKey) || (config && config.groqKey) || process.env.GROQ_API_KEY;
@@ -15,7 +15,7 @@ async function generateDungeonRoom(theme, floor, action) {
     const groq = getGroqClient();
     if (!groq) {
       return {
-        text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\n*(⚠️ API Key Groq belum terbaca, pastikan config.groqKey terisi)*\n\nArah Jalan:\n• .maju - Lanjut ke depan\n• .keluar - Pulang`,
+        text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\n*(⚠️ API Key Groq belum terbaca)*\n\nArah Jalan:\n• .maju\n• .keluar`,
         choices: ['maju', 'keluar', '.maju', '.keluar']
       };
     }
@@ -23,8 +23,8 @@ async function generateDungeonRoom(theme, floor, action) {
     const prompt = `Kamu adalah game master teks RPG gaya klasik Zork yang sangat imajinatif. 
     Buat deskripsi ruangan dungeon yang unik, menegangkan, dan kaya detail (3-4 kalimat) dengan tema "${theme}" di lantai ${floor} dari 100 lantai total. 
     Player baru saja melakukan aksi: "${action}". 
-    Berikan 3 pilihan aksi atau arah yang variatif (contoh format perintah: .maju, .periksa peti, .ambil item, .ke kiri, .keluar).
-    Format output JSON: { "description": "...", "actions": [".maju", ".periksa peti", ".ambil item", ".keluar"] }`;
+    Berikan 3 sampai 4 pilihan aksi atau arah yang variatif (contoh format perintah: .maju, .periksa peti, .ambil item, .ke kiri, .keluar).
+    Format output JSON MURNI tanpa teks pembungkus markdown: { "description": "...", "actions": [".maju", ".periksa peti", ".ambil item", ".keluar"] }`;
 
     const completion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
@@ -32,7 +32,11 @@ async function generateDungeonRoom(theme, floor, action) {
       response_format: { type: "json_object" }
     });
 
-    const result = JSON.parse(completion.choices[0]?.message?.content || '{}');
+    let rawContent = completion.choices[0]?.message?.content || '{}';
+    // Bersihkan markdown code block jika AI menyelipkannya
+    rawContent = rawContent.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+    const result = JSON.parse(rawContent);
     const rawActions = result.actions || ['.maju', '.periksa sudut', '.keluar'];
     
     const cleanChoices = rawActions.map(act => act.toLowerCase().replace('.', '').trim());
@@ -43,9 +47,9 @@ async function generateDungeonRoom(theme, floor, action) {
       choices: cleanChoices
     };
   } catch (err) {
-    console.error('Groq Dungeon Error:', err);
+    console.error('Groq Dungeon Error Detail:', err);
     return {
-      text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\nSuasana tiba-tiba senyap...\n\nAksi Tersedia:\n• .maju\n• .keluar`,
+      text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\n_Suasana tiba-tiba senyap, sihir gua bergolak..._\n\nAksi Tersedia:\n• .maju\n• .keluar`,
       choices: ['maju', 'keluar', '.maju', '.keluar']
     };
   }
@@ -173,4 +177,3 @@ async function handleDungeonCommand(sock, msg, args) {
 }
 
 module.exports = handleDungeonCommand;
-    
