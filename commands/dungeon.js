@@ -10,30 +10,28 @@ function getGroqClient() {
   return new Groq({ apiKey });
 }
 
-// 🧠 AI MERANCANG SEMUA (Deskripsi, Pilihan Aksi Unik, & Encounter) SECARA DINAMIS
 async function generateDungeonRoom(theme, floor, action) {
   try {
     const groq = getGroqClient();
     if (!groq) throw new Error("API Key Groq tidak ditemukan!");
 
-    const prompt = `Kamu adalah game master teks RPG gaya klasik Zork yang sangat imajinatif dan kreatif. 
+    const prompt = `Kamu adalah game master teks RPG gaya klasik Zork yang sangat imajinatif. 
     Kondisi: Player berada di Lantai ${floor} dari 100 dengan tema "${theme}". 
     Player baru saja melakukan aksi: "${action}".
     
-    Buat deskripsi ruangan/lantai baru yang sangat unik, atmosferik, dan disesuaikan dengan aksi player tersebut (3-4 kalimat).
+    Buat deskripsi ruangan/lantai baru yang unik, atmosferik, dan bereaksi terhadap aksi player tersebut (3-4 kalimat).
+    Berikan 4 pilihan aksi atau perintah yang spesifik dan bervariasi sesuai situasi (contoh: .periksa meja, .buka peti, .intip celah dinding, .naik tangga). 
+    PENTING: Pastikan ada minimal 1 aksi yang jelas untuk naik/pindah lantai (misal: .naik tangga, .lanjut lantai).
     
-    Berikan 4 pilihan aksi atau perintah yang **SANGAT SPESIFIK dan BERVARIASI** sesuai situasi ruangan ini (Contoh: jika ada altar, beri pilihan .geser altar atau .buka kitab; jangan pakai aksi generik yang diulang-ulang!). 
-    PENTING: Pastikan dari 4 pilihan tersebut, ada minimal 1 aksi untuk pindah/naik ke lantai berikutnya (misal: .naik tangga, .buka pintu berat, .lanjut koridor).
-    
-    Tentukan juga 'encounter' acak di ruangan ini:
-    - Jika ada monster: { "type": "monster", "name": "Nama Monster Unik", "hp": 100 }
-    - Jika ada item/harta: { "type": "item", "name": "Nama Item Unik" }
+    Tentukan 'encounter' acak di ruangan ini:
+    - Jika ada monster: { "type": "monster", "name": "Nama Monster", "hp": 100 }
+    - Jika ada item/harta: { "type": "item", "name": "Nama Item" }
     - Jika aman: { "type": "none", "name": "", "hp": 0 }
     
     Format output JSON MURNI tanpa markdown:
     {
       "description": "...",
-      "actions": [".aksi_unik_1", ".aksi_unik_2", ".aksi_unik_3", ".naik tangga"],
+      "actions": [".aksi_1", ".aksi_2", ".aksi_3", ".naik tangga"],
       "encounter": {
         "type": "monster|item|none",
         "name": "...",
@@ -55,8 +53,8 @@ async function generateDungeonRoom(theme, floor, action) {
   } catch (err) {
     console.error('Groq Dungeon Error:', err);
     return {
-      description: `Kamu berada di lantai ${floor} yang diselimuti kabut misterius. Suasana terasa sunyi namun penuh ancaman.`,
-      actions: [".periksa sekitar", ".cari jalan", ".buka pintu", ".naik tangga"],
+      description: `Kamu berada di lantai ${floor} yang sunyi dan mencekam. Ada jalur misterius di hadapanmu.`,
+      actions: [".periksa sekitar", ".buka peti", ".cari jalan", ".naik tangga"],
       encounter: { type: 'none', name: '', hp: 0 }
     };
   }
@@ -85,6 +83,7 @@ async function handleDungeonCommand(sock, msg, args) {
   const user = global.db.users[senderId];
   const subCommand = args[0]?.toLowerCase().replace('.', '').trim();
 
+  // Inisialisasi data dungeon dengan aman (mencegah undefined/undefined)
   if (!user.dungeon) {
     user.dungeon = {
       active: false,
@@ -99,7 +98,10 @@ async function handleDungeonCommand(sock, msg, args) {
     };
   }
 
-  if (user.dungeon.hp === undefined) { user.dungeon.hp = 100; user.dungeon.maxHp = 100; }
+  if (user.dungeon.hp === undefined || isNaN(user.dungeon.hp)) { 
+    user.dungeon.hp = 100; 
+    user.dungeon.maxHp = 100; 
+  }
 
   // 1. Masuk Dungeon / Inisialisasi Awal
   if (!user.dungeon.active) {
@@ -121,7 +123,7 @@ async function handleDungeonCommand(sock, msg, args) {
     }
 
     const sent = await sock.sendMessage(remoteJid, {
-      text: `🚀 *PETUALANGAN ZORK DUNGEON DIMULAI*\n📍 Lantai ${currentFloor}/100 | ❤️ HP Kamu: [ ${user.dungeon.hp}/${user.dungeon.maxHp} ]\n\n${roomData.description}\n\n🧭 *Aksi Tersedia (Gunakan titik):* \n${roomData.actions.join(' | ')}${encounterMsg}`,
+      text: `🚀 *PETUALANGAN ZORK DUNGEON DIMULAI*\n📍 Lantai ${currentFloor}/100 | ❤️ HP Kamu: [ ${user.dungeon.hp}/${user.dungeon.maxHp} ]\n\n${roomData.description}\n\n🧭 *Aksi Tersedia:* \n${roomData.actions.join(' | ')}${encounterMsg}`,
       quoted: msg
     });
     if (roomData.encounter?.type === 'monster') user.dungeon.monsterMsgKey = sent.key;
@@ -222,27 +224,24 @@ async function handleDungeonCommand(sock, msg, args) {
     return await sock.sendMessage(remoteJid, { text: `⚠️ Kamu sedang diserang oleh **${user.dungeon.activeMonster.name}**! Kalahkan dulu dengan mengetik *.serang*!`, quoted: msg });
   }
 
-  // 4. Validasi Ketikan User terhadap Pilihan AI
+  // 4. Validasi Ketikan User
   const userActionClean = args.join(' ').toLowerCase().replace('.', '').trim();
-  
-  // Cek apakah aksi user valid berdasarkan pilihan AI sebelumnya atau perintah umum
   const isValid = user.dungeon.validChoices?.some(c => userActionClean.includes(c)) || ['keluar', 'exit', 'serang'].includes(userActionClean);
 
   if (!isValid && userActionClean !== '') {
     return await sock.sendMessage(remoteJid, {
-      text: `⚠️ *Aksi tidak dikenali di ruangan ini!* \n` +
-            `_Gunakan pilihan aksi yang tertera pada daftar opsi ruangan sebelumnya._`,
+      text: `⚠️ *Aksi tidak dikenali di ruangan ini!* \n_Gunakan pilihan aksi yang tertera pada daftar opsi ruangan sebelumnya._`,
       quoted: msg
     });
   }
 
-  // 5. Tentukan Apakah Aksi Ini untuk Naik Lantai atau Interaksi Biasa di Ruang yang Sama
-  const isMovingUp = userActionClean.includes('naik') || userActionClean.includes('lanjut') || userActionClean.includes('pintu') || userActionClean.includes('maju') || userActionClean.includes('koridor') || userActionClean.includes('tangga');
+  // 5. ATURAN NAIK LANTAI DIPERKETAT (Hanya trigger jika benar-benar kata kunci tangga/naik lantai)
+  const isMovingUp = userActionClean.includes('naik') || userActionClean.includes('tangga') || userActionClean.includes('lanjut lantai') || userActionClean.includes('lantai berikutnya');
 
   const formatRp = helper.formatRupiah || (val => `Rp${Number(val || 0).toLocaleString('id-ID')}`);
 
   if (isMovingUp) {
-    // --- SKenario A: Naik ke Lantai Berikutnya ---
+    // --- SKENARIO A: Naik ke Lantai Berikutnya ---
     user.dungeon.floor += 1;
     const earnedPrize = user.dungeon.floor * 20000;
     if (typeof helper.addPoints === 'function') {
@@ -265,7 +264,6 @@ async function handleDungeonCommand(sock, msg, args) {
       });
     }
 
-    // Generate ruangan baru dari AI untuk lantai baru
     const roomData = await generateDungeonRoom(user.dungeon.theme, user.dungeon.floor, args.join(' '));
     user.dungeon.validChoices = roomData.actions.map(a => a.toLowerCase().replace('.', '').trim());
     user.dungeon.validChoices.push('keluar', 'exit', 'serang');
@@ -294,8 +292,7 @@ async function handleDungeonCommand(sock, msg, args) {
     return;
 
   } else {
-    // --- SKenario B: Interaksi di Lantai yang Sama Berdasarkan Aksi Player ---
-    // AI merespons aksi spesifik player, lalu memunculkan peluang item atau monster
+    // --- SKENARIO B: Interaksi di Lantai yang Sama (Buka pintu, periksa sekitar, dll) ---
     const roomData = await generateDungeonRoom(user.dungeon.theme, user.dungeon.floor, args.join(' '));
     user.dungeon.validChoices = roomData.actions.map(a => a.toLowerCase().replace('.', '').trim());
     user.dungeon.validChoices.push('keluar', 'exit', 'serang');
@@ -327,4 +324,4 @@ async function handleDungeonCommand(sock, msg, args) {
 }
 
 module.exports = handleDungeonCommand;
-  
+      
