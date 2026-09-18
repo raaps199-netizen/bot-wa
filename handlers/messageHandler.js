@@ -8,7 +8,7 @@ const { handleInventoryCommand } = require('../commands/inventory'); // 🎒 Imp
 const { getSenderId } = require('../utils/jid-utils');
 const { handleRebirthCommand } = require('../commands/rebirth'); // ✅ Path sudah dibenerin ke parent folder
 const handleResetCommand = require('../commands/reset'); // 🔄 Import Command Reset Season Admin
-const handleZorkCommand = require('../commands/zork'); // 🎮 Import Zork Text Adventure Engine
+const handleDungeonCommand = require('../commands/dungeon'); // 🕳️ Import Dungeon Text Adventure Engine
 
 // Command Media & Utility
 const stickerCommand = require('../commands/sticker');
@@ -156,13 +156,13 @@ async function handleMessage(sock, msg) {
     const isOwner = senderId.includes(ownerPhone) || senderId.includes(ownerLid);
 
     // ===================================================
-    // 🎮 ZORK SESSION INTERCEPTOR (NATURAL INPUT)
+    // 🕳️ DUNGEON SESSION INTERCEPTOR (NATURAL INPUT)
     // ===================================================
     const user = global.db?.users?.[senderId];
-    if (user && user.zork && user.zork.active) {
+    if (user && user.dungeon && user.dungeon.active) {
       if (!cleanText.startsWith(config.prefix) && !cleanText.startsWith('/')) {
-        const zorkArgs = cleanText.trim().split(/ +/);
-        await handleZorkCommand(sock, msg, zorkArgs, true);
+        const dungeonArgs = cleanText.trim().split(/ +/);
+        await handleDungeonCommand(sock, msg, dungeonArgs);
         return;
       }
     }
@@ -218,16 +218,20 @@ async function handleMessage(sock, msg) {
 
     switch (command) {
 
-      case 'zork':
-        await handleZorkCommand(sock, msg, args, false);
+      // 🕳️ DUNGEON TEXT ADVENTURE COMMAND (.dungeon, .dungeon restart, .dungeon quit)
+      case 'dungeon':
+      case 'jelajah':
+        await handleDungeonCommand(sock, msg, args);
         break;
 
+      // 🎒 FITUR INVENTORY / TAS
       case 'inv':
       case 'inventory':
       case 'tas':
         await handleInventoryCommand(sock, msg, senderId);
         break;
 
+      // 🎣 COMMAND FISHING & SHOP
       case 'fish':
       case 'mancing':
         await handleFishingCommand(sock, msg, command, args, senderId);
@@ -260,6 +264,7 @@ async function handleMessage(sock, msg) {
         await handleBeliCommand(sock, msg, args, senderId);
         break;
 
+      // 🐙 COMMAND EVENT WORLD BOSS
       case 'event':
         await handleEventCommand(sock, msg, args, senderId);
         break;
@@ -269,6 +274,9 @@ async function handleMessage(sock, msg) {
         await handleAttackBossCommand(sock, msg, senderId);
         break;
 
+      // ==========================================
+      // 📅 COMMAND JADWAL & PIKET KELAS
+      // ==========================================
       case 'jadwal':
       case 'jsn':
       case 'jsl':
@@ -756,7 +764,7 @@ async function handleMessage(sock, msg) {
         const gameText =
 `┏━I *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* I
 ┃
-┣⌬ ${prefixUsed}zork (Zork Text Adventure RPG)
+┣⌬ ${prefixUsed}dungeon / ${prefixUsed}jelajah (Zork Text Adventure RPG)
 ┣⌬ ${prefixUsed}bj
 ┣⌬ ${prefixUsed}mancing
 ┣⌬ ${prefixUsed}lnj (Lanjut Mancing)
@@ -844,7 +852,7 @@ async function handleMessage(sock, msg) {
 `┏━I *ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ* I
 ┃
 ┣⌬ *ɢᴀᴍᴇꜱ*
-┃  • ${prefixUsed}zork (Zork Text Adventure RPG)
+┃  • ${prefixUsed}dungeon / ${prefixUsed}jelajah (Zork Text Adventure RPG)
 ┃  • ${prefixUsed}bj
 ┃  • ${prefixUsed}mancing
 ┃  • ${prefixUsed}lnj (Lanjut Mancing)
