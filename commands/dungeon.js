@@ -15,7 +15,7 @@ async function generateDungeonRoom(theme, floor, action) {
     const groq = getGroqClient();
     if (!groq) {
       return {
-        text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\nKamu berjalan menyusuri kegelapan (Mode Offline - API Key belum terdeteksi).\n\nArah Jalan:\n• .utara - Lanjut maju\n• .keluar - Pulang`,
+        text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\nKamu berjalan menyusuri kegelapan.\n\nArah Jalan:\n• .utara - Lanjut maju\n• .keluar - Pulang`,
         choices: ['.utara', '.keluar']
       };
     }
