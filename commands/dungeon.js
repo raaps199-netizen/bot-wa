@@ -3,7 +3,6 @@ const { getSenderId } = require('../utils/jid-utils');
 const helper = require('../utils/helper');
 const Groq = require('groq-sdk');
 
-// Fungsi aman untuk inisialisasi Groq (mencegah crash saat bot startup)
 function getGroqClient() {
   const apiKey = global.config?.groqKey || process.env.GROQ_API_KEY;
   if (!apiKey) return null;
@@ -15,16 +14,16 @@ async function generateDungeonRoom(theme, floor, action) {
     const groq = getGroqClient();
     if (!groq) {
       return {
-        text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\nKamu berjalan menyusuri kegelapan.\n\nArah Jalan:\n• .utara - Lanjut maju\n• .keluar - Pulang`,
-        choices: ['.utara', '.keluar']
+        text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\nKamu berada di ruangan gelap berdebu.\n\nAksi Tersedia:\n• .maju - Lanjut ke depan\n• .periksa meja - Melihat isi meja\n• .ambil obor - Mengambil obor\n• .keluar - Pulang`,
+        choices: ['maju', 'periksa', 'ambil', 'keluar', '.maju', '.periksa', '.ambil', '.keluar']
       };
     }
 
-    const prompt = `Kamu adalah game master teks RPG gaya klasik Zork. 
-    Buat deskripsi ruangan dungeon singkat (maksimal 3 kalimat) dengan tema "${theme}" di lantai ${floor} dari 100 lantai total. 
+    const prompt = `Kamu adalah game master teks RPG gaya klasik Zork yang sangat imajinatif. 
+    Buat deskripsi ruangan dungeon yang unik, menegangkan, dan kaya detail (3-4 kalimat) dengan tema "${theme}" di lantai ${floor} dari 100 lantai total. 
     Player baru saja melakukan aksi: "${action}". 
-    Berikan juga 2 pilihan arah atau aksi selanjutnya yang valid (misal: .utara, .timur, .ambil item).
-    Format output JSON: { "description": "...", "actions": [".utara", ".ambil peti", ".keluar"] }`;
+    Berikan 3 sampai 4 pilihan aksi atau arah yang sangat variatif, kreatif, dan menantang (contoh format perintah: .maju, .periksa peti, .ambil pedang, .ke kiri, .buka pintu, .panjat dinding, .keluar).
+    Pastikan format output berupa JSON murni: { "description": "...", "actions": [".maju", ".periksa peti", ".ambil kunci", ".keluar"] }`;
 
     const completion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
@@ -33,15 +32,21 @@ async function generateDungeonRoom(theme, floor, action) {
     });
 
     const result = JSON.parse(completion.choices[0]?.message?.content || '{}');
+    const rawActions = result.actions || ['.maju', '.periksa sudut', '.keluar'];
+    
+    // Ekstraksi kata kunci agar validasi input user lebih fleksibel
+    const cleanChoices = rawActions.map(act => act.toLowerCase().replace('.', '').trim());
+    cleanChoices.push('keluar', 'exit', 'maju', 'mundur', 'kiri', 'kanan', 'utara', 'selatan', 'timur', 'barat');
+
     return {
-      text: `🕳️ *ZORK DUNGEON (Lantai ${floor}/100)*\n\n${result.description || 'Kamu menyusuri lorong sunyi.'}\n\n🧭 *Aksi Tersedia:* \n${(result.actions || ['.utara', '.keluar']).join(' | ')}`,
-      choices: result.actions || ['.utara', '.keluar']
+      text: `🕳️ *ZORK DUNGEON (Lantai ${floor}/100)*\n\n${result.description || 'Kamu menyusuri lorong sunyi penuh misteri.'}\n\n🧭 *Pilihan Aksi Tersedia:* \n${rawActions.join(' | ')}`,
+      choices: cleanChoices
     };
   } catch (err) {
     console.error('Groq Dungeon Error:', err);
     return {
-      text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\nSuasana tiba-tiba senyap...\n\nArah Jalan:\n• .utara\n• .keluar`,
-      choices: ['.utara', '.keluar']
+      text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\nSuasana tiba-tiba senyap dan bergemuruh...\n\nAksi Tersedia:\n• .maju\n• .keluar`,
+      choices: ['maju', 'keluar', '.maju', '.keluar']
     };
   }
 }
@@ -55,56 +60,67 @@ async function handleDungeonCommand(sock, msg, args) {
   if (!global.db.users[senderId]) global.db.users[senderId] = {};
 
   const user = global.db.users[senderId];
-  const subCommand = args[0]?.toLowerCase();
+  const subCommand = args[0]?.toLowerCase().replace('.', '').trim();
 
-  // Inisialisasi atau ambil data dungeon player jika belum ada
   if (!user.dungeon) {
     user.dungeon = {
       active: false,
       floor: 1,
-      theme: 'Gua Lembab Berbatu',
-      hp: 100
+      theme: 'Gua Lembab Berbatu & Reruntuhan Kuno',
+      hp: 100,
+      validChoices: ['maju', 'keluar', '.maju', '.keluar']
     };
   }
 
-  // Jika player mengetik .dungeon (masuk atau cek status progres tersimpan)
+  // Masuk dungeon atau cek status progres
   if (!user.dungeon.active) {
     user.dungeon.active = true;
-    
     const currentFloor = user.dungeon.floor || 1;
-    const room = await generateDungeonRoom(user.dungeon.theme, currentFloor, 'Melanjutkan kembali petualangan');
+    const room = await generateDungeonRoom(user.dungeon.theme, currentFloor, 'Memasuki gerbang dungeon');
+    
+    user.dungeon.validChoices = room.choices;
 
     return await sock.sendMessage(remoteJid, {
-      text: `🚀 *MELANJUTKAN PETUALANGAN DUNGEON!*\n` +
-            `📍 Progres tersimpan: *Lantai ${currentFloor} dari 100*\n\n${room.text}`,
+      text: `🚀 *PETUALANGAN ZORK DUNGEON DIMULAI!*\n` +
+            `📍 Posisi: *Lantai ${currentFloor} dari 100*\n\n${room.text}`,
       quoted: msg
     });
   }
 
-  // Jika player ingin keluar / istirahat (Progres otomatis di-save)
+  // Keluar dungeon
   if (subCommand === 'keluar' || subCommand === 'exit') {
     user.dungeon.active = false;
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
     return await sock.sendMessage(remoteJid, {
       text: `💾 *PROGRES TERSIMPAN!*\n` +
-            `Kamu mundur dari dungeon. Posisi aman terakhir kamu tersimpan di **Lantai ${user.dungeon.floor}**. Ketik .dungeon lagi kapan pun untuk lanjut!`,
+            `Kamu mundur dari dungeon. Posisi aman terakhir di **Lantai ${user.dungeon.floor}**. Ketik .dungeon lagi untuk lanjut!`,
       quoted: msg
     });
   }
 
-  // Proses pergerakan naik lantai
-  const actionText = args.join(' ');
+  // Validasi ketikan user agar tidak bisa asal ketik command luar (anti-bug)
+  const userActionClean = args.join(' ').toLowerCase().replace('.', '').trim();
+  const isValidAction = user.dungeon.validChoices?.some(choice => userActionClean.includes(choice));
+
+  if (!isValidAction && userActionClean !== '') {
+    return await sock.sendMessage(remoteJid, {
+      text: `⚠️ *Aksi tidak dikenali di ruangan ini!* \n` +
+            `_“Kamu mencoba melakukan hal aneh, tapi dinding gua hanya memantulkan gema suaramu...”_\n\n` +
+            `Gunakan pilihan aksi / kata kunci yang tertera pada deskripsi ruangan!`,
+      quoted: msg
+    });
+  }
+
+  // Jika valid, naik lantai dan berikan hadiah
   user.dungeon.floor += 1;
 
-  // 🎁 HADIAH OTOMATIS TIAP NAIK LANTAI
   const earnedPrize = user.dungeon.floor * 20000;
   if (typeof helper.addPoints === 'function') {
     try { helper.addPoints(global.db, senderId, earnedPrize); } catch (e) {}
   }
   const formatRp = helper.formatRupiah || (val => `Rp${Number(val || 0).toLocaleString('id-ID')}`);
 
-  // CEK APAKAH SUDAH MENYENTUH LANTAI 100
   if (user.dungeon.floor >= 100) {
     const grandPrize = 50000000;
     if (typeof helper.addPoints === 'function') {
@@ -117,9 +133,9 @@ async function handleDungeonCommand(sock, msg, args) {
 
     return await sock.sendMessage(remoteJid, {
       text: `🏆🎉 *SELAMAT! KAMU MENAKLUKKAN LANTAI 100 DUNGEON!* 🎉🏆\n\n` +
-            `Setelah perjalanan panjang menembus kegelapan Zork, kamu berhasil mengalahkan Raja Kegelapan di lantai puncak!\n` +
-            `💰 Hadiah Utama Kemenangan: *+${formatRp(grandPrize)}* masuk ke saldo!\n\n` +
-            `_Nama mu tercatat sebagai legenda penakluk dungeon Season 1!_ ✨`,
+            `Kamu berhasil mengalahkan Raja Kegelapan Zork di lantai puncak!\n` +
+            `💰 Hadiah Utama: *+${formatRp(grandPrize)}* masuk ke saldo!\n\n` +
+            `_Namamu resmi jadi legenda Season 1!_ ✨`,
       quoted: msg
     });
   }
@@ -128,7 +144,9 @@ async function handleDungeonCommand(sock, msg, args) {
     global.saveDatabase();
   }
 
-  const nextRoom = await generateDungeonRoom(user.dungeon.theme, user.dungeon.floor, actionText);
+  // Generate ruangan berikutnya berdasarkan aksi yang dipilih player
+  const nextRoom = await generateDungeonRoom(user.dungeon.theme, user.dungeon.floor, args.join(' '));
+  user.dungeon.validChoices = nextRoom.choices;
 
   return await sock.sendMessage(remoteJid, {
     text: `${nextRoom.text}\n\n🎁 *Hadiah Lantai ${user.dungeon.floor}:* Mendapatkan *+${formatRp(earnedPrize)}* dari reruntuhan!`,
@@ -137,4 +155,4 @@ async function handleDungeonCommand(sock, msg, args) {
 }
 
 module.exports = handleDungeonCommand;
-  
+      
