@@ -1,6 +1,7 @@
 // File: commands/dungeon.js
 const Groq = require('groq-sdk');
 const config = require('../config');
+const { getSenderId } = require('../utils/jid-utils'); // ✅ Import helper JID agar konsisten dengan messageHandler
 
 function getGroqClient() {
   const apiKey = (global.config && global.config.groqKey) || (config && config.groqKey) || process.env.GROQ_API_KEY;
@@ -27,9 +28,9 @@ const getDefaultDungeonState = () => ({
   }
 });
 
-async function handleDungeonCommand(sock, msg, args, isInSession = false) {
+async function handleDungeonCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
-  const senderId = remoteJid; 
+  const senderId = getSenderId(msg, remoteJid); // ✅ Mengambil JID user secara akurat (support group & private)
 
   if (!global.db.users) global.db.users = {};
   if (!global.db.users[senderId]) global.db.users[senderId] = {};
@@ -55,13 +56,13 @@ async function handleDungeonCommand(sock, msg, args, isInSession = false) {
     user.dungeon.active = true;
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
     return await sock.sendMessage(remoteJid, {
-      text: `🔄 *DUNGEON RESTARTED*\nGame baru dimulai!\n\nWelcome to Zork Dungeon...\nYou are standing in a living room.`,
+      text: `🔄 *DUNGEON RESTARTED*\nGame baru dimulai!\n\n*Living Room*\nYou are standing in a living room. A brass lantern is on the table.\n\nExits: north, west, down\n\n> `,
       quoted: msg
     });
   }
 
-  // Jika mengetik `.dungeon` pertama kali atau saat belum aktif
-  if (!user.dungeon.active && !isInSession) {
+  // Jika mengetik `.dungeon` / `.zork` pertama kali atau saat belum aktif
+  if (!user.dungeon.active) {
     user.dungeon.active = true;
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
     return await sock.sendMessage(remoteJid, {
@@ -75,12 +76,11 @@ async function handleDungeonCommand(sock, msg, args, isInSession = false) {
   }
 
   // Jika user mengetik .dungeon doang saat game sudah aktif, anggap sebagai 'look'
-  if (user.dungeon.active && !isInSession && !subCommand) {
+  if (user.dungeon.active && !subCommand) {
     args = ['look'];
   }
 
-  // Jika user sedang dalam sesi dan mengirim aksi game (misal: "look", "north", "take lamp")
-  const actionText = isInSession ? args.join(' ') : args.join(' ');
+  const actionText = args.join(' ');
   if (!actionText) {
     return await sock.sendMessage(remoteJid, {
       text: `Game Dungeon kamu sedang aktif. Ketik aksi yang ingin kamu lakukan (contoh: \`look\`, \`inventory\`, \`north\`).`,
@@ -95,7 +95,6 @@ async function handleDungeonCommand(sock, msg, args, isInSession = false) {
       return await sock.sendMessage(remoteJid, { text: `⚠️ Groq API Key belum dikonfigurasi untuk Dungeon Engine.`, quoted: msg });
     }
 
-    // Kirim state saat ini ke AI agar konsisten
     const systemPrompt = `Kamu adalah Zork Game Engine dan Rule Narrator yang ketat. 
     Ikuti state pemain saat ini secara mutlak dan jangan mengarang atau melanggar aturan game.
     
@@ -123,7 +122,6 @@ async function handleDungeonCommand(sock, msg, args, isInSession = false) {
 
     let rawContent = completion.choices[0]?.message?.content || '{}';
     
-    // Parse JSON dari respons AI
     const jsonMatch = rawContent.match(/```json([\s\S]*?)```/) || rawContent.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsedData = JSON.parse(jsonMatch[1] || jsonMatch[0]);
