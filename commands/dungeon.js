@@ -1,20 +1,21 @@
 // File: commands/dungeon.js
-// File: commands/dungeon.js (Bagian atas)
-// File: commands/dungeon.js (Bagian atas)
 const { getSenderId } = require('../utils/jid-utils');
 const helper = require('../utils/helper');
 const Groq = require('groq-sdk');
 
-// Mengambil key langsung dari config.js kamu ('groqKey') atau environment variable
-const groq = new Groq({ apiKey: global.config?.groqKey || process.env.GROQ_API_KEY });
-
-
+// Fungsi aman untuk inisialisasi Groq (mencegah crash saat bot startup)
+function getGroqClient() {
+  const apiKey = global.config?.groqKey || process.env.GROQ_API_KEY;
+  if (!apiKey) return null;
+  return new Groq({ apiKey });
+}
 
 async function generateDungeonRoom(theme, floor, action) {
   try {
-    if (!groq.apiKey) {
+    const groq = getGroqClient();
+    if (!groq) {
       return {
-        text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\nKamu berjalan menyusuri kegelapan.\n\nArah Jalan:\n• .utara - Lanjut maju\n• .keluar - Pulang`,
+        text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\nKamu berjalan menyusuri kegelapan (Mode Offline - API Key belum terdeteksi).\n\nArah Jalan:\n• .utara - Lanjut maju\n• .keluar - Pulang`,
         choices: ['.utara', '.keluar']
       };
     }
@@ -70,7 +71,6 @@ async function handleDungeonCommand(sock, msg, args) {
   if (!user.dungeon.active) {
     user.dungeon.active = true;
     
-    // Jika player sudah pernah main sebelumnya, lanjutkan dari lantai terakhir mereka!
     const currentFloor = user.dungeon.floor || 1;
     const room = await generateDungeonRoom(user.dungeon.theme, currentFloor, 'Melanjutkan kembali petualangan');
 
@@ -97,15 +97,14 @@ async function handleDungeonCommand(sock, msg, args) {
   const actionText = args.join(' ');
   user.dungeon.floor += 1;
 
-  // 🎁 HADIAH OTOMATIS TIAP NAIK LANTAI (Makin tinggi lantai, makin besar cuannya!)
-  // Contoh: Lantai 5 dapet Rp5.000, Lantai 50 dapet Rp50.000, dst.
+  // 🎁 HADIAH OTOMATIS TIAP NAIK LANTAI
   const earnedPrize = user.dungeon.floor * 20000;
   if (typeof helper.addPoints === 'function') {
     try { helper.addPoints(global.db, senderId, earnedPrize); } catch (e) {}
   }
   const formatRp = helper.formatRupiah || (val => `Rp${Number(val || 0).toLocaleString('id-ID')}`);
 
-  // CEK APAKAH SUDAH MENYENTUH LANTAI 100 (KEMENANGAN UTAMA)
+  // CEK APAKAH SUDAH MENYENTUH LANTAI 100
   if (user.dungeon.floor >= 100) {
     const grandPrize = 50000000;
     if (typeof helper.addPoints === 'function') {
@@ -113,7 +112,7 @@ async function handleDungeonCommand(sock, msg, args) {
     }
     
     user.dungeon.active = false;
-    user.dungeon.floor = 1; // Reset ke 1 atau biarkan sesuai kebutuhan
+    user.dungeon.floor = 1; 
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
     return await sock.sendMessage(remoteJid, {
@@ -125,7 +124,6 @@ async function handleDungeonCommand(sock, msg, args) {
     });
   }
 
-  // Simpan database setiap kali pindah ruangan/lantai
   if (typeof global.saveDatabase === 'function') {
     global.saveDatabase();
   }
@@ -139,3 +137,4 @@ async function handleDungeonCommand(sock, msg, args) {
 }
 
 module.exports = handleDungeonCommand;
+  
