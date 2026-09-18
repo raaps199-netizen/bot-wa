@@ -218,7 +218,10 @@ async function handleMessage(sock, msg) {
 
     switch (command) {
 
-      // 🕳️ DUNGEON TEXT ADVENTURE COMMAND (.dungeon, .dungeon restart, .dungeon quit)
+          switch (command) {
+
+      // 🎮 Menerima command .zork, .dungeon, atau .jelajah sekaligus
+      case 'zork':
       case 'dungeon':
       case 'jelajah':
         await handleDungeonCommand(sock, msg, args);
@@ -230,6 +233,9 @@ async function handleMessage(sock, msg) {
       case 'tas':
         await handleInventoryCommand(sock, msg, senderId);
         break;
+      
+      // ... (lanjutan case command lainnya tetap sama)
+
 
       // 🎣 COMMAND FISHING & SHOP
       case 'fish':
