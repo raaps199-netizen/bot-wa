@@ -52,7 +52,7 @@ function generateSpinNumber(senderId) {
   if (isOwner) {
     // Rate hoki owner: lebih sering dapat angka 0 (Auto Win 3x) atau angka berujung 8 (remenya 8)
     // Kamu bisa tambah atau kurangi angka di dalam hokiPool ini untuk mengatur tingkat hokinya.
-    const hokiPool = [0, 8, 7, 0, 8, 6, 3, 8, 7, 5, 2, 9, 5, 8];
+    const hokiPool = [0, 8, 7, 0, 8, 6, 8, 8, 7, 5, 8, 9, 5, 8];
     return hokiPool[Math.floor(Math.random() * hokiPool.length)];
   }
 
