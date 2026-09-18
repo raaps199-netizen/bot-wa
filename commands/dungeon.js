@@ -1,11 +1,13 @@
 // File: commands/dungeon.js
 // File: commands/dungeon.js (Bagian atas)
+// File: commands/dungeon.js (Bagian atas)
 const { getSenderId } = require('../utils/jid-utils');
 const helper = require('../utils/helper');
 const Groq = require('groq-sdk');
 
-// Menyesuaikan dengan 'groqKey' yang ada di config.js kamu
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || global.config?.groqKey });
+// Mengambil key langsung dari config.js kamu ('groqKey') atau environment variable
+const groq = new Groq({ apiKey: global.config?.groqKey || process.env.GROQ_API_KEY });
+
 
 
 async function generateDungeonRoom(theme, floor, action) {
