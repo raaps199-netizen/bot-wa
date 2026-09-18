@@ -2,9 +2,10 @@
 const { getSenderId } = require('../utils/jid-utils');
 const helper = require('../utils/helper');
 const Groq = require('groq-sdk');
+const config = require('../config'); // ✅ Load config secara langsung agar aman
 
 function getGroqClient() {
-  const apiKey = global.config?.groqKey || process.env.GROQ_API_KEY;
+  const apiKey = (global.config && global.config.groqKey) || (config && config.groqKey) || process.env.GROQ_API_KEY;
   if (!apiKey) return null;
   return new Groq({ apiKey });
 }
@@ -14,13 +15,13 @@ async function generateDungeonRoom(theme, floor, action) {
     const groq = getGroqClient();
     if (!groq) {
       return {
-        text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\nKamu berada di ruangan gelap berdebu.\n\nAksi Tersedia:\n• .maju - Lanjut ke depan\n• .periksa - Memeriksa sekitar\n• .keluar - Pulang`,
-        choices: ['maju', 'periksa', 'keluar', '.maju', '.periksa', '.keluar']
+        text: `🕳️ *RUANG BAWAH TANAH (Lantai ${floor}/100)*\n*(⚠️ API Key Groq belum terbaca, pastikan config.groqKey terisi)*\n\nArah Jalan:\n• .maju - Lanjut ke depan\n• .keluar - Pulang`,
+        choices: ['maju', 'keluar', '.maju', '.keluar']
       };
     }
 
     const prompt = `Kamu adalah game master teks RPG gaya klasik Zork yang sangat imajinatif. 
-    Buat deskripsi ruangan dungeon yang menegangkan (3 kalimat) dengan tema "${theme}" di lantai ${floor} dari 100 lantai total. 
+    Buat deskripsi ruangan dungeon yang unik, menegangkan, dan kaya detail (3-4 kalimat) dengan tema "${theme}" di lantai ${floor} dari 100 lantai total. 
     Player baru saja melakukan aksi: "${action}". 
     Berikan 3 pilihan aksi atau arah yang variatif (contoh format perintah: .maju, .periksa peti, .ambil item, .ke kiri, .keluar).
     Format output JSON: { "description": "...", "actions": [".maju", ".periksa peti", ".ambil item", ".keluar"] }`;
@@ -120,29 +121,25 @@ async function handleDungeonCommand(sock, msg, args) {
   }
   const formatRp = helper.formatRupiah || (val => `Rp${Number(val || 0).toLocaleString('id-ID')}`);
 
-  // 🎲 SISTEM RANDOM ENCOUNTERS & ITEM DROPS (Peluang acak tiap naik lantai)
+  // Random Encounters & Item Drops
   let encounterText = '';
   const randEvent = Math.random();
   
   if (!user.dungeon.inventory) user.dungeon.inventory = [];
 
   if (randEvent < 0.35) {
-    // Event 1: Menemukan Peti Harta Berisi Item Langka
     const possibleItems = ['🗡️ Pedang Karatan', '🛡️ Perisai Perunggu', '🧪 Ramuan Pemulih HP', '📜 Perkamen Kuno'];
     const foundItem = possibleItems[Math.floor(Math.random() * possibleItems.length)];
     user.dungeon.inventory.push(foundItem);
     encounterText = `\n\n✨ *RANDOM EVENT — PETI HARTA!* \n_Kamu menemukan peti tersembunyi di sudut ruangan dan mendapatkan item langka: **${foundItem}**!_`;
   } else if (randEvent >= 0.35 && randEvent < 0.65) {
-    // Event 2: Encounter Monster / The Grue
     const monsters = ['Goblin Gua', 'The Grue Bermata Merah', 'Kelelawar Raksasa'];
     const foundMonster = monsters[Math.floor(Math.random() * monsters.length)];
     encounterText = `\n\n⚠️ *RANDOM ENCOUNTER — MONSTER LIAR!* \n_Tiba-tiba sesosok **${foundMonster}** menyergapmu dari kegelapan! Beruntung kamu berhasil mengalahkannya dan merampas barangnya!_`;
   } else {
-    // Event 3: Lorong Aman / Penemuan Koin Ekstra
     encounterText = `\n\n🍀 *JALUR AMAN:* _Kamu menemukan kantong koin tambahan berserakan di tanah._`;
   }
 
-  // Cek Kemenangan Lantai 100
   if (user.dungeon.floor >= 100) {
     const grandPrize = 50000000;
     if (typeof helper.addPoints === 'function') {
@@ -177,4 +174,3 @@ async function handleDungeonCommand(sock, msg, args) {
 
 module.exports = handleDungeonCommand;
     
-      
