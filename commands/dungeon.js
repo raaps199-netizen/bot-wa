@@ -10,37 +10,31 @@ function getGroqClient() {
   return new Groq({ apiKey });
 }
 
-// 🧠 AI MENGHASILKAN SEMUA (Ruangan, Aksi, Monster, & Item) SECARA DINAMIS
+// 🧠 AI GENERATOR YANG LEBIH TAHAN BANTING (DENGAN FALLBACK DINAMIS)
 async function generateDungeonData(theme, floor, action, isFighting) {
   try {
     const groq = getGroqClient();
-    if (!groq) {
-      return {
-        description: "Kamu berada di lorong bawah tanah yang gelap dan lembab.",
-        actions: [".maju", ".periksa", ".keluar"],
-        encounter: { type: "none" }
-      };
-    }
+    if (!groq) throw new Error("API Key Groq tidak ditemukan!");
 
-    const prompt = `Kamu adalah game master teks RPG gaya klasik Zork yang sangat kreatif. 
+    const prompt = `Kamu adalah game master teks RPG gaya klasik Zork yang sangat imajinatif. 
     Kondisi: Lantai ${floor} dari 100, tema "${theme}". Player baru saja melakukan aksi: "${action}".
-    ${isFighting ? "Player sedang bertarung melawan monster. Berikan narasi pertarungan singkat." : "Buat deskripsi ruangan baru yang imajinatif (3 kalimat)."}
+    ${isFighting ? "Player sedang bertarung melawan monster." : "Buat deskripsi ruangan baru yang unik dan menegangkan (2-3 kalimat)."}
     
-    Tentukan juga apakah ada 'encounter' (kejadian acak) di ruangan ini: 
-    - Bisa berupa monster (type: "monster", name: "Nama Monster", hp: 80 s/d 150)
-    - Bisa berupa peti item (type: "item", name: "Nama Item/Senjata", description: "...")
-    - Atau kosong (type: "none")
+    Tentukan 'encounter' acak di ruangan ini dalam format JSON:
+    - Jika monster: { "type": "monster", "name": "Nama Monster Keren", "hp": 100 }
+    - Jika item/senjata: { "type": "item", "name": "Nama Senjata/Item Unik" }
+    - Jika kosong/aman: { "type": "none", "name": "", "hp": 0 }
     
-    Berikan 3-4 pilihan aksi valid (contoh format: .maju, .serang, .periksa, .ambil, .keluar).
-    Format output JSON MURNI tanpa markdown: 
+    Berikan 3-4 pilihan aksi valid (contoh: [".maju", ".serang", ".periksa", ".keluar"]).
+    PENTING: Output HARUS berupa objek JSON valid tanpa teks pembungkus markdown.
+    Format JSON:
     {
       "description": "...",
-      "actions": [".maju", ".serang", ".periksa", ".keluar"],
+      "actions": [".maju", ".periksa", ".keluar"],
       "encounter": {
         "type": "monster|item|none",
         "name": "...",
-        "hp": 100,
-        "itemReward": "..."
+        "hp": 100
       }
     }`;
 
@@ -51,14 +45,30 @@ async function generateDungeonData(theme, floor, action, isFighting) {
     });
 
     let rawContent = completion.choices[0]?.message?.content || '{}';
-    rawContent = rawContent.replace(/```json/gi, '').replace(/```/g, '').trim();
+    // Ekstraksi teks JSON yang bersih dari markdown
+    const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+    if (jsonMatch) rawContent = jsonMatch[0];
+
     return JSON.parse(rawContent);
   } catch (err) {
-    console.error('Groq Dungeon Error:', err);
+    console.error('Groq Dungeon Error Detail:', err.message || err);
+    
+    // Fallback dinamis agar game tetap seru walau AI sempat slip
+    const fallbackMonsters = ['Ork Penjaga Besi', 'The Grue Bermata Merah', 'Kelelawar Vampire', 'Goblin Gua Beracun'];
+    const fallbackItems = ['🗡️ Pedang Besi Tua', '🛡️ Perisai Perunggu', '🧪 Ramuan Pemulih HP', '📜 Perkamen Kuno'];
+    const rand = Math.random();
+    
+    let encounterData = { type: 'none', name: '', hp: 0 };
+    if (rand < 0.35) {
+      encounterData = { type: 'item', name: fallbackItems[Math.floor(Math.random() * fallbackItems.length)] };
+    } else if (rand >= 0.35 && rand < 0.70) {
+      encounterData = { type: 'monster', name: fallbackMonsters[Math.floor(Math.random() * fallbackMonsters.length)], hp: 100 };
+    }
+
     return {
-      description: "Suasana di lorong ini mendadak senyap dan mencekam.",
-      actions: [".maju", ".keluar"],
-      encounter: { type: "none" }
+      description: `Lorong lantai ${floor} tampak sunyi dengan dinding basah berlumut. Aroma misterius tercium kuat di udara sekitar.`,
+      actions: [".maju", ".periksa", ".keluar"],
+      encounter: encounterData
     };
   }
 }
@@ -67,23 +77,22 @@ async function generateDungeonData(theme, floor, action, isFighting) {
 function calculateDamage(inventory = []) {
   let baseDamage = 3; // Damage tangan kosong
   let weaponName = "Tangan Kosong";
-  let bonusDamage = 0;
 
   inventory.forEach(item => {
     const lower = item.toLowerCase();
-    if (lower.includes('pedang legendaris') || lower.includes('excalibur')) {
-      bonusDamage = 45;
+    if (lower.includes('legendaris') || lower.includes('excalibur')) {
+      baseDamage = 45;
       weaponName = item;
     } else if (lower.includes('pedang') || lower.includes('tombak')) {
-      bonusDamage = 20;
+      baseDamage = 20;
       weaponName = item;
-    } else if (lower.includes('karatan') || lower.includes('belati')) {
-      bonusDamage = 12;
+    } else if (lower.includes('karatan') || lower.includes('belati') || lower.includes('perisai')) {
+      baseDamage = 12;
       weaponName = item;
     }
   });
 
-  return { total: baseDamage + bonusDamage, weapon: weaponName, bonus: bonusDamage };
+  return { total: baseDamage, weapon: weaponName };
 }
 
 async function handleDungeonCommand(sock, msg, args) {
@@ -101,11 +110,11 @@ async function handleDungeonCommand(sock, msg, args) {
     user.dungeon = {
       active: false,
       floor: 1,
-      theme: 'Reruntuhan Benteng Kuno',
+      theme: 'Reruntuhan Benteng Kuno & Labirin Bawah Tanah',
       hp: 100,
       inventory: [],
-      activeMonster: null, // Menyimpan data monster saat bertarung
-      monsterMsgKey: null, // Menyimpan key pesan bot untuk fitur edit pesan
+      activeMonster: null,
+      monsterMsgKey: null,
       validChoices: ['.maju', '.keluar']
     };
   }
@@ -122,7 +131,7 @@ async function handleDungeonCommand(sock, msg, args) {
     let encounterMsg = '';
     if (data.encounter?.type === 'monster') {
       user.dungeon.activeMonster = { name: data.encounter.name, hp: data.encounter.hp, maxHp: data.encounter.hp };
-      encounterMsg = `\n\n⚠️ *MONSTER MUNCUL: ${data.encounter.name} (HP: ${data.encounter.hp})*\n_Ketik .serang untuk menghabisinya!_`;
+      encounterMsg = `\n\n⚠️ *MONSTER MUNCUL: ${data.encounter.name} (HP: ${data.encounter.hp})*\n_Ketik .serang untuk menyerang!_`;
     } else if (data.encounter?.type === 'item') {
       user.dungeon.inventory.push(data.encounter.name);
       encounterMsg = `\n\n✨ *MENEMUKAN ITEM:* Mendapatkan **${data.encounter.name}** masuk ke tas!`;
@@ -173,7 +182,6 @@ async function handleDungeonCommand(sock, msg, args) {
                          `💰 Hadiah Rampasan: *+${formatRp(bounty)}* masuk ke saldo!\n\n` +
                          `_Ketik .maju untuk melanjutkan perjalanan ke lantai berikutnya._`;
 
-      // EDIT PESAN LAMA SECARA REAL-TIME
       if (user.dungeon.monsterMsgKey) {
         try {
           await sock.sendMessage(remoteJid, { text: defeatText, edit: user.dungeon.monsterMsgKey });
@@ -210,9 +218,8 @@ async function handleDungeonCommand(sock, msg, args) {
   // 4. Validasi Aksi Biasa
   const userActionClean = args.join(' ').toLowerCase().replace('.', '').trim();
   
-  // Jika sedang ada monster aktif, cegah kabur sembarangan sebelum monster mati
-  if (user.dungeon.activeMonster && userActionClean.includes('maju')) {
-    return await sock.sendMessage(remoteJid, { text: `⚠️ Kamu tidak bisa maju! Kalahkan dulu **${user.dungeon.activeMonster.name}** dengan mengetik *.serang*!`, quoted: msg });
+  if (user.dungeon.activeMonster && (userActionClean.includes('maju') || userActionClean.includes('keluar') == false && userActionClean !== 'serang')) {
+    return await sock.sendMessage(remoteJid, { text: `⚠️ Kamu tidak bisa kabur atau maju! Kalahkan dulu **${user.dungeon.activeMonster.name}** dengan mengetik *.serang*!`, quoted: msg });
   }
 
   // 5. Proses Pindah Lantai / Aksi Normal
@@ -235,7 +242,7 @@ async function handleDungeonCommand(sock, msg, args) {
     if (typeof global.saveDatabase === 'function') global.saveDatabase();
 
     return await sock.sendMessage(remoteJid, {
-      text: `🏆🎉 *SELAMAT! MENAKLUKKAN LANTAI 100 DUNGEON!* 🎉🏆\n💰 Hadiah Utama: *+${formatRp(grandPrize)}*!`,
+      text: `🏆🎉 *SELAMAT! MENAKLUKKAN LANTAI 100 DUNGEON!* 🎉🏆\n💰 Hadiah Utama: *+${formatRp(grandPrize)}* masuk saldo!`,
       quoted: msg
     });
   }
@@ -268,3 +275,4 @@ async function handleDungeonCommand(sock, msg, args) {
 }
 
 module.exports = handleDungeonCommand;
+  
