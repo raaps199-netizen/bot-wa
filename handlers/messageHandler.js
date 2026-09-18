@@ -217,9 +217,6 @@ async function handleMessage(sock, msg) {
     }
 
     switch (command) {
-
-          switch (command) {
-
       // 🎮 Menerima command .zork, .dungeon, atau .jelajah sekaligus
       case 'zork':
       case 'dungeon':
