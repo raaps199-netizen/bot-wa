@@ -117,7 +117,7 @@ async function handleDungeonCommand(sock, msg, args) {
 
     const completion = await groq.chat.completions.create({
       messages: [{ role: "user", content: systemPrompt }],
-      model: "llama3-70b-8192",
+      model: "openai/gpt-oss-20b",
       temperature: 0.3
     });
 
