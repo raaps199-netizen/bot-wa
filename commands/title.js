@@ -5,19 +5,29 @@ const { getSenderId, resolveUserKey } = require('../utils/jid-utils');
 // Config Daftar Gelar per Kategori (diurutkan dari syarat terkecil ke terbesar)
 const TITLES_CONFIG = {
   poin: {
-    label: '💰 EKONOMI (Poin)',
-    unit: 'Poin',
-    list: [
-      { min: 0,      name: 'The Initiate' },
-      { min: 500,    name: 'The Rising One' },
-      { min: 1000,   name: 'Knight of Dawn' },
-      { min: 3000,   name: 'Noble Knight' },
-      { min: 5000,   name: 'Lord of Valor' },
-      { min: 10000,  name: 'Duke of Honor' },
-      { min: 50000,  name: 'Prince of the Realm' },
-      { min: 100000, name: 'Emperor of the Realm' }
-    ]
-  },
+  label: '💰 EKONOMI (Poin)',
+  unit: 'Poin',
+  list: [
+    { min: 0,           name: 'The Initiate' },
+    { min: 500,         name: 'The Rising One' },
+    { min: 1000,        name: 'Knight of Dawn' },
+    { min: 3000,        name: 'Noble Knight' },
+    { min: 5000,        name: 'Lord of Valor' },
+    { min: 10000,       name: 'Duke of Honor' },
+    { min: 50000,       name: 'Prince of the Realm' },
+    { min: 100000,      name: 'Emperor of the Realm' },
+    { min: 500000,      name: 'Grand Emperor' },
+    { min: 1000000,     name: 'Millionaire' },
+    { min: 5000000,     name: 'High Millionaire' },
+    { min: 10000000,    name: 'Master of Wealth' },
+    { min: 50000000,    name: 'Tycoon of Fortune' },
+    { min: 100000000,   name: 'Lord of Fortune' },
+    { min: 500000000,   name: 'Grand Tycoon' },
+    { min: 1000000000,  name: 'The Billionaire' },
+    { min: 5000000000,  name: 'The Great Billionaire' },
+    { min: 10000000000, name: 'The Wealth Emperor' }
+  ]
+},
   reme: {
     label: '🎰 KASINO (Reme)',
     unit: 'Win',
