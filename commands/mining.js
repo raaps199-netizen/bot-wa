@@ -918,32 +918,43 @@ async function digCommand(sock, msg, user) {
     '⛏️ *Sedang menggali...*\\n\\n' +
     '🔨 Pickaxe sedang bekerja...';
 
-  // Kirim SATU bubble status. Bubble inilah yang wajib diedit
-  // menjadi hasil mining, bukan mengirim bubble hasil baru.
-  const sentMessage = await sock.sendMessage(
-    remoteJid,
-    {
-      text: startingText
-    },
-    { quoted: msg }
-  );
+  // Sama seperti fishing.js:
+  // kalau sudah pernah mining, edit bubble mining sebelumnya.
+  // Hanya .mining dig pertama yang membuat bubble baru.
+  let editKey = mining.lastDigKey || null;
+  let sentMessage;
 
-  // Normalisasi key supaya edit selalu ditujukan ke pesan BOT sendiri.
-  // Jangan pakai key dari command user.
-  const digEditKey = {
-    remoteJid: sentMessage.key.remoteJid || remoteJid,
-    fromMe: true,
-    id: sentMessage.key.id,
-    ...(sentMessage.key.participant
-      ? { participant: sentMessage.key.participant }
-      : {}),
-    ...(sentMessage.key.participantAlt
-      ? { participantAlt: sentMessage.key.participantAlt }
-      : {})
-  };
+  if (editKey) {
+    try {
+      await sock.sendMessage(
+        remoteJid,
+        {
+          text: startingText,
+          edit: editKey
+        }
+      );
+      sentMessage = { key: editKey };
+    } catch (e) {
+      console.error('⚠️ Gagal edit bubble mining lama, membuat bubble baru:', e);
+      sentMessage = await sock.sendMessage(
+        remoteJid,
+        {
+          text: startingText
+        },
+        { quoted: msg }
+      );
+    }
+  } else {
+    sentMessage = await sock.sendMessage(
+      remoteJid,
+      {
+        text: startingText
+      },
+      { quoted: msg }
+    );
+  }
 
-  mining.lastDigKey = digEditKey;
-  global.saveDatabase?.();
+  const digEditKey = sentMessage.key;
 
   await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -1043,10 +1054,9 @@ async function digCommand(sock, msg, user) {
     }
   );
 
-  // Dig kembali ke mode normal:
-  // pesan hasil tetap diedit dari pesan "Sedang menggali..."
-  // dan tidak otomatis membuat menu baru.
-  mining.lastDigKey = null;
+  // Simpan key bubble ini supaya .mining dig berikutnya
+  // mengedit bubble yang sama, persis seperti .lnj di fishing.js.
+  mining.lastDigKey = digEditKey;
   global.saveDatabase?.();
 }
 
