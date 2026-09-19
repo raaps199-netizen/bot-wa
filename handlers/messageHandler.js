@@ -105,86 +105,100 @@ const daftarPiket = {
 async function sendTestInteractive(sock, msg) {
   const jid = msg.key.remoteJid;
 
-  const message = generateWAMessageFromContent(
-    jid,
-    {
-      viewOnceMessage: {
-        message: {
-          interactiveMessage:
-            proto.Message.InteractiveMessage.create({
-              body:
-                proto.Message.InteractiveMessage.Body.create({
-                  text:
-                    '⛏️ *MINING TEST*\n\n' +
-                    '📍 Depth: *100m*\n' +
-                    '⚡ Energy: *100/100*\n' +
-                    '💎 Diamond: *4*'
-                }),
-
-              footer:
-                proto.Message.InteractiveMessage.Footer.create({
-                  text: 'Mining System'
-                }),
-
-              nativeFlowMessage:
-                proto.Message.InteractiveMessage.NativeFlowMessage.create({
-                  buttons: [
-                    {
-                      name: 'quick_reply',
-                      buttonParamsJson: JSON.stringify({
-                        display_text: '⛏️ GALI',
-                        id: 'mining_dig'
-                      })
-                    },
-                    {
-                      name: 'quick_reply',
-                      buttonParamsJson: JSON.stringify({
-                        display_text: '🎒 INVENTORY',
-                        id: 'mining_inventory'
-                      })
-                    }
-                  ]
-                })
-            })
-        }
-      }
-    },
-    {
-      userJid: jid
-    }
-  );
-
-  await sock.relayMessage(
-    jid,
-    message.message,
-    {
-      messageId: message.key.id
-    }
-  );
-}
-
-function acakArray(array) {
-  let arr = [...array];
-
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-
-  return arr;
-}
-
-async function handleMessage(sock, msg) {
   try {
-    const messageContent = msg.message;
+    console.log('🧪 TEST INTERACTIVE:', jid);
 
-    if (
-      !messageContent ||
-      msg.key.remoteJid === 'status@broadcast'
-    ) {
-      return;
-    }
+    const message = generateWAMessageFromContent(
+      jid,
+      {
+        viewOnceMessage: {
+          message: {
+            messageContextInfo: {
+              deviceListMetadata: {},
+              deviceListMetadataVersion: 2
+            },
 
+            interactiveMessage:
+              proto.Message.InteractiveMessage.create({
+                body:
+                  proto.Message.InteractiveMessage.Body.create({
+                    text:
+                      '⛏️ *MINING TEST*\n\n' +
+                      '📍 Depth: *100m*\n' +
+                      '⚡ Energy: *100/100*\n' +
+                      '💎 Diamond: *4*\n\n' +
+                      'Pilih aksi lu:'
+                  }),
+
+                footer:
+                  proto.Message.InteractiveMessage.Footer.create({
+                    text: 'Mining Adventure'
+                  }),
+
+                nativeFlowMessage:
+                  proto.Message.InteractiveMessage.NativeFlowMessage.create({
+                    buttons: [
+                      {
+                        name: 'quick_reply',
+                        buttonParamsJson: JSON.stringify({
+                          display_text: '⛏️ GALI',
+                          id: 'mining_dig'
+                        })
+                      },
+                      {
+                        name: 'quick_reply',
+                        buttonParamsJson: JSON.stringify({
+                          display_text: '🎒 INVENTORY',
+                          id: 'mining_inventory'
+                        })
+                      }
+                    ],
+
+                    messageParamsJson: JSON.stringify({
+                      limited_time_offer: {
+                        text: 'Mining Adventure'
+                      }
+                    })
+                  })
+              })
+          }
+        }
+      },
+      {
+        userJid: jid
+      }
+    );
+
+    await sock.relayMessage(
+      jid,
+      message.message,
+      {
+        messageId: message.key.id
+      }
+    );
+
+    console.log(
+      '✅ INTERACTIVE TERKIRIM:',
+      message.key.id
+    );
+
+  } catch (err) {
+    console.error(
+      '❌ ERROR INTERACTIVE:',
+      err
+    );
+
+    await sock.sendMessage(
+      jid,
+      {
+        text:
+          '❌ Gagal mengirim interactive.\n\n' +
+          `Error: ${err?.message || err}`
+      },
+      { quoted: msg }
+    );
+  }
+}
     // ===================================================
     // 🏅 AUTO-INJECT GELAR/TITLE PADA MENTION USER
     // ===================================================
