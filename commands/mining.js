@@ -16,6 +16,7 @@ const {
 } = require('../utils/helper');
 
 const { getSenderId } = require('../utils/jid-utils');
+const { proto, generateWAMessageFromContent } = require('@whiskeysockets/baileys');
 
 // ==========================================
 // ⚡ ENERGY UPGRADES
@@ -809,6 +810,40 @@ async function restCommand(sock, msg, user, sender) {
 
 
 // ==========================================
+// ✏️ EDIT MINING MESSAGE
+// ==========================================
+
+async function editMiningMessage(sock, jid, key, text) {
+  const editKey = {
+    remoteJid: key.remoteJid || jid,
+    fromMe: key.fromMe,
+    id: key.id,
+    ...(key.participant ? { participant: key.participant } : {})
+  };
+
+  const protocolMessage = proto.Message.ProtocolMessage.create({
+    key: editKey,
+    type: proto.Message.ProtocolMessage.Type.MESSAGE_EDIT,
+    editedMessage: proto.Message.create({
+      conversation: text
+    })
+  });
+
+  const waMessage = generateWAMessageFromContent(
+    jid,
+    { protocolMessage },
+    { userJid: sock.user?.id || jid }
+  );
+
+  await sock.relayMessage(
+    jid,
+    waMessage.message,
+    { messageId: waMessage.key.id }
+  );
+}
+
+
+// ==========================================
 // ⛏️ DIG
 // ==========================================
 
@@ -921,40 +956,15 @@ async function digCommand(sock, msg, user) {
   let sentMessage;
 
   // Ikuti pola fishing: gunakan pesan mining terakhir bila masih bisa diedit.
-  if (mining.lastDigKey) {
-    try {
-      await sock.sendMessage(
-        remoteJid,
-        {
-          text: startingText,
-          edit: mining.lastDigKey
-        }
-      );
-
-      sentMessage = {
-        key: mining.lastDigKey
-      };
-    } catch (error) {
-      console.error('Mining previous message edit failed:', error);
-
-      // Jika pesan lama sudah tidak bisa diedit, buat pesan baru.
-      sentMessage = await sock.sendMessage(
-        remoteJid,
-        {
-          text: startingText
-        },
-        { quoted: msg }
-      );
-    }
-  } else {
-    sentMessage = await sock.sendMessage(
-      remoteJid,
-      {
-        text: startingText
-      },
-      { quoted: msg }
-    );
-  }
+  // Setiap command .mining dig membuat satu pesan status baru.
+  // Pesan ini yang nanti diedit langsung menjadi hasil mining.
+  sentMessage = await sock.sendMessage(
+    remoteJid,
+    {
+      text: startingText
+    },
+    { quoted: msg }
+  );
 
   mining.lastDigKey = sentMessage.key;
   global.saveDatabase?.();
@@ -1026,10 +1036,7 @@ async function digCommand(sock, msg, user) {
   const totalOre =
     mining.inventory[oreId];
 
-  await sock.sendMessage(
-    remoteJid,
-    {
-      text: `
+  const resultText = `
 ╭─ ⛏️ *MINING SUCCESS* ⛏️ ─╮
 │
 │ ${emoji} *${ore.rarity}*
@@ -1049,9 +1056,13 @@ async function digCommand(sock, msg, user) {
 ╰────────────────────────╯
 
 💡 Jual hasil mining:
-*.mining sell*`,
-      edit: sentMessage.key
-    }
+*.mining sell*`;
+
+  await editMiningMessage(
+    sock,
+    remoteJid,
+    sentMessage.key,
+    resultText
   );
 
   // Dig kembali ke mode normal:
