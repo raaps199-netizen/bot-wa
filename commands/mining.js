@@ -1097,10 +1097,13 @@ async function digCommand(sock, msg, user, isAuto = false, forceNewBubble = fals
 
   // Auto mining menggali lebih cepat, jadi energy juga terkuras lebih cepat.
   await new Promise(resolve =>
-    setTimeout(resolve, isAuto ? 500 : 1000)
+    setTimeout(resolve, isAuto ? 2000 : 1000)
   );
 
-  mining.stamina -= 10;
+  // Auto mining memakai energy lebih banyak karena prosesnya dipercepat.
+  const energyCost = isAuto ? 20 : 10;
+
+  mining.stamina -= energyCost;
   mining.durability -= 1;
 
   const depthGain =
