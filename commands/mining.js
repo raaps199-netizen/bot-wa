@@ -62,16 +62,18 @@ const activeRest = new Set();
 // ==========================================
 
 function getDefaultMiningState() {
+  const consumables = {};
+
+  for (const id of Object.keys(staminaItems)) {
+    consumables[id] = 0;
+  }
+
   return {
     depth: 0,
-
     stamina: 100,
     maxStamina: 100,
-
     pickaxe: 'wooden',
-
-    durability: 50,
-
+    durability: pickaxes.wooden?.maxDurability || 50,
     inventory: {},
 
     stats: {
@@ -82,16 +84,13 @@ function getDefaultMiningState() {
       ancientCrystalsFound: 0
     },
 
-    consumables: {
-      snack: 0,
-      energy: 0,
-      potion: 0
-    },
-
-    // Upgrade energy terakhir
+    consumables,
     energyUpgrade: null
   };
 }
+
+
+
 
 
 // ==========================================
@@ -106,49 +105,39 @@ function initializeMining(user) {
 
   const defaults = getDefaultMiningState();
 
-  if (user.mining.depth === undefined) {
-    user.mining.depth = defaults.depth;
-  }
+  if (user.mining.depth === undefined) user.mining.depth = defaults.depth;
+  if (user.mining.stamina === undefined) user.mining.stamina = defaults.stamina;
+  if (user.mining.maxStamina === undefined) user.mining.maxStamina = defaults.maxStamina;
 
-  if (user.mining.stamina === undefined) {
-    user.mining.stamina = defaults.stamina;
-  }
-
-  if (user.mining.maxStamina === undefined) {
-    user.mining.maxStamina = defaults.maxStamina;
-  }
-
-  if (!user.mining.pickaxe) {
+  if (!pickaxes[user.mining.pickaxe]) {
     user.mining.pickaxe = 'wooden';
   }
 
   if (user.mining.durability === undefined) {
     user.mining.durability =
-      pickaxes[user.mining.pickaxe].maxDurability;
+      pickaxes[user.mining.pickaxe]?.maxDurability ||
+      pickaxes.wooden.maxDurability;
   }
 
-  if (!user.mining.inventory) {
-    user.mining.inventory = {};
-  }
+  if (!user.mining.inventory) user.mining.inventory = {};
 
-  if (!user.mining.consumables) {
-    user.mining.consumables = {
-      snack: 0,
-      energy: 0,
-      potion: 0
-    };
-  }
+  user.mining.consumables = {
+    ...defaults.consumables,
+    ...(user.mining.consumables || {})
+  };
 
-  if (!user.mining.stats) {
-    user.mining.stats = {
-      ...defaults.stats
-    };
-  }
+  user.mining.stats = {
+    ...defaults.stats,
+    ...(user.mining.stats || {})
+  };
 
   if (user.mining.energyUpgrade === undefined) {
     user.mining.energyUpgrade = null;
   }
 }
+
+
+
 
 
 // ==========================================
@@ -805,73 +794,80 @@ function getAvailableOres(depth) {
 
 
 function chooseOre(depth, power) {
-  const available =
-    getAvailableOres(depth);
+  const available = getAvailableOres(depth);
 
-  if (available.length === 0) {
-    return ores.stone;
-  }
+  if (available.length === 0) return ores.stone;
 
-  let weighted = [];
+  const weighted = [];
 
-  for (const [id, ore] of available) {
+  for (const [, ore] of available) {
     let weight = 100;
 
     switch (ore.rarity) {
-      case 'COMMON':
-        weight = 100;
-        break;
-
-      case 'UNCOMMON':
-        weight = 35 + power * 3;
-        break;
-
-      case 'RARE':
-        weight = 10 + power * 2;
-        break;
-
-      case 'EPIC':
-        weight = 4 + power;
-        break;
-
-      case 'LEGENDARY':
-        weight = 1 + power * 0.5;
-        break;
-
-      case 'MYTHIC':
-        weight = 0.2 + power * 0.1;
-        break;
+      case 'COMMON': weight = 100; break;
+      case 'UNCOMMON': weight = 35 + power * 3; break;
+      case 'RARE': weight = 10 + power * 2; break;
+      case 'EPIC': weight = 4 + power; break;
+      case 'LEGENDARY': weight = 1 + power * 0.5; break;
+      case 'MYTHIC': weight = 0.2 + power * 0.1; break;
+      case 'DIVINE': weight = 0.08 + power * 0.04; break;
+      case 'CELESTIAL': weight = 0.03 + power * 0.02; break;
+      case 'ANCIENT': weight = 0.01 + power * 0.01; break;
+      case 'TRANSCENDENT': weight = 0.003 + power * 0.005; break;
     }
 
-    for (
-      let i = 0;
-      i < Math.max(1, Math.floor(weight));
-      i++
-    ) {
-      weighted.push({
-        id,
-        ore
-      });
-    }
+    weighted.push({ ore, weight });
   }
 
-  return weighted[
-    Math.floor(
-      Math.random() * weighted.length
-    )
-  ].ore;
+  const totalWeight = weighted.reduce(
+    (total, item) => total + item.weight,
+    0
+  );
+
+  let roll = Math.random() * totalWeight;
+
+  for (const item of weighted) {
+    roll -= item.weight;
+    if (roll <= 0) return item.ore;
+  }
+
+  return weighted[weighted.length - 1].ore;
 }
+
+
+
 
 
 async function digCommand(sock, msg, user) {
   const mining = user.mining;
+  const remoteJid = msg.key.remoteJid;
   const pickaxe = pickaxes[mining.pickaxe];
+
+  if (!pickaxe) {
+    mining.pickaxe = 'wooden';
+    mining.durability = pickaxes.wooden.maxDurability;
+    global.saveDatabase?.();
+
+    return await sock.sendMessage(
+      remoteJid,
+      {
+        text:
+          '⚠️ Pickaxe mining kamu tidak valid.\\n\\n' +
+          'Pickaxe otomatis dikembalikan ke *Wooden Pickaxe*.'
+      },
+      { quoted: msg }
+    );
+  }
 
   if (mining.stamina < 10) {
     return await sock.sendMessage(
-      msg.key.remoteJid,
+      remoteJid,
       {
-        text: `⚡ *ENERGY HABIS!*\n\nEnergy kamu: *${mining.stamina}/${mining.maxStamina}*\n\nGunakan:\n*.mining rest*\n\natau gunakan item:\n*.mining use energy*`
+        text:
+          `⚡ *ENERGY HABIS!*\\n\\n` +
+          `Energy kamu: *${mining.stamina}/${mining.maxStamina}*\\n\\n` +
+          `Gunakan:\\n*.mining rest*\\n\\n` +
+          `atau gunakan item:\\n*.mining use energy*`
       },
       { quoted: msg }
     );
@@ -879,20 +875,34 @@ async function digCommand(sock, msg, user) {
 
   if (mining.durability <= 0) {
     return await sock.sendMessage(
-      msg.key.remoteJid,
+      remoteJid,
       {
-        text: `🔧 *PICKAXE RUSAK!*\n\nPickaxe kamu sudah tidak memiliki durability.\n\nBeli pickaxe baru di *.mining shop*`
+        text:
+          `🔧 *PICKAXE RUSAK!*\\n\\n` +
+          `Pickaxe kamu sudah tidak memiliki durability.\\n\\n` +
+          `Beli pickaxe baru di *.mining shop*`
       },
       { quoted: msg }
     );
   }
 
+  const sentMessage = await sock.sendMessage(
+    remoteJid,
+    {
+      text:
+        '⛏️ *Sedang menggali...*\\n\\n' +
+        '🔨 Pickaxe sedang bekerja...'
+    },
+    { quoted: msg }
+  );
+
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
   mining.stamina -= 10;
   mining.durability -= 1;
 
   const depthGain =
-    Math.floor(Math.random() * 4) +
-    pickaxe.power;
+    Math.floor(Math.random() * 4) + pickaxe.power;
 
   mining.depth += depthGain;
 
@@ -906,31 +916,36 @@ async function digCommand(sock, msg, user) {
       mining.depth
     );
 
-  const ore =
-    chooseOre(
-      mining.depth,
-      pickaxe.power
-    );
+  const ore = chooseOre(
+    mining.depth,
+    pickaxe.power
+  );
 
   const amount =
     Math.floor(
       Math.random() *
-      Math.max(1, pickaxe.power / 2)
+      Math.max(1, Math.floor(pickaxe.power / 2))
     ) + 1;
 
-  const oreId =
-    Object.keys(ores).find(
-      id => ores[id] === ore
+  const oreId = Object.keys(ores).find(
+    id => ores[id] === ore
+  );
+
+  if (!ore || !oreId) {
+    return await sock.sendMessage(
+      remoteJid,
+      {
+        text: '❌ Gagal menentukan ore. Coba mining lagi.'
+      },
+      { quoted: msg }
     );
+  }
 
   mining.inventory[oreId] =
-    (mining.inventory[oreId] || 0) +
-    amount;
+    (mining.inventory[oreId] || 0) + amount;
 
   mining.stats.totalMined += amount;
-
-  mining.stats.totalValue +=
-    ore.price * amount;
+  mining.stats.totalValue += ore.price * amount;
 
   if (oreId === 'diamond') {
     mining.stats.diamondsFound += amount;
@@ -948,10 +963,10 @@ async function digCommand(sock, msg, user) {
   const totalOre =
     mining.inventory[oreId];
 
- const sentMessage = await sock.sendMessage(
-  msg.key.remoteJid,
-  {
-    text: `
+  await sock.sendMessage(
+    remoteJid,
+    {
+      text: `
 ╭─ ⛏️ *MINING SUCCESS* ⛏️ ─╮
 │
 │ ${emoji} *${ore.rarity}*
@@ -971,10 +986,14 @@ async function digCommand(sock, msg, user) {
 ╰────────────────────────╯
 
 💡 Jual hasil mining:
-*.mining sell*`
-  },
-  { quoted: msg }
-);
+*.mining sell*`,
+      edit: sentMessage.key
+    }
+  );
+}
+
+
+
 
 // ==========================================
 // 🎒 INVENTORY
