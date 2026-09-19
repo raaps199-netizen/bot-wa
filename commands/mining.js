@@ -19,6 +19,45 @@ const { getSenderId } = require('../utils/jid-utils');
 
 
 // ==========================================
+// ⚡ ENERGY UPGRADES
+// ==========================================
+
+const energyUpgrades = {
+  battery: {
+    name: '🔋 Energy Cell',
+    price: 10000,
+    maxStamina: 125
+  },
+
+  core: {
+    name: '⚡ Advanced Energy Core',
+    price: 30000,
+    maxStamina: 150
+  },
+
+  reactor: {
+    name: '🔋 Mining Reactor',
+    price: 75000,
+    maxStamina: 200
+  },
+
+  fusion: {
+    name: '⚡ Fusion Energy Core',
+    price: 200000,
+    maxStamina: 300
+  }
+};
+
+
+// ==========================================
+// 😴 ACTIVE REST
+// ==========================================
+
+// Menyimpan user yang sedang melakukan rest
+const activeRest = new Set();
+
+
+// ==========================================
 // 🛠️ DEFAULT MINING STATE
 // ==========================================
 
@@ -47,7 +86,10 @@ function getDefaultMiningState() {
       snack: 0,
       energy: 0,
       potion: 0
-    }
+    },
+
+    // Upgrade energy terakhir
+    energyUpgrade: null
   };
 }
 
@@ -81,7 +123,8 @@ function initializeMining(user) {
   }
 
   if (user.mining.durability === undefined) {
-    user.mining.durability = pickaxes[user.mining.pickaxe].maxDurability;
+    user.mining.durability =
+      pickaxes[user.mining.pickaxe].maxDurability;
   }
 
   if (!user.mining.inventory) {
@@ -97,7 +140,13 @@ function initializeMining(user) {
   }
 
   if (!user.mining.stats) {
-    user.mining.stats = defaults.stats;
+    user.mining.stats = {
+      ...defaults.stats
+    };
+  }
+
+  if (user.mining.energyUpgrade === undefined) {
+    user.mining.energyUpgrade = null;
   }
 }
 
@@ -116,7 +165,8 @@ async function statusCommand(sock, msg, user, sender) {
 ╭─ ⛏️ *MINING STATUS* ⛏️ ─╮
 │
 │ 📍 Kedalaman: *${mining.depth}m*
-│ ⚡ Stamina: *${mining.stamina}/${mining.maxStamina}*
+│
+│ ⚡ Energy: *${mining.stamina}/${mining.maxStamina}*
 │
 │ ⛏️ Pickaxe: *${pickaxe.name}*
 │ 💥 Power: *${pickaxe.power}*
@@ -173,7 +223,21 @@ async function shopCommand(sock, msg) {
     text += `│ • *${id}*
 │   ${item.name}
 │   💰 ${formatRupiah(item.price)}
-│   ⚡ +${item.stamina} Stamina
+│   ⚡ +${item.stamina} Energy
+│
+`;
+  }
+
+  text += `├────────────────────────┤
+│ ⚡ *ENERGY UPGRADES*
+│
+`;
+
+  for (const [id, item] of Object.entries(energyUpgrades)) {
+    text += `│ • *${id}*
+│   ${item.name}
+│   💰 ${formatRupiah(item.price)}
+│   ⚡ Max Energy: ${item.maxStamina}
 │
 `;
   }
@@ -185,6 +249,7 @@ async function shopCommand(sock, msg) {
 │ Contoh:
 │ .mining buy stone
 │ .mining buy energy
+│ .mining buy battery
 │
 ╰────────────────────────╯`;
 
@@ -207,15 +272,16 @@ async function buyCommand(sock, msg, user, args) {
     return await sock.sendMessage(
       msg.key.remoteJid,
       {
-        text: `⚠️ Masukkan ID barang.\n\nContoh:\n*.mining buy stone*\n*.mining buy energy*`
+        text: `⚠️ Masukkan ID barang.\n\nContoh:\n*.mining buy stone*\n*.mining buy energy*\n*.mining buy battery*`
       },
       { quoted: msg }
     );
   }
 
-  // --------------------------
-  // PICKAXE
-  // --------------------------
+
+  // ==========================================
+  // ⛏️ PICKAXE
+  // ==========================================
 
   if (pickaxes[itemId]) {
     const item = pickaxes[itemId];
@@ -230,8 +296,11 @@ async function buyCommand(sock, msg, user, args) {
       );
     }
 
-    const currentIndex = Object.keys(pickaxes).indexOf(user.mining.pickaxe);
-    const targetIndex = Object.keys(pickaxes).indexOf(itemId);
+    const currentIndex =
+      Object.keys(pickaxes).indexOf(user.mining.pickaxe);
+
+    const targetIndex =
+      Object.keys(pickaxes).indexOf(itemId);
 
     if (targetIndex < currentIndex) {
       return await sock.sendMessage(
@@ -253,15 +322,14 @@ async function buyCommand(sock, msg, user, args) {
       );
     }
 
-    deductPoints(global.db, getSenderId(msg, msg.key.remoteJid), item.price);
+    deductPoints(
+      global.db,
+      getSenderId(msg, msg.key.remoteJid),
+      item.price
+    );
 
     user.mining.pickaxe = itemId;
     user.mining.durability = item.maxDurability;
-
-    if (item.maxDepth > user.mining.depth) {
-      // Tidak perlu melakukan apa-apa.
-      // Depth tetap berada di posisi sebelumnya.
-    }
 
     global.saveDatabase?.();
 
@@ -287,9 +355,10 @@ async function buyCommand(sock, msg, user, args) {
     );
   }
 
-  // --------------------------
-  // STAMINA ITEM
-  // --------------------------
+
+  // ==========================================
+  // 🥤 STAMINA ITEM
+  // ==========================================
 
   if (staminaItems[itemId]) {
     const item = staminaItems[itemId];
@@ -318,11 +387,86 @@ async function buyCommand(sock, msg, user, args) {
     return await sock.sendMessage(
       msg.key.remoteJid,
       {
-        text: `✅ Berhasil membeli *${item.name}*!\n\n📦 Jumlah: *${user.mining.consumables[itemId]}x*\n⚡ Memulihkan: *+${item.stamina} Stamina*\n💳 Sisa Saldo: *${formatRupiah(getTotalScore(user))}*\n\nGunakan dengan:\n*.mining use ${itemId}*`
+        text: `✅ Berhasil membeli *${item.name}*!\n\n📦 Jumlah: *${user.mining.consumables[itemId]}x*\n⚡ Memulihkan: *+${item.stamina} Energy*\n💳 Sisa Saldo: *${formatRupiah(getTotalScore(user))}*\n\nGunakan dengan:\n*.mining use ${itemId}*`
       },
       { quoted: msg }
     );
   }
+
+
+  // ==========================================
+  // ⚡ ENERGY UPGRADE
+  // ==========================================
+
+  if (energyUpgrades[itemId]) {
+    const item = energyUpgrades[itemId];
+
+    // Tidak boleh membeli upgrade yang sama
+    // atau upgrade yang lebih rendah
+    const currentMax = user.mining.maxStamina;
+
+    if (item.maxStamina <= currentMax) {
+      return await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+          text: `⚠️ Kamu sudah memiliki *${currentMax} Max Energy* atau lebih tinggi.\n\nUpgrade *${item.name}* hanya memberikan *${item.maxStamina} Max Energy*.`
+        },
+        { quoted: msg }
+      );
+    }
+
+    if (getTotalScore(user) < item.price) {
+      return await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+          text: `❌ Saldo tidak cukup!\n\n💰 Harga: ${formatRupiah(item.price)}\n💳 Saldo kamu: ${formatRupiah(getTotalScore(user))}`
+        },
+        { quoted: msg }
+      );
+    }
+
+    deductPoints(
+      global.db,
+      getSenderId(msg, msg.key.remoteJid),
+      item.price
+    );
+
+    const oldMax = user.mining.maxStamina;
+
+    user.mining.maxStamina = item.maxStamina;
+    user.mining.energyUpgrade = itemId;
+
+    global.saveDatabase?.();
+
+    return await sock.sendMessage(
+      msg.key.remoteJid,
+      {
+        text: `
+╭─ ⚡ *ENERGY UPGRADE* ⚡ ─╮
+│
+│ ✅ Upgrade berhasil!
+│
+│ ${item.name}
+│
+│ ⚡ Max Energy:
+│ *${oldMax} → ${item.maxStamina}*
+│
+│ 💰 Harga:
+│ *${formatRupiah(item.price)}*
+│
+│ 💳 Sisa Saldo:
+│ *${formatRupiah(getTotalScore(user))}*
+│
+╰────────────────────────╯`
+      },
+      { quoted: msg }
+    );
+  }
+
+
+  // ==========================================
+  // ❌ ITEM TIDAK DITEMUKAN
+  // ==========================================
 
   return await sock.sendMessage(
     msg.key.remoteJid,
@@ -351,7 +495,8 @@ async function useCommand(sock, msg, user, args) {
     );
   }
 
-  const count = user.mining.consumables[itemId] || 0;
+  const count =
+    user.mining.consumables[itemId] || 0;
 
   if (count <= 0) {
     return await sock.sendMessage(
@@ -367,7 +512,7 @@ async function useCommand(sock, msg, user, args) {
     return await sock.sendMessage(
       msg.key.remoteJid,
       {
-        text: `⚡ Stamina kamu sudah penuh!`
+        text: `⚡ Energy kamu sudah penuh!\n\n*${user.mining.stamina}/${user.mining.maxStamina}*`
       },
       { quoted: msg }
     );
@@ -384,7 +529,8 @@ async function useCommand(sock, msg, user, args) {
 
   user.mining.consumables[itemId]--;
 
-  const recovered = user.mining.stamina - oldStamina;
+  const recovered =
+    user.mining.stamina - oldStamina;
 
   global.saveDatabase?.();
 
@@ -392,20 +538,256 @@ async function useCommand(sock, msg, user, args) {
     msg.key.remoteJid,
     {
       text: `
-⚡ *STAMINA RECOVERED!*
+⚡ *ENERGY RECOVERED!*
 
 ${item.name}
 
-⚡ +${recovered} Stamina
+⚡ +${recovered} Energy
 
-Stamina:
+Energy:
 *${oldStamina} → ${user.mining.stamina}/${user.mining.maxStamina}*
 
-📦 Sisa: *${user.mining.consumables[itemId]}x*
+📦 Sisa:
+*${user.mining.consumables[itemId]}x*
 `
     },
     { quoted: msg }
   );
+}
+
+
+// ==========================================
+// 😴 REST
+// ==========================================
+
+function generateRestProgress(start, max, seconds) {
+  const totalGain = max - start;
+
+  if (totalGain <= 0) {
+    return Array(seconds + 1).fill(max);
+  }
+
+  // Buat titik progres acak
+  // supaya kenaikannya tidak selalu sama.
+  const values = [];
+
+  for (let i = 1; i < seconds; i++) {
+    const progress = i / seconds;
+
+    // Base progress
+    const base =
+      start + (totalGain * progress);
+
+    // Variasi kecil
+    const variation =
+      (Math.random() - 0.5) *
+      totalGain *
+      0.15;
+
+    let value = Math.floor(
+      base + variation
+    );
+
+    // Harus selalu lebih tinggi
+    // dari nilai sebelumnya
+    const previous =
+      values.length > 0
+        ? values[values.length - 1]
+        : start;
+
+    value = Math.max(
+      previous + 1,
+      value
+    );
+
+    // Jangan sampai menyentuh max
+    // sebelum waktunya
+    value = Math.min(
+      max - (seconds - i),
+      value
+    );
+
+    values.push(value);
+  }
+
+  // Tambahkan nilai awal dan akhir
+  return [
+    start,
+    ...values,
+    max
+  ];
+}
+
+
+async function restCommand(sock, msg, user, sender) {
+  const mining = user.mining;
+  const remoteJid = msg.key.remoteJid;
+
+  // ==========================================
+  // CEK REST AKTIF
+  // ==========================================
+
+  if (activeRest.has(sender)) {
+    return await sock.sendMessage(
+      remoteJid,
+      {
+        text: `😴 Kamu sedang beristirahat.\n\nTunggu sampai rest selesai dulu.`
+      },
+      { quoted: msg }
+    );
+  }
+
+
+  // ==========================================
+  // CEK ENERGY FULL
+  // ==========================================
+
+  if (mining.stamina >= mining.maxStamina) {
+    return await sock.sendMessage(
+      remoteJid,
+      {
+        text: `⚡ Energy kamu sudah penuh!\n\n*${mining.stamina}/${mining.maxStamina}*`
+      },
+      { quoted: msg }
+    );
+  }
+
+
+  activeRest.add(sender);
+
+  const maxStamina = mining.maxStamina;
+  const startStamina = mining.stamina;
+
+  const restDuration = 15;
+
+  const progress =
+    generateRestProgress(
+      startStamina,
+      maxStamina,
+      restDuration
+    );
+
+
+  // ==========================================
+  // KIRIM 1 PESAN
+  // ==========================================
+
+  let sentMessage;
+
+  try {
+    sentMessage = await sock.sendMessage(
+      remoteJid,
+      {
+        text: `
+╭─ 😴 *MINING REST* 😴 ─╮
+│
+│ 💤 Sedang beristirahat...
+│
+│ ⏳ Sisa: *15*
+│ ⚡ Energy: *${startStamina}/${maxStamina}*
+│
+╰────────────────────────╯
+`
+      },
+      { quoted: msg }
+    );
+
+
+    // ==========================================
+    // EDIT SETIAP DETIK
+    // ==========================================
+
+    for (let remaining = 14; remaining >= 0; remaining--) {
+      await new Promise(
+        resolve => setTimeout(resolve, 1000)
+      );
+
+      const elapsed =
+        15 - remaining;
+
+      const newStamina =
+        progress[elapsed];
+
+      mining.stamina =
+        Math.min(
+          maxStamina,
+          newStamina
+        );
+
+      global.saveDatabase?.();
+
+
+      // ==========================================
+      // REST SELESAI
+      // ==========================================
+
+      if (remaining === 0) {
+        mining.stamina = maxStamina;
+
+        global.saveDatabase?.();
+
+        await sock.sendMessage(
+          remoteJid,
+          {
+            text: `
+╭─ 😴 *REST COMPLETE* 😴 ─╮
+│
+│ ✅ Istirahat selesai!
+│
+│ ⚡ Energy:
+│ *${mining.stamina}/${maxStamina}*
+│
+│ ⛏️ Siap kembali menambang!
+│
+╰────────────────────────╯
+`,
+            edit: sentMessage.key
+          }
+        );
+
+        break;
+      }
+
+
+      // ==========================================
+      // UPDATE ENERGY
+      // ==========================================
+
+      await sock.sendMessage(
+        remoteJid,
+        {
+          text: `
+╭─ 😴 *MINING REST* 😴 ─╮
+│
+│ 💤 Sedang beristirahat...
+│
+│ ⏳ Sisa: *${remaining}*
+│ ⚡ Energy: *${mining.stamina}/${maxStamina}*
+│
+╰────────────────────────╯
+`,
+          edit: sentMessage.key
+        }
+      );
+    }
+
+  } catch (error) {
+    console.error('Mining rest error:', error);
+
+    // Kalau terjadi error saat edit,
+    // jangan biarkan user terkunci dalam activeRest.
+    await sock.sendMessage(
+      remoteJid,
+      {
+        text: `❌ Rest mengalami error: ${error.message}`
+      },
+      { quoted: msg }
+    );
+
+  } finally {
+    activeRest.delete(sender);
+    global.saveDatabase?.();
+  }
 }
 
 
@@ -421,8 +803,10 @@ function getAvailableOres(depth) {
   );
 }
 
+
 function chooseOre(depth, power) {
-  const available = getAvailableOres(depth);
+  const available =
+    getAvailableOres(depth);
 
   if (available.length === 0) {
     return ores.stone;
@@ -459,12 +843,23 @@ function chooseOre(depth, power) {
         break;
     }
 
-    for (let i = 0; i < Math.max(1, Math.floor(weight)); i++) {
-      weighted.push({ id, ore });
+    for (
+      let i = 0;
+      i < Math.max(1, Math.floor(weight));
+      i++
+    ) {
+      weighted.push({
+        id,
+        ore
+      });
     }
   }
 
-  return weighted[Math.floor(Math.random() * weighted.length)].ore;
+  return weighted[
+    Math.floor(
+      Math.random() * weighted.length
+    )
+  ].ore;
 }
 
 
@@ -476,7 +871,7 @@ async function digCommand(sock, msg, user) {
     return await sock.sendMessage(
       msg.key.remoteJid,
       {
-        text: `⚡ *STAMINA HABIS!*\n\nStamina kamu: *${mining.stamina}/${mining.maxStamina}*\n\nGunakan item stamina dengan:\n*.mining use energy*\n\nAtau beli di:\n*.mining shop*`
+        text: `⚡ *ENERGY HABIS!*\n\nEnergy kamu: *${mining.stamina}/${mining.maxStamina}*\n\nGunakan:\n*.mining rest*\n\natau gunakan item:\n*.mining use energy*`
       },
       { quoted: msg }
     );
@@ -495,7 +890,9 @@ async function digCommand(sock, msg, user) {
   mining.stamina -= 10;
   mining.durability -= 1;
 
-  const depthGain = Math.floor(Math.random() * 4) + pickaxe.power;
+  const depthGain =
+    Math.floor(Math.random() * 4) +
+    pickaxe.power;
 
   mining.depth += depthGain;
 
@@ -503,25 +900,37 @@ async function digCommand(sock, msg, user) {
     mining.depth = pickaxe.maxDepth;
   }
 
-  mining.stats.deepestDepth = Math.max(
-    mining.stats.deepestDepth,
-    mining.depth
-  );
+  mining.stats.deepestDepth =
+    Math.max(
+      mining.stats.deepestDepth,
+      mining.depth
+    );
 
-  const ore = chooseOre(mining.depth, pickaxe.power);
+  const ore =
+    chooseOre(
+      mining.depth,
+      pickaxe.power
+    );
 
   const amount =
-    Math.floor(Math.random() * Math.max(1, pickaxe.power / 2)) + 1;
+    Math.floor(
+      Math.random() *
+      Math.max(1, pickaxe.power / 2)
+    ) + 1;
 
-  const oreId = Object.keys(ores).find(
-    id => ores[id] === ore
-  );
+  const oreId =
+    Object.keys(ores).find(
+      id => ores[id] === ore
+    );
 
   mining.inventory[oreId] =
-    (mining.inventory[oreId] || 0) + amount;
+    (mining.inventory[oreId] || 0) +
+    amount;
 
   mining.stats.totalMined += amount;
-  mining.stats.totalValue += ore.price * amount;
+
+  mining.stats.totalValue +=
+    ore.price * amount;
 
   if (oreId === 'diamond') {
     mining.stats.diamondsFound += amount;
@@ -533,7 +942,8 @@ async function digCommand(sock, msg, user) {
 
   global.saveDatabase?.();
 
-  const emoji = rarityEmoji[ore.rarity] || '⚪';
+  const emoji =
+    rarityEmoji[ore.rarity] || '⚪';
 
   const totalOre =
     mining.inventory[oreId];
@@ -549,11 +959,12 @@ async function digCommand(sock, msg, user) {
 │ 💎 Mendapatkan:
 │ *${ore.name} x${amount}*
 │
-│ 💰 Nilai: *${formatRupiah(ore.price * amount)}*
+│ 💰 Nilai:
+│ *${formatRupiah(ore.price * amount)}*
 │
 ├────────────────────────┤
 │ 📍 Depth: *${mining.depth}m*
-│ ⚡ Stamina: *${mining.stamina}/${mining.maxStamina}*
+│ ⚡ Energy: *${mining.stamina}/${mining.maxStamina}*
 │ 🔧 Durability: *${mining.durability}/${pickaxe.maxDurability}*
 │ 📦 Ore ini: *${totalOre}x*
 │
@@ -576,45 +987,66 @@ async function inventoryCommand(sock, msg, user) {
 
   let oreText = '';
 
-  for (const [id, amount] of Object.entries(mining.inventory)) {
+  for (
+    const [id, amount]
+    of Object.entries(mining.inventory)
+  ) {
     if (amount <= 0) continue;
 
     const ore = ores[id];
 
     if (!ore) continue;
 
-    oreText += `${rarityEmoji[ore.rarity] || '⚪'} ${ore.name}: *${amount}x* (${formatRupiah(ore.price * amount)})\n`;
+    oreText +=
+      `${rarityEmoji[ore.rarity] || '⚪'} ${ore.name}: *${amount}x* (${formatRupiah(ore.price * amount)})\n`;
   }
 
   if (!oreText) {
-    oreText = '📦 Inventory ore masih kosong.\n';
+    oreText =
+      '📦 Inventory ore masih kosong.\n';
   }
 
   let consumableText = '';
 
-  for (const [id, amount] of Object.entries(mining.consumables)) {
+  for (
+    const [id, amount]
+    of Object.entries(mining.consumables)
+  ) {
     if (amount > 0) {
-      consumableText += `• ${staminaItems[id].name}: *${amount}x*\n`;
+      consumableText +=
+        `• ${staminaItems[id].name}: *${amount}x*\n`;
     }
   }
 
   if (!consumableText) {
-    consumableText = 'Tidak ada item stamina.\n';
+    consumableText =
+      'Tidak ada item stamina.\n';
   }
 
-  const totalValue = Object.entries(mining.inventory)
-    .reduce((total, [id, amount]) => {
-      return total + (
-        ores[id]
-          ? ores[id].price * amount
-          : 0
+  const totalValue =
+    Object.entries(mining.inventory)
+      .reduce(
+        (total, [id, amount]) => {
+          return total + (
+            ores[id]
+              ? ores[id].price * amount
+              : 0
+          );
+        },
+        0
       );
-    }, 0);
 
   const text = `
 ╭─ 🎒 *MINING INVENTORY* 🎒 ─╮
 │
-${oreText.split('\n').map(x => x ? `│ ${x}` : '│').join('\n')}
+${oreText
+  .split('\n')
+  .map(x =>
+    x
+      ? `│ ${x}`
+      : '│'
+  )
+  .join('\n')}
 │
 ├────────────────────────┤
 │ 💰 Total Nilai Ore:
@@ -623,7 +1055,14 @@ ${oreText.split('\n').map(x => x ? `│ ${x}` : '│').join('\n')}
 ├────────────────────────┤
 │ ⚡ *STAMINA ITEMS*
 │
-${consumableText.split('\n').map(x => x ? `│ ${x}` : '│').join('\n')}
+${consumableText
+  .split('\n')
+  .map(x =>
+    x
+      ? `│ ${x}`
+      : '│'
+  )
+  .join('\n')}
 ╰────────────────────────╯
 `;
 
@@ -639,10 +1078,18 @@ ${consumableText.split('\n').map(x => x ? `│ ${x}` : '│').join('\n')}
 // 💰 SELL
 // ==========================================
 
-async function sellCommand(sock, msg, user, sender, args) {
+async function sellCommand(
+  sock,
+  msg,
+  user,
+  sender,
+  args
+) {
   const mining = user.mining;
 
-  if (Object.keys(mining.inventory).length === 0) {
+  if (
+    Object.keys(mining.inventory).length === 0
+  ) {
     return await sock.sendMessage(
       msg.key.remoteJid,
       {
@@ -652,20 +1099,35 @@ async function sellCommand(sock, msg, user, sender, args) {
     );
   }
 
-  const target = args[0]?.toLowerCase();
+  const target =
+    args[0]?.toLowerCase();
 
   let soldItems = [];
   let total = 0;
 
-  // --------------------------
+
+  // ==========================================
   // SELL ALL
-  // --------------------------
+  // ==========================================
 
-  if (!target || target === 'all' || target === 'semua') {
-    for (const [id, amount] of Object.entries(mining.inventory)) {
-      if (!ores[id] || amount <= 0) continue;
+  if (
+    !target ||
+    target === 'all' ||
+    target === 'semua'
+  ) {
+    for (
+      const [id, amount]
+      of Object.entries(mining.inventory)
+    ) {
+      if (
+        !ores[id] ||
+        amount <= 0
+      ) {
+        continue;
+      }
 
-      const value = ores[id].price * amount;
+      const value =
+        ores[id].price * amount;
 
       soldItems.push({
         ore: ores[id],
@@ -679,9 +1141,10 @@ async function sellCommand(sock, msg, user, sender, args) {
     mining.inventory = {};
   }
 
-  // --------------------------
+
+  // ==========================================
   // SELL SPECIFIC ORE
-  // --------------------------
+  // ==========================================
 
   else {
     if (!ores[target]) {
@@ -694,7 +1157,8 @@ async function sellCommand(sock, msg, user, sender, args) {
       );
     }
 
-    const amount = mining.inventory[target] || 0;
+    const amount =
+      mining.inventory[target] || 0;
 
     if (amount <= 0) {
       return await sock.sendMessage(
@@ -706,7 +1170,8 @@ async function sellCommand(sock, msg, user, sender, args) {
       );
     }
 
-    total = ores[target].price * amount;
+    total =
+      ores[target].price * amount;
 
     soldItems.push({
       ore: ores[target],
@@ -716,6 +1181,7 @@ async function sellCommand(sock, msg, user, sender, args) {
 
     delete mining.inventory[target];
   }
+
 
   if (total <= 0) {
     return await sock.sendMessage(
@@ -727,20 +1193,30 @@ async function sellCommand(sock, msg, user, sender, args) {
     );
   }
 
-  // MASUK KE SALDO UTAMA
-  addPoints(global.db, sender, total);
 
-  mining.stats.totalValue = Math.max(
-    0,
-    mining.stats.totalValue - total
+  // ==========================================
+  // MASUK KE SALDO UTAMA
+  // ==========================================
+
+  addPoints(
+    global.db,
+    sender,
+    total
   );
+
+  mining.stats.totalValue =
+    Math.max(
+      0,
+      mining.stats.totalValue - total
+    );
 
   global.saveDatabase?.();
 
   let soldText = '';
 
   soldItems.forEach(item => {
-    soldText += `• ${item.ore.name} x${item.amount} → ${formatRupiah(item.value)}\n`;
+    soldText +=
+      `• ${item.ore.name} x${item.amount} → ${formatRupiah(item.value)}\n`;
   });
 
   await sock.sendMessage(
@@ -800,6 +1276,12 @@ async function helpCommand(sock, msg) {
 │ ⚡ *.mining use energy*
 │    Gunakan stamina item
 │
+│ 😴 *.mining rest*
+│    Pulihkan energy selama 15 detik
+│
+│ 🔋 *.mining buy battery*
+│    Upgrade Max Energy
+│
 ╰────────────────────────╯
 `;
 
@@ -815,46 +1297,108 @@ async function helpCommand(sock, msg) {
 // 🎮 MAIN HANDLER
 // ==========================================
 
-async function handleMiningCommand(sock, msg, args) {
-  const remoteJid = msg.key.remoteJid;
-  const sender = getSenderId(msg, remoteJid);
+async function handleMiningCommand(
+  sock,
+  msg,
+  args
+) {
+  const remoteJid =
+    msg.key.remoteJid;
 
-  const user = getUserData(global.db, sender);
+  const sender =
+    getSenderId(
+      msg,
+      remoteJid
+    );
+
+  const user =
+    getUserData(
+      global.db,
+      sender
+    );
 
   initializeMining(user);
 
-  const subCommand = args[0]?.toLowerCase();
+  const subCommand =
+    args[0]?.toLowerCase();
 
   try {
     switch (subCommand) {
+
       case undefined:
       case 'help':
       case 'bantuan':
-        return await helpCommand(sock, msg);
+        return await helpCommand(
+          sock,
+          msg
+        );
+
 
       case 'status':
-        return await statusCommand(sock, msg, user, sender);
+        return await statusCommand(
+          sock,
+          msg,
+          user,
+          sender
+        );
+
 
       case 'shop':
       case 'toko':
-        return await shopCommand(sock, msg);
+        return await shopCommand(
+          sock,
+          msg
+        );
+
 
       case 'buy':
       case 'beli':
-        return await buyCommand(sock, msg, user, args.slice(1));
+        return await buyCommand(
+          sock,
+          msg,
+          user,
+          args.slice(1)
+        );
+
 
       case 'use':
       case 'pakai':
-        return await useCommand(sock, msg, user, args.slice(1));
+        return await useCommand(
+          sock,
+          msg,
+          user,
+          args.slice(1)
+        );
+
+
+      case 'rest':
+      case 'istirahat':
+        return await restCommand(
+          sock,
+          msg,
+          user,
+          sender
+        );
+
 
       case 'dig':
       case 'gali':
-        return await digCommand(sock, msg, user);
+        return await digCommand(
+          sock,
+          msg,
+          user
+        );
+
 
       case 'inventory':
       case 'inv':
       case 'tas':
-        return await inventoryCommand(sock, msg, user);
+        return await inventoryCommand(
+          sock,
+          msg,
+          user
+        );
+
 
       case 'sell':
       case 'jual':
@@ -866,6 +1410,7 @@ async function handleMiningCommand(sock, msg, args) {
           args.slice(1)
         );
 
+
       default:
         return await sock.sendMessage(
           remoteJid,
@@ -875,8 +1420,12 @@ async function handleMiningCommand(sock, msg, args) {
           { quoted: msg }
         );
     }
+
   } catch (error) {
-    console.error('Mining command error:', error);
+    console.error(
+      'Mining command error:',
+      error
+    );
 
     await sock.sendMessage(
       remoteJid,
@@ -887,5 +1436,6 @@ async function handleMiningCommand(sock, msg, args) {
     );
   }
 }
+
 
 module.exports = handleMiningCommand;
