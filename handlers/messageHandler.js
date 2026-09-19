@@ -336,13 +336,71 @@ async function handleMessage(sock, msg) {
         'listResponseMessage'
       );
 
+    const templateButtonResponse =
+      findNestedMessageValue(
+        messageContent,
+        'templateButtonReplyMessage'
+      );
+
     console.log('🔎 MESSAGE STRUCTURE:', JSON.stringify({
       keys: Object.keys(messageContent || {}),
       hasInteractive: !!interactiveResponse,
       hasLegacyButton: !!legacyButtonResponse,
       hasList: !!listResponse,
+      hasTemplateButton: !!templateButtonResponse,
       raw: JSON.stringify(messageContent || {}).slice(0, 3000)
     }));
+
+    // WhatsApp client tertentu mengirim native-flow quick reply
+    // sebagai templateButtonReplyMessage.
+    const templateButtonId =
+      templateButtonResponse?.selectedId;
+
+    if (templateButtonId) {
+      console.log(
+        '🔘 TEMPLATE BUTTON:',
+        templateButtonId
+      );
+
+      const miningButtonMap = {
+        mining_dig: ['dig', false],
+        mining_inventory: ['inventory', true],
+        mining_rest: ['rest', true],
+        mining_status: ['status', true],
+        mining_shop: ['shop', true]
+      };
+
+      const miningAction = miningButtonMap[templateButtonId];
+
+      if (miningAction) {
+        await handleMiningCommand(
+          sock,
+          msg,
+          [miningAction[0]]
+        );
+
+        if (miningAction[1]) {
+          await handleMiningCommand(
+            sock,
+            msg,
+            ['menu']
+          );
+        }
+
+        return;
+      }
+
+      if (templateButtonId === 'test_button') {
+        await sock.sendMessage(
+          remoteJid,
+          {
+            text: '✅ *INTERACTIVE BERHASIL!*\\n\\nBot menerima ID: *test_button*.'
+          },
+          { quoted: msg }
+        );
+        return;
+      }
+    }
 
     if (interactiveResponse) {
       try {
