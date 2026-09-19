@@ -16,8 +16,6 @@ const {
 } = require('../utils/helper');
 
 const { getSenderId } = require('../utils/jid-utils');
-const { proto, generateWAMessageFromContent, isJidGroup } = require('@whiskeysockets/baileys');
-
 
 // ==========================================
 // ⚡ ENERGY UPGRADES
@@ -811,123 +809,6 @@ async function restCommand(sock, msg, user, sender) {
 
 
 // ==========================================
-// 🎛️ INTERACTIVE MINING MENU
-// ==========================================
-
-async function sendMiningMenu(sock, msg, user) {
-  const jid = msg.key.remoteJid;
-  const mining = user.mining;
-
-  const body =
-    '⛏️ *MINING ADVENTURE*\n\n' +
-    '📍 Depth: *' + mining.depth + 'm*\n' +
-    '⚡ Energy: *' + mining.stamina + '/' + mining.maxStamina + '*\n' +
-    '🔧 Durability: *' + mining.durability + '*\n\n' +
-    'Pilih aksi di bawah:';
-
-  const buttons = [
-    {
-      name: 'quick_reply',
-      buttonParamsJson: JSON.stringify({
-        display_text: '⛏️ GALI',
-        id: 'mining_dig'
-      })
-    },
-    {
-      name: 'quick_reply',
-      buttonParamsJson: JSON.stringify({
-        display_text: '🎒 INVENTORY',
-        id: 'mining_inventory'
-      })
-    },
-    {
-      name: 'quick_reply',
-      buttonParamsJson: JSON.stringify({
-        display_text: '😴 REST',
-        id: 'mining_rest'
-      })
-    }
-  ];
-
-  const interactiveMessage =
-    proto.Message.InteractiveMessage.create({
-      body: proto.Message.InteractiveMessage.Body.create({
-        text: body
-      }),
-      footer: proto.Message.InteractiveMessage.Footer.create({
-        text: 'Mining Adventure'
-      }),
-      nativeFlowMessage:
-        proto.Message.InteractiveMessage.NativeFlowMessage.create({
-          buttons,
-          messageParamsJson: '{}',
-          messageVersion: 1
-        })
-    });
-
-  const waMessage = generateWAMessageFromContent(
-    jid,
-    { interactiveMessage },
-    { userJid: sock.user?.id || jid }
-  );
-
-  const bizNode = {
-    tag: 'biz',
-    attrs: {
-      actual_actors: '2',
-      host_storage: '2',
-      privacy_mode_ts: String(Math.floor(Date.now() / 1000) - 77980457)
-    },
-    content: [
-      {
-        tag: 'interactive',
-        attrs: {
-          type: 'native_flow',
-          v: '1'
-        },
-        content: [
-          {
-            tag: 'native_flow',
-            attrs: {
-              v: '9',
-              name: 'mixed'
-            }
-          }
-        ]
-      },
-      {
-        tag: 'quality_control',
-        attrs: {
-          source_type: 'third_party'
-        }
-      }
-    ]
-  };
-
-  const botNode = {
-    tag: 'bot',
-    attrs: {
-      biz_bot: '1'
-    }
-  };
-
-  await sock.relayMessage(
-    jid,
-    waMessage.message,
-    {
-      messageId: waMessage.key.id,
-      additionalNodes: isJidGroup(jid)
-        ? [bizNode]
-        : [botNode, bizNode]
-    }
-  );
-
-  return {
-    key: waMessage.key
-  };
-}
-
-// ==========================================
 // ⛏️ DIG
 // ==========================================
 
@@ -1533,10 +1414,9 @@ async function handleMiningCommand(
       case undefined:
       case 'menu':
       case 'mining':
-        return await sendMiningMenu(
+        return await helpCommand(
           sock,
-          msg,
-          user
+          msg
         );
 
       case 'help':
