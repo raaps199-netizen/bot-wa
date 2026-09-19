@@ -470,32 +470,32 @@ async function handleMessage(sock, msg) {
       );
     }
 
-    // ===================================================
+              // ===================================================
     // PREFIX
     // ===================================================
     let prefixUsed = '';
 
-    if (
-      cleanText.startsWith(config.prefix)
-    ) {
+    if (cleanText.startsWith(config.prefix)) {
       prefixUsed = config.prefix;
-
-    } else if (
-      cleanText.startsWith('/')
-    ) {
+    } else if (cleanText.startsWith('/')) {
       prefixUsed = '/';
     }
 
     if (!prefixUsed) return;
 
-    const args =
-      cleanText
-        .slice(prefixUsed.length)
-        .trim()
-        .split(/ +/);
+    const args = cleanText
+      .slice(prefixUsed.length)
+      .trim()
+      .split(/ +/);
 
-    const command =
-      args.shift().toLowerCase();
+    const command = args.shift().toLowerCase();
+
+    console.log('📩 COMMAND MASUK:', {
+      text: cleanText,
+      prefix: prefixUsed,
+      command,
+      args
+    });
 
     // ===================================================
     // 🚨 KUNCI LOCKDOWN KRAKEN
@@ -509,9 +509,7 @@ async function handleMessage(sock, msg) {
         'boss'
       ];
 
-      if (
-        !allowedCommands.includes(command)
-      ) {
+      if (!allowedCommands.includes(command)) {
         return await sock.sendMessage(
           remoteJid,
           {
@@ -531,35 +529,45 @@ async function handleMessage(sock, msg) {
     switch (command) {
 
       // ==========================================
-      // 🧪 TEST INTERACTIVE
-      // ==========================================
-      case 'testinteractive':
-        await sendTestInteractive(
-          sock,
-          msg
-        );
-        break;
-
-      // ==========================================
-      // 🎮 DUNGEON / ZORK
-      // ==========================================
-      case 'zork':
-      case 'dungeon':
-      case 'jelajah':
-        await handleDungeonCommand(
-          sock,
-          msg,
-          args
-        );
-        break;
-
-      // ==========================================
       // ⛏️ MINING
       // ==========================================
       case 'mining':
       case 'mine':
       case 'tambang':
+
+        console.log('⛏️ MINING COMMAND TERDETEKSI');
+
         await handleMiningCommand(
+          sock,
+          msg,
+          args
+        );
+
+        console.log('✅ MINING COMMAND SELESAI');
+
+        break;
+
+      // ==========================================
+      // 🧪 TEST INTERACTIVE
+      // ==========================================
+      case 'testinteractive':
+
+        console.log('🧪 TEST INTERACTIVE TERDETEKSI');
+
+        await sendTestInteractive(
+          sock,
+          msg
+        );
+
+        break;
+
+      // ==========================================
+      // 🎮 DUNGEON
+      // ==========================================
+      case 'zork':
+      case 'dungeon':
+      case 'jelajah':
+        await handleDungeonCommand(
           sock,
           msg,
           args
@@ -593,6 +601,7 @@ async function handleMessage(sock, msg) {
         );
         break;
 
+      // ... case command lu yang lain tetap di bawah sini
       case 'lnj':
       case 'lanjut':
         await handleFishingCommand(
