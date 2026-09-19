@@ -16,7 +16,6 @@ const {
 } = require('../utils/helper');
 
 const { getSenderId } = require('../utils/jid-utils');
-const { proto, generateWAMessageFromContent } = require('@whiskeysockets/baileys');
 
 // ==========================================
 // ⚡ ENERGY UPGRADES
@@ -810,40 +809,6 @@ async function restCommand(sock, msg, user, sender) {
 
 
 // ==========================================
-// ✏️ EDIT MINING MESSAGE
-// ==========================================
-
-async function editMiningMessage(sock, jid, key, text) {
-  const editKey = {
-    remoteJid: key.remoteJid || jid,
-    fromMe: key.fromMe,
-    id: key.id,
-    ...(key.participant ? { participant: key.participant } : {})
-  };
-
-  const protocolMessage = proto.Message.ProtocolMessage.create({
-    key: editKey,
-    type: proto.Message.ProtocolMessage.Type.MESSAGE_EDIT,
-    editedMessage: proto.Message.create({
-      conversation: text
-    })
-  });
-
-  const waMessage = generateWAMessageFromContent(
-    jid,
-    { protocolMessage },
-    { userJid: sock.user?.id || jid }
-  );
-
-  await sock.relayMessage(
-    jid,
-    waMessage.message,
-    { messageId: waMessage.key.id }
-  );
-}
-
-
-// ==========================================
 // ⛏️ DIG
 // ==========================================
 
@@ -1058,11 +1023,12 @@ async function digCommand(sock, msg, user) {
 💡 Jual hasil mining:
 *.mining sell*`;
 
-  await editMiningMessage(
-    sock,
+  await sock.sendMessage(
     remoteJid,
-    sentMessage.key,
-    resultText
+    {
+      text: resultText,
+      edit: sentMessage.key
+    }
   );
 
   // Dig kembali ke mode normal:
