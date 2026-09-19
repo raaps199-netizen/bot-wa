@@ -918,12 +918,9 @@ async function digCommand(sock, msg, user) {
     '⛏️ *Sedang menggali...*\\n\\n' +
     '🔨 Pickaxe sedang bekerja...';
 
-  let sentMessage;
-
-  // Ikuti pola fishing: gunakan pesan mining terakhir bila masih bisa diedit.
-  // Setiap command .mining dig membuat satu pesan status baru.
-  // Pesan ini yang nanti diedit langsung menjadi hasil mining.
-  sentMessage = await sock.sendMessage(
+  // Kirim SATU bubble status. Bubble inilah yang wajib diedit
+  // menjadi hasil mining, bukan mengirim bubble hasil baru.
+  const sentMessage = await sock.sendMessage(
     remoteJid,
     {
       text: startingText
@@ -931,7 +928,21 @@ async function digCommand(sock, msg, user) {
     { quoted: msg }
   );
 
-  mining.lastDigKey = sentMessage.key;
+  // Normalisasi key supaya edit selalu ditujukan ke pesan BOT sendiri.
+  // Jangan pakai key dari command user.
+  const digEditKey = {
+    remoteJid: sentMessage.key.remoteJid || remoteJid,
+    fromMe: true,
+    id: sentMessage.key.id,
+    ...(sentMessage.key.participant
+      ? { participant: sentMessage.key.participant }
+      : {}),
+    ...(sentMessage.key.participantAlt
+      ? { participantAlt: sentMessage.key.participantAlt }
+      : {})
+  };
+
+  mining.lastDigKey = digEditKey;
   global.saveDatabase?.();
 
   await new Promise(resolve => setTimeout(resolve, 1000));
@@ -1023,11 +1034,12 @@ async function digCommand(sock, msg, user) {
 💡 Jual hasil mining:
 *.mining sell*`;
 
+  // EDIT BUBBLE YANG SAMA
   await sock.sendMessage(
     remoteJid,
     {
       text: resultText,
-      edit: sentMessage.key
+      edit: digEditKey
     }
   );
 
