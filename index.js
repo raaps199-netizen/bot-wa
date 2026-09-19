@@ -191,7 +191,20 @@ async function startBot() {
         m.messages?.length || 0
       );
 
-      if (m.type !== 'notify') {
+      // Native-flow button reply di self-chat kadang masuk sebagai
+      // event selain "notify". Jangan buang event tersebut kalau memang
+      // payload-nya adalah response tombol.
+      const hasInteractiveEvent =
+        m.messages?.some(msg => {
+          const raw = JSON.stringify(msg.message || {});
+          return (
+            raw.includes('interactiveResponseMessage') ||
+            raw.includes('buttonsResponseMessage') ||
+            raw.includes('listResponseMessage')
+          );
+        });
+
+      if (m.type !== 'notify' && !hasInteractiveEvent) {
         return;
       }
 
