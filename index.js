@@ -200,7 +200,8 @@ async function startBot() {
           return (
             raw.includes('interactiveResponseMessage') ||
             raw.includes('buttonsResponseMessage') ||
-            raw.includes('listResponseMessage')
+            raw.includes('listResponseMessage') ||
+            raw.includes('templateButtonReplyMessage')
           );
         });
 
@@ -221,7 +222,8 @@ async function startBot() {
         const hasButtonResponse =
           rawMessageJson.includes('interactiveResponseMessage') ||
           rawMessageJson.includes('buttonsResponseMessage') ||
-          rawMessageJson.includes('listResponseMessage');
+          rawMessageJson.includes('listResponseMessage') ||
+          rawMessageJson.includes('templateButtonReplyMessage');
 
         if (msg.key.fromMe && !hasButtonResponse) {
           continue;
