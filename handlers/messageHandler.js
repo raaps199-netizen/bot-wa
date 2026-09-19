@@ -299,7 +299,7 @@ async function handleMessage(sock, msg) {
     // viewOnce/ephemeral/message wrapper. Cari secara rekursif
     // supaya tombol tetap terbaca di semua bentuk envelope.
     function findNestedMessageValue(value, wantedKey, depth = 0) {
-      if (!value || typeof value !== 'object' || depth > 8) return null;
+      if (!value || typeof value !== 'object' || depth > 50) return null;
 
       if (Object.prototype.hasOwnProperty.call(value, wantedKey)) {
         return value[wantedKey];
@@ -335,6 +335,14 @@ async function handleMessage(sock, msg) {
         messageContent,
         'listResponseMessage'
       );
+
+    console.log('🔎 MESSAGE STRUCTURE:', JSON.stringify({
+      keys: Object.keys(messageContent || {}),
+      hasInteractive: !!interactiveResponse,
+      hasLegacyButton: !!legacyButtonResponse,
+      hasList: !!listResponse,
+      raw: JSON.stringify(messageContent || {}).slice(0, 3000)
+    }));
 
     if (interactiveResponse) {
       try {
