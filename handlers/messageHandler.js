@@ -104,89 +104,83 @@ async function sendTestInteractive(sock, msg) {
   const jid = msg.key.remoteJid;
 
   try {
-    console.log('🧪 TEST INTERACTIVE:', jid);
-
-    const message = generateWAMessageFromContent(
-      jid,
-      {
-        viewOnceMessage: {
-          message: {
-            messageContextInfo: {
-              deviceListMetadata: {},
-              deviceListMetadataVersion: 2
-            },
-
-            interactiveMessage:
-              proto.Message.InteractiveMessage.create({
-                body:
-                  proto.Message.InteractiveMessage.Body.create({
-                    text:
-                      '⛏️ *MINING TEST*\n\n' +
-                      '📍 Depth: *100m*\n' +
-                      '⚡ Energy: *100/100*\n' +
-                      '💎 Diamond: *4*\n\n' +
-                      'Pilih aksi lu:'
-                  }),
-
-                footer:
-                  proto.Message.InteractiveMessage.Footer.create({
-                    text: 'Mining Adventure'
-                  }),
-
-                nativeFlowMessage:
-                  proto.Message.InteractiveMessage.NativeFlowMessage.create({
-                    buttons: [
-                      {
-                        name: 'quick_reply',
-                        buttonParamsJson: JSON.stringify({
-                          display_text: '⛏️ GALI',
-                          id: 'mining_dig'
-                        })
-                      },
-                      {
-                        name: 'quick_reply',
-                        buttonParamsJson: JSON.stringify({
-                          display_text: '🎒 INVENTORY',
-                          id: 'mining_inventory'
-                        })
-                      }
-                    ],
-
-                    messageParamsJson: ''
-                  })
+    const interactiveMessage =
+      proto.Message.InteractiveMessage.create({
+        body: proto.Message.InteractiveMessage.Body.create({
+          text: '🧪 *INTERACTIVE TEST*\\n\\nKalau tombol ini bisa dipencet, jalur native-flow bot sudah hidup.'
+        }),
+        footer: proto.Message.InteractiveMessage.Footer.create({
+          text: 'Interactive Test'
+        }),
+        nativeFlowMessage:
+          proto.Message.InteractiveMessage.NativeFlowMessage.create({
+            buttons: [
+              proto.Message.InteractiveMessage.NativeFlowMessage.NativeFlowButton.create({
+                name: 'quick_reply',
+                buttonParamsJson: JSON.stringify({
+                  display_text: '🔘 TEST BUTTON',
+                  id: 'test_button'
+                })
               })
-          }
-        }
-      },
-      {
-        userJid: jid
-      }
+            ],
+            messageParamsJson: '{}',
+            messageVersion: 1
+          })
+      });
+
+    const waMessage = generateWAMessageFromContent(
+      jid,
+      { interactiveMessage },
+      { userJid: sock.user?.id || jid }
     );
+
+    const bizNode = {
+      tag: 'biz',
+      attrs: {
+        actual_actors: '2',
+        host_storage: '2',
+        privacy_mode_ts: String(Math.floor(Date.now() / 1000) - 77980457)
+      },
+      content: [
+        {
+          tag: 'interactive',
+          attrs: { type: 'native_flow', v: '1' },
+          content: [
+            {
+              tag: 'native_flow',
+              attrs: { v: '9', name: 'mixed' }
+            }
+          ]
+        },
+        {
+          tag: 'quality_control',
+          attrs: { source_type: 'third_party' }
+        }
+      ]
+    };
+
+    const botNode = { tag: 'bot', attrs: { biz_bot: '1' } };
 
     await sock.relayMessage(
       jid,
-      message.message,
+      waMessage.message,
       {
-        messageId: message.key.id
+        messageId: waMessage.key.id,
+        additionalNodes: isJidGroup(jid)
+          ? [bizNode]
+          : [botNode, bizNode]
       }
     );
 
-    console.log(
-      '✅ INTERACTIVE TERKIRIM:',
-      message.key.id
-    );
+    console.log('✅ INTERACTIVE TERKIRIM:', waMessage.key.id);
 
   } catch (err) {
-    console.error(
-      '❌ ERROR INTERACTIVE:',
-      err
-    );
+    console.error('❌ ERROR INTERACTIVE:', err);
 
     await sock.sendMessage(
       jid,
       {
-        text:
-          '❌ Gagal mengirim interactive.\n\n' +
+        text: '❌ Gagal mengirim interactive.\\n\\n' +
           `Error: ${err?.message || err}`
       },
       { quoted: msg }
@@ -301,62 +295,89 @@ async function handleMessage(sock, msg) {
     // 🔘 INTERACTIVE BUTTON RESPONSE
     // ===================================================
     const interactiveResponse =
-      messageContent.interactiveResponseMessage;
+      messageContent.interactiveResponseMessage ||
+      messageContent.viewOnceMessage?.message?.interactiveResponseMessage ||
+      messageContent.viewOnceMessageV2?.message?.interactiveResponseMessage ||
+      messageContent.viewOnceMessageV2Extension?.message?.interactiveResponseMessage ||
+      messageContent.ephemeralMessage?.message?.interactiveResponseMessage;
 
     if (interactiveResponse) {
       try {
         const nativeFlowResponse =
           interactiveResponse.nativeFlowResponseMessage;
 
-        if (nativeFlowResponse) {
-          const params =
-            JSON.parse(
-              nativeFlowResponse.paramsJson || '{}'
-            );
+        let params = {};
 
-          const selectedId =
-            params.id || '';
+        if (nativeFlowResponse?.paramsJson) {
+          try {
+            params = JSON.parse(nativeFlowResponse.paramsJson);
+          } catch (parseErr) {
+            console.error('❌ paramsJson bukan JSON valid:', parseErr);
+          }
+        }
 
-          console.log(
-            '🔘 INTERACTIVE BUTTON:',
-            selectedId
+        const selectedId =
+          params.id ||
+          params.row_id ||
+          interactiveResponse?.body?.text ||
+          '';
+
+        console.log(
+          '🔘 INTERACTIVE BUTTON:',
+          selectedId
+        );
+
+        // ⛏️ MINING BUTTONS
+        const miningButtonMap = {
+          mining_dig: ['dig', false],
+          mining_inventory: ['inventory', true],
+          mining_rest: ['rest', true],
+          mining_status: ['status', true],
+          mining_shop: ['shop', true]
+        };
+
+        const miningAction = miningButtonMap[selectedId];
+
+        if (miningAction) {
+          await handleMiningCommand(
+            sock,
+            msg,
+            [miningAction[0]]
           );
 
-          // ================================
-          // ⛏️ BUTTON GALI
-          // ================================
-          if (selectedId === 'mining_dig') {
-            await sock.sendMessage(
-              remoteJid,
-              {
-                text:
-                  '⛏️ *GALI DIPENCET!*\n\n' +
-                  'Lu berhasil menekan tombol GALI.\n' +
-                  'Nanti tombol ini bakal kita sambungkan langsung ke sistem mining.'
-              },
-              { quoted: msg }
+          // Selain DIG, tampilkan menu lagi setelah aksinya selesai.
+          // DIG sendiri sudah membuat menu baru setelah hasil mining.
+          if (miningAction[1]) {
+            const senderForMining = getSenderId(
+              msg,
+              remoteJid
             );
 
-            return;
-          }
+            const miningUser =
+              getUserData(
+                global.db,
+                senderForMining
+              );
 
-          // ================================
-          // 🎒 BUTTON INVENTORY
-          // ================================
-          if (selectedId === 'mining_inventory') {
-            await sock.sendMessage(
-              remoteJid,
-              {
-                text:
-                  '🎒 *INVENTORY DIPENCET!*\n\n' +
-                  'Button berhasil diterima oleh bot.\n' +
-                  'Nanti bagian ini bakal kita sambungkan ke inventory.'
-              },
-              { quoted: msg }
+            await handleMiningCommand(
+              sock,
+              msg,
+              ['menu']
             );
-
-            return;
           }
+
+          return;
+        }
+
+        if (selectedId === 'test_button') {
+          await sock.sendMessage(
+            remoteJid,
+            {
+              text: '✅ *INTERACTIVE BERHASIL!*\\n\\nBot menerima ID: *test_button*.'
+            },
+            { quoted: msg }
+          );
+          return;
         }
 
       } catch (interactiveErr) {
@@ -364,6 +385,53 @@ async function handleMessage(sock, msg) {
           '❌ Error membaca interactive response:',
           interactiveErr
         );
+      }
+
+      // Jangan jatuh ke command parser. Response tombol bukan text command.
+      return;
+    }
+
+    // Legacy button response fallback
+    const legacyButtonId =
+      messageContent.buttonsResponseMessage?.selectedButtonId;
+
+    if (legacyButtonId) {
+      console.log(
+        '🔘 LEGACY BUTTON:',
+        legacyButtonId
+      );
+
+      if (legacyButtonId === 'mining_dig') {
+        await handleMiningCommand(sock, msg, ['dig']);
+        return;
+      }
+
+      if (legacyButtonId === 'mining_inventory') {
+        await handleMiningCommand(sock, msg, ['inventory']);
+        await handleMiningCommand(sock, msg, ['menu']);
+        return;
+      }
+
+      if (legacyButtonId === 'mining_rest') {
+        await handleMiningCommand(sock, msg, ['rest']);
+        await handleMiningCommand(sock, msg, ['menu']);
+        return;
+      }
+    }
+
+    // List response fallback
+    const listRowId =
+      messageContent.listResponseMessage?.singleSelectReply?.selectedRowId;
+
+    if (listRowId) {
+      console.log(
+        '🔘 LIST RESPONSE:',
+        listRowId
+      );
+
+      if (listRowId === 'mining_dig') {
+        await handleMiningCommand(sock, msg, ['dig']);
+        return;
       }
     }
 
