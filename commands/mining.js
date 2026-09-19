@@ -45,6 +45,30 @@ const energyUpgrades = {
     name: '⚡ Fusion Energy Core',
     price: 200000,
     maxStamina: 300
+  },
+
+  hyper: {
+    name: '🔋 Hyper Energy Reactor',
+    price: 500000,
+    maxStamina: 500
+  },
+
+  quantum: {
+    name: '⚡ Quantum Energy Core',
+    price: 1200000,
+    maxStamina: 750
+  },
+
+  infinity: {
+    name: '🌌 Infinity Energy Core',
+    price: 3000000,
+    maxStamina: 1000
+  },
+
+  transcendent: {
+    name: '✨ Transcendent Energy Core',
+    price: 7500000,
+    maxStamina: 1500
   }
 };
 
