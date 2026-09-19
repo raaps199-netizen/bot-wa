@@ -109,7 +109,8 @@ function getDefaultMiningState() {
     },
 
     consumables,
-    energyUpgrade: null
+    energyUpgrade: null,
+    lastDigKey: null
   };
 }
 
@@ -157,6 +158,10 @@ function initializeMining(user) {
 
   if (user.mining.energyUpgrade === undefined) {
     user.mining.energyUpgrade = null;
+  }
+
+  if (user.mining.lastDigKey === undefined) {
+    user.mining.lastDigKey = null;
   }
 }
 
@@ -910,15 +915,50 @@ async function digCommand(sock, msg, user) {
     );
   }
 
-  const sentMessage = await sock.sendMessage(
-    remoteJid,
-    {
-      text:
-        '⛏️ *Sedang menggali...*\\n\\n' +
-        '🔨 Pickaxe sedang bekerja...'
-    },
-    { quoted: msg }
-  );
+  const startingText =
+    '⛏️ *Sedang menggali...*\\n\\n' +
+    '🔨 Pickaxe sedang bekerja...';
+
+  let sentMessage;
+
+  // Ikuti pola fishing: gunakan pesan mining terakhir bila masih bisa diedit.
+  if (mining.lastDigKey) {
+    try {
+      await sock.sendMessage(
+        remoteJid,
+        {
+          text: startingText,
+          edit: mining.lastDigKey
+        }
+      );
+
+      sentMessage = {
+        key: mining.lastDigKey
+      };
+    } catch (error) {
+      console.error('Mining previous message edit failed:', error);
+
+      // Jika pesan lama sudah tidak bisa diedit, buat pesan baru.
+      sentMessage = await sock.sendMessage(
+        remoteJid,
+        {
+          text: startingText
+        },
+        { quoted: msg }
+      );
+    }
+  } else {
+    sentMessage = await sock.sendMessage(
+      remoteJid,
+      {
+        text: startingText
+      },
+      { quoted: msg }
+    );
+  }
+
+  mining.lastDigKey = sentMessage.key;
+  global.saveDatabase?.();
 
   await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -1014,6 +1054,10 @@ async function digCommand(sock, msg, user) {
       edit: sentMessage.key
     }
   );
+
+  // Simpan key supaya .mining dig berikutnya mengedit bubble yang sama.
+  mining.lastDigKey = sentMessage.key;
+  global.saveDatabase?.();
 }
 
 
