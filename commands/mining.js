@@ -1173,71 +1173,10 @@ async function digCommand(sock, msg, user) {
     }
   );
 
-  // Kembalikan bubble yang sama ke menu interaktif.
-  // Jadi satu sesi mining tidak terus menumpuk pesan baru.
-  try {
-    const menuBody =
-      '⛏️ *MINING ADVENTURE*\\n\\n' +
-      '📍 Depth: *' + mining.depth + 'm*\\n' +
-      '⚡ Energy: *' + mining.stamina + '/' + mining.maxStamina + '*\\n' +
-      '🔧 Durability: *' + mining.durability + '*\\n\\n' +
-      'Pilih aksi di bawah:';
-
-    const menuButtons = [
-      {
-        name: 'quick_reply',
-        buttonParamsJson: JSON.stringify({
-          display_text: '⛏️ GALI',
-          id: 'mining_dig'
-        })
-      },
-      {
-        name: 'quick_reply',
-        buttonParamsJson: JSON.stringify({
-          display_text: '🎒 INVENTORY',
-          id: 'mining_inventory'
-        })
-      },
-      {
-        name: 'quick_reply',
-        buttonParamsJson: JSON.stringify({
-          display_text: '😴 REST',
-          id: 'mining_rest'
-        })
-      }
-    ];
-
-    await sock.sendMessage(
-      remoteJid,
-      {
-        interactiveMessage: {
-          body: { text: menuBody },
-          footer: { text: 'Mining Adventure' },
-          nativeFlowMessage: {
-            buttons: menuButtons,
-            messageParamsJson: '{}',
-            messageVersion: 1
-          }
-        },
-        edit: sentMessage.key
-      }
-    );
-
-    mining.lastDigKey = sentMessage.key;
-  } catch (menuError) {
-    console.error('Mining interactive menu edit failed:', menuError);
-
-    // Fallback kalau client tidak mengizinkan edit interactive:
-    // buat satu menu baru agar tombol tetap bisa dipakai.
-    try {
-      const menuMessage = await sendMiningMenu(sock, msg, user);
-      mining.lastDigKey = menuMessage.key;
-    } catch (fallbackError) {
-      console.error('Mining interactive menu fallback failed:', fallbackError);
-      mining.lastDigKey = sentMessage.key;
-    }
-  }
-
+  // Dig kembali ke mode normal:
+  // pesan hasil tetap diedit dari pesan "Sedang menggali..."
+  // dan tidak otomatis membuat menu baru.
+  mining.lastDigKey = null;
   global.saveDatabase?.();
 }
 
