@@ -79,6 +79,12 @@ const energyUpgrades = {
 // Menyimpan user yang sedang melakukan rest
 const activeRest = new Set();
 
+// ==========================================
+// 🤖 AUTO MINING
+// ==========================================
+
+const activeAutoMining = new Set();
+
 
 // ==========================================
 // 🛠️ DEFAULT MINING STATE
@@ -167,6 +173,139 @@ function initializeMining(user) {
 
 
 
+
+// ==========================================
+// 🤖 AUTO MINING
+// ==========================================
+
+async function autoMiningCommand(sock, msg, user, sender) {
+  const remoteJid = msg.key.remoteJid;
+  const mining = user.mining;
+
+  if (activeAutoMining.has(sender)) {
+    return await sock.sendMessage(
+      remoteJid,
+      {
+        text:
+          '⚠️ *AUTO MINING SUDAH AKTIF!*\\n\\n' +
+          'Ketik *.mining stop* untuk menghentikannya.'
+      },
+      { quoted: msg }
+    );
+  }
+
+  if (mining.stamina < 10) {
+    return await sock.sendMessage(
+      remoteJid,
+      {
+        text:
+          '⚡ *ENERGY TERLALU RENDAH!*\\n\\n' +
+          `Energy kamu: *${mining.stamina}/${mining.maxStamina}*\\n\\n` +
+          'Rest atau gunakan item energy dulu.'
+      },
+      { quoted: msg }
+    );
+  }
+
+  if (mining.durability <= 0) {
+    return await sock.sendMessage(
+      remoteJid,
+      {
+        text:
+          '🔧 *PICKAXE RUSAK!*\\n\\n' +
+          'Beli atau gunakan pickaxe lain sebelum menjalankan Auto Mining.'
+      },
+      { quoted: msg }
+    );
+  }
+
+  activeAutoMining.add(sender);
+
+  await sock.sendMessage(
+    remoteJid,
+    {
+      text:
+        '🤖 *AUTO MINING AKTIF!*\\n\\n' +
+        '⛏️ Bot akan menggali secara otomatis.\\n' +
+        '⚡ Energy terkuras lebih cepat karena interval mining dipercepat.\\n\\n' +
+        'Ketik *.mining stop* untuk berhenti.'
+    },
+    { quoted: msg }
+  );
+
+  runAutoMining(sock, msg, user, sender).catch(err => {
+    console.error('❌ Auto Mining Error:', err);
+    activeAutoMining.delete(sender);
+  });
+}
+
+async function stopAutoMining(sock, msg, sender) {
+  const remoteJid = msg.key.remoteJid;
+
+  if (!activeAutoMining.has(sender)) {
+    return await sock.sendMessage(
+      remoteJid,
+      {
+        text: '⚠️ *AUTO MINING TIDAK AKTIF!*'
+      },
+      { quoted: msg }
+    );
+  }
+
+  activeAutoMining.delete(sender);
+
+  return await sock.sendMessage(
+    remoteJid,
+    {
+      text: '🛑 *AUTO MINING DIHENTIKAN!*'
+    },
+    { quoted: msg }
+  );
+}
+
+async function runAutoMining(sock, msg, user, sender) {
+  const mining = user.mining;
+
+  while (activeAutoMining.has(sender)) {
+    if (mining.stamina < 10) {
+      activeAutoMining.delete(sender);
+
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+          text:
+            `⚡ *AUTO MINING BERHENTI!*\\n\\n` +
+            `Energy habis: *${mining.stamina}/${mining.maxStamina}*`
+        }
+      );
+
+      break;
+    }
+
+    if (mining.durability <= 0) {
+      activeAutoMining.delete(sender);
+
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        {
+          text:
+            '🔧 *AUTO MINING BERHENTI!*\\n\\n' +
+            'Pickaxe kamu sudah rusak.'
+        }
+      );
+
+      break;
+    }
+
+    try {
+      await digCommand(sock, msg, user, true);
+    } catch (err) {
+      console.error('❌ Auto mining step error:', err);
+      activeAutoMining.delete(sender);
+      break;
+    }
+  }
+}
 
 // ==========================================
 // 📊 STATUS
@@ -866,7 +1005,7 @@ function chooseOre(depth, power) {
 
 
 
-async function digCommand(sock, msg, user) {
+async function digCommand(sock, msg, user, isAuto = false) {
   const mining = user.mining;
   const remoteJid = msg.key.remoteJid;
   const pickaxe = pickaxes[mining.pickaxe];
@@ -956,7 +1095,10 @@ async function digCommand(sock, msg, user) {
 
   const digEditKey = sentMessage.key;
 
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  // Auto mining menggali lebih cepat, jadi energy juga terkuras lebih cepat.
+  await new Promise(resolve =>
+    setTimeout(resolve, isAuto ? 500 : 1000)
+  );
 
   mining.stamina -= 10;
   mining.durability -= 1;
@@ -1336,6 +1478,12 @@ async function helpCommand(sock, msg) {
 │
 │ ⛏️ *.mining dig*
 │    Menggali tambang
+
+│ 🤖 *.mining auto*
+│    Mining otomatis lebih cepat
+│
+│ 🛑 *.mining stop*
+│    Hentikan Auto Mining
 │
 │ 📊 *.mining status*
 │    Cek status mining
@@ -1473,8 +1621,34 @@ async function handleMiningCommand(
         );
 
 
+      case 'auto':
+      case 'automining':
+        return await autoMiningCommand(
+          sock,
+          msg,
+          user,
+          sender
+        );
+
+      case 'stop':
+        return await stopAutoMining(
+          sock,
+          msg,
+          sender
+        );
+
       case 'dig':
       case 'gali':
+        if (activeAutoMining.has(sender)) {
+          return await sock.sendMessage(
+            remoteJid,
+            {
+              text: '⚠️ Auto Mining sedang aktif. Ketik *.mining stop* dulu jika ingin mining manual.'
+            },
+            { quoted: msg }
+          );
+        }
+
         return await digCommand(
           sock,
           msg,
