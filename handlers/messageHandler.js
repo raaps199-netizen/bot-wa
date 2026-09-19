@@ -13,6 +13,14 @@ const handleDungeonCommand = require('../commands/dungeon');
 // ⛏️ Import Mining
 const handleMiningCommand = require('../commands/mining');
 
+// ==========================================================
+// 🧪 IMPORT INTERACTIVE MESSAGE
+// ==========================================================
+const {
+  proto,
+  generateWAMessageFromContent
+} = require('@whiskeysockets/baileys');
+
 // Command Media & Utility
 const stickerCommand = require('../commands/sticker');
 const tiktokCommand = require('../commands/tiktok');
@@ -89,25 +97,97 @@ const daftarPiket = {
   jjt: ["Dhirgam", "Yoga", "Dude", "Daffa", "Irfan", "Ara", "Anissa", "Meli", "Gibran", "Salsabila"]
 };
 
-// Fungsi Acak Array
+// ==========================================
+// 🧪 TEST INTERACTIVE MESSAGE
+// ==========================================
+async function sendTestInteractive(sock, msg) {
+  const jid = msg.key.remoteJid;
+
+  const message = generateWAMessageFromContent(
+    jid,
+    {
+      viewOnceMessage: {
+        message: {
+          interactiveMessage:
+            proto.Message.InteractiveMessage.create({
+              body:
+                proto.Message.InteractiveMessage.Body.create({
+                  text:
+                    '⛏️ *MINING TEST*\n\n' +
+                    '📍 Depth: *100m*\n' +
+                    '⚡ Energy: *100/100*\n' +
+                    '💎 Diamond: *4*'
+                }),
+
+              footer:
+                proto.Message.InteractiveMessage.Footer.create({
+                  text: 'Mining System'
+                }),
+
+              nativeFlowMessage:
+                proto.Message.InteractiveMessage.NativeFlowMessage.create({
+                  buttons: [
+                    {
+                      name: 'quick_reply',
+                      buttonParamsJson: JSON.stringify({
+                        display_text: '⛏️ GALI',
+                        id: 'mining_dig'
+                      })
+                    },
+                    {
+                      name: 'quick_reply',
+                      buttonParamsJson: JSON.stringify({
+                        display_text: '🎒 INVENTORY',
+                        id: 'mining_inventory'
+                      })
+                    }
+                  ]
+                })
+            })
+        }
+      }
+    },
+    {
+      userJid: jid
+    }
+  );
+
+  await sock.relayMessage(
+    jid,
+    message.message,
+    {
+      messageId: message.key.id
+    }
+  );
+}
+
 function acakArray(array) {
   let arr = [...array];
+
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
+
   return arr;
 }
 
 async function handleMessage(sock, msg) {
   try {
     const messageContent = msg.message;
-    if (!messageContent || msg.key.remoteJid === 'status@broadcast') return;
+
+    if (
+      !messageContent ||
+      msg.key.remoteJid === 'status@broadcast'
+    ) {
+      return;
+    }
 
     // ===================================================
     // 🏅 AUTO-INJECT GELAR/TITLE PADA MENTION USER
     // ===================================================
     const originalSendMessage = sock.sendMessage.bind(sock);
+
     sock = new Proxy(sock, {
       get(target, prop) {
         if (prop === 'sendMessage') {
@@ -121,7 +201,9 @@ async function handleMessage(sock, msg) {
               let text = content.text;
 
               content.mentions.forEach(mJid => {
-                const userData = getUserData(global.db, mJid);
+                const userData =
+                  getUserData(global.db, mJid);
+
                 const title =
                   userData?.title ||
                   userData?.activeTitle ||
@@ -130,22 +212,37 @@ async function handleMessage(sock, msg) {
 
                 if (title) {
                   const num = mJid.split('@')[0];
-                  const nick = userData?.nickname || userData?.name;
+                  const nick =
+                    userData?.nickname ||
+                    userData?.name;
+
                   const titleTag = `[${title}] `;
 
                   if (
                     nick &&
                     text.includes(`@${nick}`) &&
-                    !text.includes(`${titleTag}@${nick}`)
+                    !text.includes(
+                      `${titleTag}@${nick}`
+                    )
                   ) {
-                    text = text.split(`@${nick}`).join(`${titleTag}@${nick}`);
+                    text = text
+                      .split(`@${nick}`)
+                      .join(
+                        `${titleTag}@${nick}`
+                      );
                   }
 
                   if (
                     text.includes(`@${num}`) &&
-                    !text.includes(`${titleTag}@${num}`)
+                    !text.includes(
+                      `${titleTag}@${num}`
+                    )
                   ) {
-                    text = text.split(`@${num}`).join(`${titleTag}@${num}`);
+                    text = text
+                      .split(`@${num}`)
+                      .join(
+                        `${titleTag}@${num}`
+                      );
                   }
                 }
               });
@@ -153,7 +250,11 @@ async function handleMessage(sock, msg) {
               content.text = text;
             }
 
-            return originalSendMessage(jid, content, options);
+            return originalSendMessage(
+              jid,
+              content,
+              options
+            );
           };
         }
 
@@ -172,14 +273,19 @@ async function handleMessage(sock, msg) {
       '';
 
     const cleanText = text.trim();
+
     if (!cleanText) return;
 
     const remoteJid = msg.key.remoteJid;
-    const senderId = getSenderId(msg, remoteJid);
+    const senderId = getSenderId(
+      msg,
+      remoteJid
+    );
 
     // Owner checks
     const ownerPhone = '6289531307627';
     const ownerLid = '66477638029541';
+
     const isOwner =
       senderId.includes(ownerPhone) ||
       senderId.includes(ownerLid);
@@ -189,13 +295,24 @@ async function handleMessage(sock, msg) {
     // ===================================================
     const user = global.db?.users?.[senderId];
 
-    if (user && user.dungeon && user.dungeon.active) {
+    if (
+      user &&
+      user.dungeon &&
+      user.dungeon.active
+    ) {
       if (
         !cleanText.startsWith(config.prefix) &&
         !cleanText.startsWith('/')
       ) {
-        const dungeonArgs = cleanText.trim().split(/ +/);
-        await handleDungeonCommand(sock, msg, dungeonArgs);
+        const dungeonArgs =
+          cleanText.trim().split(/ +/);
+
+        await handleDungeonCommand(
+          sock,
+          msg,
+          dungeonArgs
+        );
+
         return;
       }
     }
@@ -207,7 +324,8 @@ async function handleMessage(sock, msg) {
       cleanText.toLowerCase() === '.spin' ||
       cleanText.toLowerCase() === 'spin'
     ) {
-      const gameType = global.db?.game?.[remoteJid]?.type;
+      const gameType =
+        global.db?.game?.[remoteJid]?.type;
 
       if (gameType === 'reme') {
         await spinCommand(sock, msg);
@@ -225,9 +343,14 @@ async function handleMessage(sock, msg) {
     // ===================================================
     try {
       const isGameAnswered =
-        await handleGameAnswer(sock, msg, cleanText);
+        await handleGameAnswer(
+          sock,
+          msg,
+          cleanText
+        );
 
       if (isGameAnswered) return;
+
     } catch (gameErr) {
       console.error(
         'Error saat handleGameAnswer:',
@@ -240,9 +363,14 @@ async function handleMessage(sock, msg) {
     // ===================================================
     try {
       const isDuelAnswered =
-        await handleDuelAnswer(sock, msg, cleanText);
+        await handleDuelAnswer(
+          sock,
+          msg,
+          cleanText
+        );
 
       if (isDuelAnswered) return;
+
     } catch (duelErr) {
       console.error(
         'Error saat handleDuelAnswer:',
@@ -255,9 +383,14 @@ async function handleMessage(sock, msg) {
     // ===================================================
     let prefixUsed = '';
 
-    if (cleanText.startsWith(config.prefix)) {
+    if (
+      cleanText.startsWith(config.prefix)
+    ) {
       prefixUsed = config.prefix;
-    } else if (cleanText.startsWith('/')) {
+
+    } else if (
+      cleanText.startsWith('/')
+    ) {
       prefixUsed = '/';
     }
 
@@ -269,7 +402,8 @@ async function handleMessage(sock, msg) {
         .trim()
         .split(/ +/);
 
-    const command = args.shift().toLowerCase();
+    const command =
+      args.shift().toLowerCase();
 
     // ===================================================
     // 🚨 KUNCI LOCKDOWN KRAKEN
@@ -283,7 +417,9 @@ async function handleMessage(sock, msg) {
         'boss'
       ];
 
-      if (!allowedCommands.includes(command)) {
+      if (
+        !allowedCommands.includes(command)
+      ) {
         return await sock.sendMessage(
           remoteJid,
           {
@@ -303,12 +439,27 @@ async function handleMessage(sock, msg) {
     switch (command) {
 
       // ==========================================
+      // 🧪 TEST INTERACTIVE
+      // ==========================================
+      case 'testinteractive':
+      case 'testinteractive':
+        await sendTestInteractive(
+          sock,
+          msg
+        );
+        break;
+
+      // ==========================================
       // 🎮 DUNGEON / ZORK
       // ==========================================
       case 'zork':
       case 'dungeon':
       case 'jelajah':
-        await handleDungeonCommand(sock, msg, args);
+        await handleDungeonCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       // ==========================================
@@ -317,7 +468,11 @@ async function handleMessage(sock, msg) {
       case 'mining':
       case 'mine':
       case 'tambang':
-        await handleMiningCommand(sock, msg, args);
+        await handleMiningCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       // ==========================================
@@ -454,15 +609,20 @@ async function handleMessage(sock, msg) {
         };
 
         let rawKey =
-          (command === 'jadwal'
-            ? args[0]
-            : command) || '';
+          (
+            command === 'jadwal'
+              ? args[0]
+              : command
+          ) || '';
 
         let key =
-          aliasHari[rawKey.toLowerCase()];
+          aliasHari[
+            rawKey.toLowerCase()
+          ];
 
         if (!key) {
-          const todayIdx = new Date().getDay();
+          const todayIdx =
+            new Date().getDay();
 
           const dayMap = {
             1: 'jsn',
@@ -472,7 +632,8 @@ async function handleMessage(sock, msg) {
             5: 'jjt'
           };
 
-          key = dayMap[todayIdx] || 'jsn';
+          key =
+            dayMap[todayIdx] || 'jsn';
         }
 
         const dataMapel =
@@ -596,15 +757,20 @@ async function handleMessage(sock, msg) {
 
           let mentions = [];
 
-          if (remoteJid.endsWith('@g.us')) {
+          if (
+            remoteJid.endsWith('@g.us')
+          ) {
             try {
               const groupMetadata =
-                await sock.groupMetadata(remoteJid);
+                await sock.groupMetadata(
+                  remoteJid
+                );
 
               mentions =
                 groupMetadata.participants.map(
                   p => p.id
                 );
+
             } catch (e) {
               console.error(
                 'Gagal mengambil metadata grup:',
@@ -639,7 +805,9 @@ async function handleMessage(sock, msg) {
         const sentMsg =
           await sock.sendMessage(
             remoteJid,
-            { text: 'Pong! 🏓' },
+            {
+              text: 'Pong! 🏓'
+            },
             { quoted: msg }
           );
 
@@ -673,11 +841,15 @@ async function handleMessage(sock, msg) {
             },
             { quoted: msg }
           );
+
           break;
         }
 
         const mentioned =
-          msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+          msg.message
+            ?.extendedTextMessage
+            ?.contextInfo
+            ?.mentionedJid || [];
 
         let targetId = senderId;
         let addAmount = NaN;
@@ -690,9 +862,9 @@ async function handleMessage(sock, msg) {
               arg => !arg.includes('@')
             );
 
-          
           addAmount =
             parseInt(nonTagArgs[0]);
+
         } else {
           addAmount =
             parseInt(args[0]);
@@ -709,6 +881,7 @@ async function handleMessage(sock, msg) {
             },
             { quoted: msg }
           );
+
           break;
         }
 
@@ -729,8 +902,10 @@ async function handleMessage(sock, msg) {
               },
               { quoted: msg }
             );
+
             break;
           }
+
         } else {
           addPoints(
             global.db,
@@ -740,7 +915,8 @@ async function handleMessage(sock, msg) {
         }
 
         if (
-          typeof global.saveDatabase === 'function'
+          typeof global.saveDatabase ===
+          'function'
         ) {
           global.saveDatabase();
         }
@@ -785,6 +961,7 @@ async function handleMessage(sock, msg) {
             },
             { quoted: msg }
           );
+
           break;
         }
 
@@ -802,7 +979,10 @@ async function handleMessage(sock, msg) {
       // ==========================================
       case 'claim':
       case 'daily':
-        await claimCommand(sock, msg);
+        await claimCommand(
+          sock,
+          msg
+        );
         break;
 
       // ==========================================
@@ -846,6 +1026,7 @@ async function handleMessage(sock, msg) {
             },
             { quoted: msg }
           );
+
           break;
         }
 
@@ -858,6 +1039,7 @@ async function handleMessage(sock, msg) {
             },
             { quoted: msg }
           );
+
           break;
         }
 
@@ -871,7 +1053,8 @@ async function handleMessage(sock, msg) {
         user.name = newNick;
 
         if (
-          typeof global.saveDatabase === 'function'
+          typeof global.saveDatabase ===
+          'function'
         ) {
           global.saveDatabase();
         }
@@ -905,6 +1088,7 @@ async function handleMessage(sock, msg) {
             },
             { quoted: msg }
           );
+
           break;
         }
 
@@ -917,7 +1101,8 @@ async function handleMessage(sock, msg) {
         delete global.db.game[remoteJid];
 
         if (
-          typeof global.saveDatabase === 'function'
+          typeof global.saveDatabase ===
+          'function'
         ) {
           global.saveDatabase();
         }
@@ -952,6 +1137,7 @@ async function handleMessage(sock, msg) {
             },
             { quoted: msg }
           );
+
           break;
         }
 
@@ -1353,6 +1539,7 @@ async function handleMessage(sock, msg) {
             args
           );
         }
+
         break;
 
       case 'math':
@@ -1458,7 +1645,9 @@ async function handleMessage(sock, msg) {
 
         await sock.sendMessage(
           remoteJid,
-          { text: gameText },
+          {
+            text: gameText
+          },
           { quoted: msg }
         );
 
@@ -1496,7 +1685,9 @@ async function handleMessage(sock, msg) {
 
         await sock.sendMessage(
           remoteJid,
-          { text: toolsText },
+          {
+            text: toolsText
+          },
           { quoted: msg }
         );
 
@@ -1520,7 +1711,9 @@ async function handleMessage(sock, msg) {
 
         await sock.sendMessage(
           remoteJid,
-          { text: groupText },
+          {
+            text: groupText
+          },
           { quoted: msg }
         );
 
@@ -1572,7 +1765,7 @@ async function handleMessage(sock, msg) {
 ┃
 ┣⌬ *ᴛᴏᴏʟꜱ & ᴊᴀᴅᴡᴀʟ*
 ┃  • ${prefixUsed}jadwal [hari]
-┃  • ${prefixUsed}jsn / .jsl / .jrb / .jkm / .jjt
+┃  • ${prefixUsed}jsn / ${prefixUsed}jsl / ${prefixUsed}jrb / ${prefixUsed}jkm / ${prefixUsed}jjt
 ┃  • ${prefixUsed}ping
 ┃  • ${prefixUsed}s
 ┃  • ${prefixUsed}wm <pack|author>
@@ -1601,7 +1794,9 @@ async function handleMessage(sock, msg) {
 
         await sock.sendMessage(
           remoteJid,
-          { text: allText },
+          {
+            text: allText
+          },
           { quoted: msg }
         );
 
@@ -1628,7 +1823,9 @@ _ᴄᴏɴᴛᴏʜ: *.menu_game* ATAU *.allmenu* UNTUK MENAMPILKAN SEMUA MENU_`;
 
         await sock.sendMessage(
           remoteJid,
-          { text: menuText },
+          {
+            text: menuText
+          },
           { quoted: msg }
         );
 
