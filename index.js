@@ -202,12 +202,15 @@ async function startBot() {
         // Pesan bot sendiri normalnya diabaikan supaya tidak loop.
         // Tetapi response tombol native-flow di self-chat punya fromMe=true,
         // jadi response interactive tetap harus diteruskan ke handler.
-        const hasInteractiveResponse =
-          JSON.stringify(msg.message || {}).includes(
-            'interactiveResponseMessage'
-          );
+        const rawMessageJson =
+          JSON.stringify(msg.message || {});
 
-        if (msg.key.fromMe && !hasInteractiveResponse) {
+        const hasButtonResponse =
+          rawMessageJson.includes('interactiveResponseMessage') ||
+          rawMessageJson.includes('buttonsResponseMessage') ||
+          rawMessageJson.includes('listResponseMessage');
+
+        if (msg.key.fromMe && !hasButtonResponse) {
           continue;
         }
 
