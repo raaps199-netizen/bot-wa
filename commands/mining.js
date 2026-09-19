@@ -948,7 +948,7 @@ async function digCommand(sock, msg, user) {
   const totalOre =
     mining.inventory[oreId];
 
-  await sock.sendMessage(
+ const sentMessage = await sock.sendMessage(
   msg.key.remoteJid,
   {
     text: `
@@ -971,11 +971,10 @@ async function digCommand(sock, msg, user) {
 ╰────────────────────────╯
 
 💡 Jual hasil mining:
-*.mining sell*`,
-    edit: msg.key
-  }
+*.mining sell*`
+  },
+  { quoted: msg }
 );
-
 
 // ==========================================
 // 🎒 INVENTORY
@@ -1438,4 +1437,3 @@ async function handleMiningCommand(
 
 
 module.exports = handleMiningCommand;
-};
