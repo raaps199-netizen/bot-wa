@@ -16,6 +16,7 @@ const {
 } = require('../utils/helper');
 
 const { getSenderId } = require('../utils/jid-utils');
+const { proto, generateWAMessageFromContent, isJidGroup } = require('@whiskeysockets/baileys');
 
 
 // ==========================================
@@ -1055,8 +1056,24 @@ async function digCommand(sock, msg, user) {
     }
   );
 
-  // Simpan key supaya .mining dig berikutnya mengedit bubble yang sama.
-  mining.lastDigKey = sentMessage.key;
+  // Setelah hasil keluar, kirim menu baru agar mining bisa dilanjutkan
+  // hanya dengan menekan tombol.
+  try {
+    const menuMessage = await sendMiningMenu(
+      sock,
+      msg,
+      user
+    );
+
+    // Tombol GALI berikutnya akan mengedit bubble menu ini.
+    mining.lastDigKey = menuMessage.key;
+  } catch (menuError) {
+    console.error('Mining interactive menu error:', menuError);
+
+    // Fallback: kalau interactive gagal, tetap simpan pesan hasil.
+    mining.lastDigKey = sentMessage.key;
+  }
+
   global.saveDatabase?.();
 }
 
@@ -1411,6 +1428,14 @@ async function handleMiningCommand(
     switch (subCommand) {
 
       case undefined:
+      case 'menu':
+      case 'mining':
+        return await sendMiningMenu(
+          sock,
+          msg,
+          user
+        );
+
       case 'help':
       case 'bantuan':
         return await helpCommand(
