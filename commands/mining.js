@@ -819,10 +819,10 @@ async function sendMiningMenu(sock, msg, user) {
   const mining = user.mining;
 
   const body =
-    '⛏️ *MINING ADVENTURE*\\n\\n' +
-    '📍 Depth: *' + mining.depth + 'm*\\n' +
-    '⚡ Energy: *' + mining.stamina + '/' + mining.maxStamina + '*\\n' +
-    '🔧 Durability: *' + mining.durability + '*\\n\\n' +
+    '⛏️ *MINING ADVENTURE*\n\n' +
+    '📍 Depth: *' + mining.depth + 'm*\n' +
+    '⚡ Energy: *' + mining.stamina + '/' + mining.maxStamina + '*\n' +
+    '🔧 Durability: *' + mining.durability + '*\n\n' +
     'Pilih aksi di bawah:';
 
   const buttons = [
