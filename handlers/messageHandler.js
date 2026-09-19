@@ -9,8 +9,6 @@ const { getSenderId } = require('../utils/jid-utils');
 const { handleRebirthCommand } = require('../commands/rebirth');
 const handleResetCommand = require('../commands/reset');
 const handleDungeonCommand = require('../commands/dungeon');
-const testInteractiveCommand = require('../commands/testinteractive');
-
 
 // ⛏️ Import Mining
 const handleMiningCommand = require('../commands/mining');
@@ -154,11 +152,7 @@ async function sendTestInteractive(sock, msg) {
                       }
                     ],
 
-                    messageParamsJson: JSON.stringify({
-                      limited_time_offer: {
-                        text: 'Mining Adventure'
-                      }
-                    })
+                    messageParamsJson: ''
                   })
               })
           }
@@ -199,6 +193,16 @@ async function sendTestInteractive(sock, msg) {
     );
   }
 }
+
+// ==========================================================
+// 🎯 HANDLE SEMUA PESAN
+// ==========================================================
+async function handleMessage(sock, msg) {
+  try {
+    const messageContent = msg.message;
+
+    if (!messageContent) return;
+
     // ===================================================
     // 🏅 AUTO-INJECT GELAR/TITLE PADA MENTION USER
     // ===================================================
@@ -228,6 +232,7 @@ async function sendTestInteractive(sock, msg) {
 
                 if (title) {
                   const num = mJid.split('@')[0];
+
                   const nick =
                     userData?.nickname ||
                     userData?.name;
@@ -290,9 +295,80 @@ async function sendTestInteractive(sock, msg) {
 
     const cleanText = text.trim();
 
+    const remoteJid = msg.key.remoteJid;
+
+    // ===================================================
+    // 🔘 INTERACTIVE BUTTON RESPONSE
+    // ===================================================
+    const interactiveResponse =
+      messageContent.interactiveResponseMessage;
+
+    if (interactiveResponse) {
+      try {
+        const nativeFlowResponse =
+          interactiveResponse.nativeFlowResponseMessage;
+
+        if (nativeFlowResponse) {
+          const params =
+            JSON.parse(
+              nativeFlowResponse.paramsJson || '{}'
+            );
+
+          const selectedId =
+            params.id || '';
+
+          console.log(
+            '🔘 INTERACTIVE BUTTON:',
+            selectedId
+          );
+
+          // ================================
+          // ⛏️ BUTTON GALI
+          // ================================
+          if (selectedId === 'mining_dig') {
+            await sock.sendMessage(
+              remoteJid,
+              {
+                text:
+                  '⛏️ *GALI DIPENCET!*\n\n' +
+                  'Lu berhasil menekan tombol GALI.\n' +
+                  'Nanti tombol ini bakal kita sambungkan langsung ke sistem mining.'
+              },
+              { quoted: msg }
+            );
+
+            return;
+          }
+
+          // ================================
+          // 🎒 BUTTON INVENTORY
+          // ================================
+          if (selectedId === 'mining_inventory') {
+            await sock.sendMessage(
+              remoteJid,
+              {
+                text:
+                  '🎒 *INVENTORY DIPENCET!*\n\n' +
+                  'Button berhasil diterima oleh bot.\n' +
+                  'Nanti bagian ini bakal kita sambungkan ke inventory.'
+              },
+              { quoted: msg }
+            );
+
+            return;
+          }
+        }
+
+      } catch (interactiveErr) {
+        console.error(
+          '❌ Error membaca interactive response:',
+          interactiveErr
+        );
+      }
+    }
+
     if (!cleanText) return;
 
-    const remoteJid = msg.key.remoteJid;
     const senderId = getSenderId(
       msg,
       remoteJid
@@ -457,7 +533,6 @@ async function sendTestInteractive(sock, msg) {
       // ==========================================
       // 🧪 TEST INTERACTIVE
       // ==========================================
-      case 'testinteractive':
       case 'testinteractive':
         await sendTestInteractive(
           sock,
@@ -1537,25 +1612,11 @@ async function sendTestInteractive(sock, msg) {
       // ==========================================
       case 'bj':
       case 'blackjack':
-      case 'hit':
-      case 'stand':
-        if (
-          command === 'hit' ||
-          command === 'stand'
-        ) {
-          await blackjackCommand(
-            sock,
-            msg,
-            [command]
-          );
-        } else {
-          await blackjackCommand(
-            sock,
-            msg,
-            args
-          );
-        }
-
+        await blackjackCommand(
+          sock,
+          msg,
+          args
+        );
         break;
 
       case 'math':
