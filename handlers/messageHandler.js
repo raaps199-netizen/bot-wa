@@ -18,7 +18,8 @@ const handleMiningCommand = require('../commands/mining');
 // ==========================================================
 const {
   proto,
-  generateWAMessageFromContent
+  generateWAMessageFromContent,
+  isJidGroup
 } = require('@whiskeysockets/baileys');
 
 // Command Media & Utility
