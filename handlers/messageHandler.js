@@ -9,6 +9,8 @@ const { getSenderId } = require('../utils/jid-utils');
 const { handleRebirthCommand } = require('../commands/rebirth');
 const handleResetCommand = require('../commands/reset');
 const handleDungeonCommand = require('../commands/dungeon');
+const testInteractiveCommand = require('../commands/testinteractive');
+
 
 // ⛏️ Import Mining
 const handleMiningCommand = require('../commands/mining');
