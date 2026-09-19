@@ -709,11 +709,26 @@ async function handleMessage(sock, msg) {
         await handleMiningCommand(
           sock,
           msg,
-          args
+          args[0]?.toLowerCase() === 'mining' && args[1]?.toLowerCase() === 'dig'
+            ? ['dig', 'new']
+            : args
         );
 
         console.log('✅ MINING COMMAND SELESAI');
 
+        break;
+
+      // ==========================================
+      // ⛏️ QUICK DIG
+      // .dig melanjutkan bubble mining terakhir
+      // ==========================================
+      case 'dig':
+      case 'gali':
+        await handleMiningCommand(
+          sock,
+          msg,
+          ['dig', 'continue']
+        );
         break;
 
       // ==========================================
