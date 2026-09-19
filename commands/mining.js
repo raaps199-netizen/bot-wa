@@ -1438,3 +1438,4 @@ async function handleMiningCommand(
 
 
 module.exports = handleMiningCommand;
+};
