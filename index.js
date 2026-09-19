@@ -74,15 +74,14 @@ async function startBot() {
   });
 
   sock.ev.on('messages.upsert', async (m) => {
-    if (m.type === 'notify') {
-      for (const msg of m.messages) {
-        if (!msg.key.fromMe) {
-          await handleMessage(sock, msg);
-        }
+  console.log('📩 MESSAGE MASUK:', JSON.stringify(m, null, 2));
+
+  if (m.type === 'notify') {
+    for (const msg of m.messages) {
+      if (!msg.key.fromMe) {
+        console.log('➡️ MEMANGGIL handleMessage');
+        await handleMessage(sock, msg);
       }
     }
-  });
-}
-
-startBot();
-    
+  }
+});
