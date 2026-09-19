@@ -295,12 +295,46 @@ async function handleMessage(sock, msg) {
     // ===================================================
     // 🔘 INTERACTIVE BUTTON RESPONSE
     // ===================================================
+    // WhatsApp kadang membungkus response native-flow di
+    // viewOnce/ephemeral/message wrapper. Cari secara rekursif
+    // supaya tombol tetap terbaca di semua bentuk envelope.
+    function findNestedMessageValue(value, wantedKey, depth = 0) {
+      if (!value || typeof value !== 'object' || depth > 8) return null;
+
+      if (Object.prototype.hasOwnProperty.call(value, wantedKey)) {
+        return value[wantedKey];
+      }
+
+      for (const child of Object.values(value)) {
+        const found = findNestedMessageValue(
+          child,
+          wantedKey,
+          depth + 1
+        );
+
+        if (found) return found;
+      }
+
+      return null;
+    }
+
     const interactiveResponse =
-      messageContent.interactiveResponseMessage ||
-      messageContent.viewOnceMessage?.message?.interactiveResponseMessage ||
-      messageContent.viewOnceMessageV2?.message?.interactiveResponseMessage ||
-      messageContent.viewOnceMessageV2Extension?.message?.interactiveResponseMessage ||
-      messageContent.ephemeralMessage?.message?.interactiveResponseMessage;
+      findNestedMessageValue(
+        messageContent,
+        'interactiveResponseMessage'
+      );
+
+    const legacyButtonResponse =
+      findNestedMessageValue(
+        messageContent,
+        'buttonsResponseMessage'
+      );
+
+    const listResponse =
+      findNestedMessageValue(
+        messageContent,
+        'listResponseMessage'
+      );
 
     if (interactiveResponse) {
       try {
@@ -394,7 +428,7 @@ async function handleMessage(sock, msg) {
 
     // Legacy button response fallback
     const legacyButtonId =
-      messageContent.buttonsResponseMessage?.selectedButtonId;
+      legacyButtonResponse?.selectedButtonId;
 
     if (legacyButtonId) {
       console.log(
@@ -422,7 +456,7 @@ async function handleMessage(sock, msg) {
 
     // List response fallback
     const listRowId =
-      messageContent.listResponseMessage?.singleSelectReply?.selectedRowId;
+      listResponse?.singleSelectReply?.selectedRowId;
 
     if (listRowId) {
       console.log(
