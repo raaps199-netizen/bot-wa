@@ -1005,7 +1005,7 @@ function chooseOre(depth, power) {
 
 
 
-async function digCommand(sock, msg, user, isAuto = false) {
+async function digCommand(sock, msg, user, isAuto = false, forceNewBubble = false) {
   const mining = user.mining;
   const remoteJid = msg.key.remoteJid;
   const pickaxe = pickaxes[mining.pickaxe];
@@ -1060,7 +1060,7 @@ async function digCommand(sock, msg, user, isAuto = false) {
   // Sama seperti fishing.js:
   // kalau sudah pernah mining, edit bubble mining sebelumnya.
   // Hanya .mining dig pertama yang membuat bubble baru.
-  let editKey = mining.lastDigKey || null;
+  let editKey = forceNewBubble ? null : (mining.lastDigKey || null);
   let sentMessage;
 
   if (editKey) {
@@ -1652,7 +1652,9 @@ async function handleMiningCommand(
         return await digCommand(
           sock,
           msg,
-          user
+          user,
+          false,
+          args[1]?.toLowerCase() === 'new'
         );
 
 
