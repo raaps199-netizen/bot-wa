@@ -199,7 +199,15 @@ async function startBot() {
         const msg of m.messages
       ) {
 
-        if (msg.key.fromMe) {
+        // Pesan bot sendiri normalnya diabaikan supaya tidak loop.
+        // Tetapi response tombol native-flow di self-chat punya fromMe=true,
+        // jadi response interactive tetap harus diteruskan ke handler.
+        const hasInteractiveResponse =
+          JSON.stringify(msg.message || {}).includes(
+            'interactiveResponseMessage'
+          );
+
+        if (msg.key.fromMe && !hasInteractiveResponse) {
           continue;
         }
 
