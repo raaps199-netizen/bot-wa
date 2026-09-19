@@ -709,7 +709,7 @@ async function handleMessage(sock, msg) {
         await handleMiningCommand(
           sock,
           msg,
-          args[0]?.toLowerCase() === 'mining' && args[1]?.toLowerCase() === 'dig'
+          args[0]?.toLowerCase() === 'dig'
             ? ['dig', 'new']
             : args
         );
