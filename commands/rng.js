@@ -81,10 +81,10 @@ async function gachaRoll(sock, msg, senderId, auto = false, existingKey = null) 
   const jid = msg.key.remoteJid;
 
   const frames = [
-    '🎰 *ROLLING...*\\n\\n⚪ ⚪ ⚪ ⚪ ⚪',
-    '🎰 *ROLLING...*\\n\\n🟢 🔵 🟣 🟡 🔴',
-    '🎰 *ROLLING...*\\n\\n✨ 🌀 👑 🌌 ✨',
-    '🎰 *ROLLING...*\\n\\n🔮 ❓ 🔮 ❓ 🔮'
+    '🎰 *ROLLING...*\n\n⚪ ⚪ ⚪ ⚪ ⚪',
+    '🎰 *ROLLING...*\n\n🟢 🔵 🟣 🟡 🔴',
+    '🎰 *ROLLING...*\n\n✨ 🌀 👑 🌌 ✨',
+    '🎰 *ROLLING...*\n\n🔮 ❓ 🔮 ❓ 🔮'
   ];
 
   let editKey = existingKey;
@@ -101,14 +101,14 @@ async function gachaRoll(sock, msg, senderId, auto = false, existingKey = null) 
   state.history = state.history.slice(0,20);
   await save();
 
-  let result = (auto ? '🎲 *AUTO ROLL #' : '🎲 *ROLL #') + state.rolls.toLocaleString('id-ID') + '*\\n\\n';
-  if (aura.oneIn >= 10000) result += '╔════════════════════════╗\\n';
-  result += aura.emoji + ' *' + aura.name + '*\\n\\n';
-  result += 'Rarity: *' + aura.rarity + '*\\n';
-  result += 'Chance: *1 in ' + aura.oneIn.toLocaleString('id-ID') + '*\\n';
-  result += 'Collection: *' + state.collection[aura.id] + 'x*\\n';
+  let result = (auto ? '🎲 *AUTO ROLL #' : '🎲 *ROLL #') + state.rolls.toLocaleString('id-ID') + '*\n\n';
+  if (aura.oneIn >= 10000) result += '╔════════════════════════╗\n';
+  result += aura.emoji + ' *' + aura.name + '*\n\n';
+  result += 'Rarity: *' + aura.rarity + '*\n';
+  result += 'Chance: *1 in ' + aura.oneIn.toLocaleString('id-ID') + '*\n';
+  result += 'Collection: *' + state.collection[aura.id] + 'x*\n';
   result += '🍀 Luck: *' + state.luck + 'x*';
-  if (aura.oneIn >= 10000) result += '\\n╚════════════════════════╝';
+  if (aura.oneIn >= 10000) result += '\n╚════════════════════════╝';
 
   await sendEdited(sock, jid, editKey, result);
   return { aura:aura, state:state, key:editKey, text:result };
@@ -123,7 +123,7 @@ async function autoRoll(sock, msg, senderId, target, max){
 
   try {
     // Create exactly ONE bot message for the whole Auto Roll session.
-    session.key = await sendEdited(sock, jid, null, '🎲 *AUTO ROLL DIMULAI...*\\n\\n🎰 Menyiapkan roll...');
+    session.key = await sendEdited(sock, jid, null, '🎲 *AUTO ROLL DIMULAI...*\n\n🎰 Menyiapkan roll...');
     
     while(session.running && (!max || session.count < max)){
       const last = await gachaRoll(sock, msg, senderId, true, session.key);
@@ -138,7 +138,7 @@ async function autoRoll(sock, msg, senderId, target, max){
           sock,
           jid,
           session.key,
-          last.text + '\\n\\n🎯 *TARGET TERCAPAI!*\\nAuto berhenti setelah *' +
+          last.text + '\n\n🎯 *TARGET TERCAPAI!*\nAuto berhenti setelah *' +
           session.count.toLocaleString('id-ID') + ' roll*.'
         );
         return;
@@ -149,8 +149,8 @@ async function autoRoll(sock, msg, senderId, target, max){
 
     if(session.key){
       const finalText = session.running
-        ? '⏹️ *AUTO ROLL SELESAI*\\n\\nRoll sesi: *' + session.count.toLocaleString('id-ID') + '*'
-        : '⏹️ *AUTO ROLL DIHENTIKAN*\\n\\nRoll sesi: *' + session.count.toLocaleString('id-ID') + '*';
+        ? '⏹️ *AUTO ROLL SELESAI*\n\nRoll sesi: *' + session.count.toLocaleString('id-ID') + '*'
+        : '⏹️ *AUTO ROLL DIHENTIKAN*\n\nRoll sesi: *' + session.count.toLocaleString('id-ID') + '*';
       await sendEdited(sock, jid, session.key, finalText);
     }
   } finally {
@@ -166,7 +166,7 @@ async function handleRngCommand(sock,msg,args){
   const state=getState(user);
   const sub=String(args[0]||'help').toLowerCase();
   if(sub==='help') return sock.sendMessage(jid,{text:'╭━━〔 🎲 *AURA RNG* 〕━━╮\n┃ .rng roll\n┃ .rng inv\n┃ .rng profile\n┃ .rng list\n┃ .rng equip <aura>\n┃ .rng auto <target> [max]\n┃ .rng stop\n╰━━━━━━━━━━━━━━━━━━╯'},{quoted:msg});
-  if(sub==='stop'){ const session=activeAuto.get(senderId); if(!session) return sock.sendMessage(jid,{text:'⚠️ Gak ada Auto Roll aktif.'},{quoted:msg}); session.running=false; if(session.key) await sendEdited(sock,jid,session.key,'⏹️ *AUTO ROLL DIHENTIKAN.*\\n\\nRoll sesi: *'+session.count.toLocaleString('id-ID')+'*'); return; }
+  if(sub==='stop'){ const session=activeAuto.get(senderId); if(!session) return sock.sendMessage(jid,{text:'⚠️ Gak ada Auto Roll aktif.'},{quoted:msg}); session.running=false; if(session.key) await sendEdited(sock,jid,session.key,'⏹️ *AUTO ROLL DIHENTIKAN.*\n\nRoll sesi: *'+session.count.toLocaleString('id-ID')+'*'); return; }
   if(sub==='roll' || sub==='r'){ return gachaRoll(sock,msg,senderId,false); }
   if(sub==='auto'){ const target=args[1]; const max=Math.max(0,Number(args[2])||0); if(!target) return sock.sendMessage(jid,{text:'⚠️ Contoh: *.rng auto Mythic* atau *.rng auto 10000 500*'},{quoted:msg}); return autoRoll(sock,msg,senderId,target,max); }
   if(sub==='inv' || sub==='inventory' || sub==='collection'){
