@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Aura RNG</title>
+<style>
+:root{--bg:#07080d;--panel:rgba(18,20,31,.88);--line:rgba(255,255,255,.09);--text:#f5f7ff;--muted:#8d94a8;--accent:#8b5cf6;--glow:rgba(139,92,246,.45)}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 0,#1a1234 0,#0b0c14 38%,#05060a 100%);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;display:flex;justify-content:center}
+.app{width:min(560px,100%);padding:20px 14px 42px}.top{text-align:center;margin:10px 0 18px}.top h1{margin:0;font-size:30px;letter-spacing:-1px}.top p{margin:5px 0;color:var(--muted);font-size:13px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:0 18px 60px rgba(0,0,0,.35);backdrop-filter:blur(14px)}
+.stage{height:330px;border-radius:20px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 45%,rgba(139,92,246,.13),transparent 58%),#090b12}
+.stage:before{content:"";position:absolute;inset:-50%;background:conic-gradient(from 0deg,transparent,rgba(139,92,246,.12),transparent 25%);animation:spin 8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.aura{position:relative;z-index:2;text-align:center;min-width:220px}.orb{width:120px;height:120px;margin:auto;border-radius:50%;display:grid;place-items:center;font-size:54px;background:radial-gradient(circle at 35% 30%,#fff,rgba(255,255,255,.35) 10%,rgba(139,92,246,.7) 38%,#111 72%);box-shadow:0 0 35px var(--glow),inset 0 0 25px rgba(255,255,255,.22);transition:.25s}
+.rolling .orb{animation:shake .12s infinite alternate, pulse .5s infinite}.rolling .name{opacity:.5}
+@keyframes shake{from{transform:translateX(-7px) rotate(-3deg)}to{transform:translateX(7px) rotate(3deg)}}@keyframes pulse{50%{filter:brightness(1.8);box-shadow:0 0 65px var(--glow)}}
+.name{font-size:26px;font-weight:850;margin-top:18px}.rarity{margin-top:6px;color:#cfd3e4;font-weight:700}.chance{color:var(--muted);font-size:13px;margin-top:5px}
+.result.rare .orb{animation:rareIn .8s ease-out,rareGlow 1.4s infinite alternate}@keyframes rareIn{0%{transform:scale(.2);opacity:0}65%{transform:scale(1.18)}100%{transform:scale(1);opacity:1}}@keyframes rareGlow{to{box-shadow:0 0 95px var(--glow),inset 0 0 30px white}}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.stat{background:#0c0e16;border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center}.stat b{display:block;font-size:16px}.stat span{font-size:10px;color:var(--muted)}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}.controls button{border:0;border-radius:14px;padding:14px;font-weight:800;font-size:14px;color:white;background:#181b29;cursor:pointer}.controls button.primary{background:linear-gradient(135deg,#8b5cf6,#6366f1);box-shadow:0 8px 24px rgba(99,102,241,.25)}button:disabled{opacity:.45;cursor:not-allowed}
+.history{margin-top:14px}.history h3{font-size:13px;margin:0 0 8px;color:#c8ccda}.history-list{display:flex;gap:7px;overflow:auto;padding-bottom:3px}.chip{white-space:nowrap;background:#0c0e16;border:1px solid var(--line);padding:8px 10px;border-radius:12px;font-size:12px}.hint{font-size:11px;color:#666d80;text-align:center;margin-top:13px}
+@media(max-width:380px){.stage{height:290px}.stats{grid-template-columns:1fr 1fr 1fr}.name{font-size:23px}}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="top"><h1>🎲 Aura RNG</h1><p>Roll your luck. Chase the impossible.</p></header>
+  <section class="card">
+    <div id="stage" class="stage">
+      <div id="aura" class="aura">
+        <div id="orb" class="orb">❓</div>
+        <div id="name" class="name">Ready?</div>
+        <div id="rarity" class="rarity">Press ROLL</div>
+        <div id="chance" class="chance">The universe is judging you.</div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="rolls">0</b><span>ROLLS</span></div>
+      <div class="stat"><b id="best">1 in 2</b><span>BEST</span></div>
+      <div class="stat"><b id="luck">1x</b><span>LUCK</span></div>
+    </div>
+    <div class="controls">
+      <button id="rollBtn" class="primary">🎰 ROLL</button>
+      <button id="autoBtn">⚡ AUTO</button>
+    </div>
+    <div class="history"><h3>Recent rolls</h3><div id="history" class="history-list"><div class="chip">Nothing yet</div></div></div>
+    <div class="hint">RNG runs in your browser. No account required.</div>
+  </section>
+</main>
+<script>
+const rarities=[
+{name:'Common',emoji:'⚪',oneIn:2},{name:'Uncommon',emoji:'🟢',oneIn:5},{name:'Rare',emoji:'🔵',oneIn:25},{name:'Epic',emoji:'🟣',oneIn:100},{name:'Legendary',emoji:'🟡',oneIn:500},{name:'Mythic',emoji:'🔴',oneIn:2500},{name:'Divine',emoji:'🌌',oneIn:10000},{name:'Celestial',emoji:'✨',oneIn:50000},{name:'Transcendent',emoji:'🌀',oneIn:250000},{name:'Immortal',emoji:'👑',oneIn:1000000},{name:'Boundless',emoji:'♾️',oneIn:10000000}];
+const names=['Dust','Stone','Mist','Leaf','Spark','Bubble','Shadow','Frost','Ember','Breeze','Aqua','Bloom','Glow','Cloud','Static','Toxic','Plasma','Inferno','Phantom','Thunder','Blizzard','Venom','Solar','Lunar','Spirit','Crimson','Azure','Voidling','Radiant','Tempest','Eclipse','Nebula','Aurora','Blood Moon','Starfall','Deep Sea','Soulfire','Cyber','Chrono','Gravity','Mirage','Rift','Comet','Wildfire','Thunderstorm','Celestia','Astral','Oblivion','Nightmare','Dreamwalker','Singularity','Dimension','Arcane','Overdrive','Cataclysm','Genesis','Requiem','Seraph','Leviathan','Ragnarok','Godspeed','Divine Flame','Eternity','Star Eater','World Ender','Timekeeper','Reality','Omniscient','Astral King','Void Emperor','Infinity','Absolute Zero','Eternal Night',"Heaven's Gate",'Hellborn','Cosmic Weaver','Fatebreaker','Reality Breaker','The Forgotten','End of Worlds','Primordial','Creation','Destruction','Divine Judgement','Cosmic God','Eternal Sovereign','The First Light','The Last Shadow','Absolute','Omnipotence','Akasha','Abyss','Paradox','Zero Point','Origin','Beyond','???','The Unwritten','Absolute Infinity','∅ — Nothingness'];
+const data=names.map((name,i)=>{let ri=i<15?0:i<30?1:i<45?2:i<60?3:i<70?4:i<80?5:i<90?6:i<91?7:i<96?8:i<99?9:10;let r=rarities[ri];return{id:i+1,name,rarity:r.name,emoji:r.emoji,oneIn:r.oneIn}});
+
+let rolls=0,best=2,luck=1,rolling=false,auto=false;
+const $=id=>document.getElementById(id);
+function pick(){const pool=data.map(a=>{const boost=a.oneIn>=500?luck:Math.sqrt(luck);return{a,s:boost/a.oneIn}});const total=pool.reduce((n,x)=>n+x.s,0);let n=Math.random()*total;for(const x of pool){n-=x.s;if(n<=0)return x.a}return data[0]}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+function frame(i){const f=[['⚪','⚪','⚪','⚪','⚪'],['🟢','🔵','🟣','🟡','🔴'],['✨','🌀','👑','🌌','✨'],['🔮','❓','🔮','❓','🔮']][i];$('orb').textContent=f[Math.floor(Math.random()*f.length)];$('name').textContent='ROLLING...';$('rarity').textContent='';$('chance').textContent='';}
+async function roll(){if(rolling)return;rolling=true;$('rollBtn').disabled=true;$('autoBtn').disabled=true;$('stage').classList.add('rolling');for(let i=0;i<8;i++){frame(i%4);await sleep(110+i*12)}const a=pick();rolls++;best=Math.max(best,a.oneIn);$('stage').classList.remove('rolling');$('stage').classList.toggle('result',a.oneIn>=10000);$('orb').textContent=a.emoji;$('name').textContent=a.name;$('rarity').textContent=a.rarity;$('chance').textContent='Chance: 1 in '+a.oneIn.toLocaleString('en-US');$('rolls').textContent=rolls.toLocaleString();$('best').textContent='1 in '+best.toLocaleString();$('luck').textContent=luck+'x';addHistory(a);await sleep(a.oneIn>=10000?1800:450);rolling=false;$('rollBtn').disabled=false;$('autoBtn').disabled=false}
+function addHistory(a){const h=$('history');if(h.children.length===1&&h.children[0].textContent==='Nothing yet')h.innerHTML='';const el=document.createElement('div');el.className='chip';el.textContent=a.emoji+' '+a.name;h.prepend(el);while(h.children.length>8)h.lastChild.remove()}
+$('rollBtn').onclick=roll;
+$('autoBtn').onclick=async()=>{if(auto){auto=false;$('autoBtn').textContent='⚡ AUTO';return}auto=true;$('autoBtn').textContent='⏹ STOP';while(auto){await roll();await sleep(180)}$('autoBtn').textContent='⚡ AUTO'};
+</script>
+</body>
+</html>
