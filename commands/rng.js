@@ -65,10 +65,33 @@ function meetsTarget(aura, target) {
 
 async function save(){ if(typeof global.saveDatabase === 'function') await global.saveDatabase(); }
 
-async function rollOnce(sock,msg,senderId,auto){
+async function sendEdited(sock, jid, key, text) {
+  if (key) {
+    await sock.sendMessage(jid, { text, edit: key });
+    return key;
+  }
+  const sent = await sock.sendMessage(jid, { text });
+  return sent.key;
+}
+
+async function gachaRoll(sock, msg, senderId, auto = false) {
   const user = global.db && global.db.users && global.db.users[senderId];
-  if(!user) return null;
+  if (!user) return null;
   const state = getState(user);
+
+  const frames = [
+    '🎰 *ROLLING...*\n\n⚪ ⚪ ⚪ ⚪ ⚪',
+    '🎰 *ROLLING...*\n\n🟢 🔵 🟣 🟡 🔴',
+    '🎰 *ROLLING...*\n\n✨ 🌀 👑 🌌 ✨',
+    '🎰 *ROLLING...*\n\n🔮 ❓ 🔮 ❓ 🔮'
+  ];
+
+  let editKey = null;
+  for (const frame of frames) {
+    editKey = await sendEdited(sock, msg.key.remoteJid, editKey, frame);
+    await new Promise(function(resolve){ setTimeout(resolve, 450); });
+  }
+
   const aura = pickAura(state);
   state.rolls++;
   state.collection[aura.id] = (state.collection[aura.id] || 0) + 1;
@@ -76,33 +99,35 @@ async function rollOnce(sock,msg,senderId,auto){
   state.history.unshift({id:aura.id,at:Date.now()});
   state.history = state.history.slice(0,20);
   await save();
-  const prefix = auto ? '🎲 *AUTO ROLL #' : '🎲 *ROLL #';
-  let text = prefix + state.rolls.toLocaleString('id-ID') + '*\n\n';
-  text += aura.emoji + ' *' + aura.name + '*\n\n';
-  text += 'Rarity: *' + aura.rarity + '*\n';
-  text += 'Chance: *1 in ' + aura.oneIn.toLocaleString('id-ID') + '*\n';
-  text += 'Collection: *' + state.collection[aura.id] + 'x*\n';
-  text += '🍀 Luck: *' + state.luck + 'x*';
-  if(aura.oneIn >= 10000) text = '╔══════════════════╗\n' + text + '\n╚══════════════════╝';
-  return {aura:aura,state:state,text:text};
+
+  let result = (auto ? '🎲 *AUTO ROLL #' : '🎲 *ROLL #') + state.rolls.toLocaleString('id-ID') + '*\\n\\n';
+  if (aura.oneIn >= 10000) result += '╔════════════════════════╗\\n';
+  result += aura.emoji + ' *' + aura.name + '*\\n\\n';
+  result += 'Rarity: *' + aura.rarity + '*\\n';
+  result += 'Chance: *1 in ' + aura.oneIn.toLocaleString('id-ID') + '*\\n';
+  result += 'Collection: *' + state.collection[aura.id] + 'x*\\n';
+  result += '🍀 Luck: *' + state.luck + 'x*';
+  if (aura.oneIn >= 10000) result += '\\n╚════════════════════════╝';
+
+  await sendEdited(sock, msg.key.remoteJid, editKey, result);
+  return { aura:aura, state:state, key:editKey, text:result };
 }
 
 async function autoRoll(sock,msg,senderId,target,max){
   const jid=msg.key.remoteJid;
-  if(activeAuto.has(senderId)) return sock.sendMessage(jid,{text:'⚠️ Auto Roll lu masih jalan. Ketik *.rng stop*.'},{quoted:msg});
+  if(activeAuto.has(senderId)) return sock.sendMessage(jid,{text:'⚠️ Auto Roll lu masih jalan. Ketik *.rng stop*.'});
   activeAuto.set(senderId,true);
   let count=0,last=null;
   try {
     while(activeAuto.get(senderId) && (!max || count<max)){
-      last=await rollOnce(sock,msg,senderId,true); if(!last) break; count++;
+      last=await gachaRoll(sock,msg,senderId,true); if(!last) break; count++;
       if(target && meetsTarget(last.aura,target)){
-        await sock.sendMessage(jid,{text:last.text+'\n\n🎯 *TARGET TERCAPAI!*\nAuto berhenti setelah *'+count.toLocaleString('id-ID')+' roll*.'},{quoted:msg});
+        await sock.sendMessage(jid,{text:'🎯 *TARGET TERCAPAI!*\\nAuto berhenti setelah *'+count.toLocaleString('id-ID')+' roll*.'});
         return;
       }
-      if(count % 10 === 0) await sock.sendMessage(jid,{text:'🎲 Auto Roll: *'+count.toLocaleString('id-ID')+'*\nTerakhir: '+last.aura.emoji+' *'+last.aura.name+'*'},{quoted:msg});
       await new Promise(function(resolve){setTimeout(resolve,700);});
     }
-    if(last) await sock.sendMessage(jid,{text:last.text+'\n\n⏹️ *AUTO ROLL BERHENTI*\nRoll sesi: *'+count.toLocaleString('id-ID')+'*'},{quoted:msg});
+    if(last) await sendEdited(sock,jid,last.key,last.text+'\\n\\n⏹️ *AUTO ROLL BERHENTI*\\nRoll sesi: *'+count.toLocaleString('id-ID')+'*');
   } finally { activeAuto.delete(senderId); }
 }
 
@@ -115,7 +140,7 @@ async function handleRngCommand(sock,msg,args){
   const sub=String(args[0]||'help').toLowerCase();
   if(sub==='help') return sock.sendMessage(jid,{text:'╭━━〔 🎲 *AURA RNG* 〕━━╮\n┃ .rng roll\n┃ .rng inv\n┃ .rng profile\n┃ .rng list\n┃ .rng equip <aura>\n┃ .rng auto <target> [max]\n┃ .rng stop\n╰━━━━━━━━━━━━━━━━━━╯'},{quoted:msg});
   if(sub==='stop'){ if(!activeAuto.has(senderId)) return sock.sendMessage(jid,{text:'⚠️ Gak ada Auto Roll aktif.'},{quoted:msg}); activeAuto.delete(senderId); return sock.sendMessage(jid,{text:'⏹️ *AUTO ROLL DIHENTIKAN.*'},{quoted:msg}); }
-  if(sub==='roll' || sub==='r'){ const r=await rollOnce(sock,msg,senderId,false); return sock.sendMessage(jid,{text:r.text},{quoted:msg}); }
+  if(sub==='roll' || sub==='r'){ return gachaRoll(sock,msg,senderId,false); }
   if(sub==='auto'){ const target=args[1]; const max=Math.max(0,Number(args[2])||0); if(!target) return sock.sendMessage(jid,{text:'⚠️ Contoh: *.rng auto Mythic* atau *.rng auto 10000 500*'},{quoted:msg}); return autoRoll(sock,msg,senderId,target,max); }
   if(sub==='inv' || sub==='inventory' || sub==='collection'){
     const owned=AURA_DATA.filter(function(a){return state.collection[a.id];});
