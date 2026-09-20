@@ -62,12 +62,6 @@ const energyUpgrades = {
     name: '🌌 Infinity Energy Core',
     price: 3000000,
     maxStamina: 1000
-  },
-
-  transcendent: {
-    name: '✨ Transcendent Energy Core',
-    price: 7500000,
-    maxStamina: 1500
   }
 };
 
