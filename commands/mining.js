@@ -954,6 +954,56 @@ function getAvailableOres(depth) {
 }
 
 
+function triggerMiningEvent(mining, ore, amount, pickaxe) {
+  if (Math.random() > 0.08) return null;
+
+  const events = [
+    () => {
+      const bonus = Math.max(1, Math.ceil(amount * 0.5));
+      return {
+        bonusAmount: bonus,
+        text: `✨ *LUCKY VEIN!*
+\n\nLapisan ore ini ternyata lebih kaya dari perkiraan.
+\n💎 Bonus *+${bonus}x ${ore.name}*!`
+      };
+    },
+    () => {
+      const oldDepth = mining.depth;
+      mining.depth = Math.min(
+        pickaxe.maxDepth,
+        mining.depth + Math.floor(Math.random() * 8) + 3
+      );
+      mining.stats.deepestDepth = Math.max(
+        mining.stats.deepestDepth,
+        mining.depth
+      );
+
+      return {
+        bonusAmount: 0,
+        text: `🪨 *HIDDEN CAVITY!*
+\n\nKamu menemukan rongga tersembunyi di bawah lapisan ini.
+\n📍 Depth: *${oldDepth}m → ${mining.depth}m*`
+      };
+    },
+    () => {
+      const oldStamina = mining.stamina;
+      mining.stamina = Math.min(
+        mining.maxStamina,
+        mining.stamina + 15
+      );
+
+      return {
+        bonusAmount: 0,
+        text: `🔋 *ENERGY CACHE!*
+\n\nAda cadangan energi yang tertinggal di lorong.
+\n⚡ Energy: *${oldStamina} → ${mining.stamina}/${mining.maxStamina}*`
+      };
+    }
+  ];
+
+  return events[Math.floor(Math.random() * events.length)]();
+}
+
 function chooseOre(depth, power) {
   const available = getAvailableOres(depth);
 
@@ -1154,6 +1204,28 @@ async function digCommand(sock, msg, user, isAuto = false, forceNewBubble = fals
     mining.stats.ancientCrystalsFound += amount;
   }
 
+  const miningEvent = triggerMiningEvent(
+    mining,
+    ore,
+    amount,
+    pickaxe
+  );
+
+  if (miningEvent?.bonusAmount) {
+    mining.inventory[oreId] += miningEvent.bonusAmount;
+    mining.stats.totalMined += miningEvent.bonusAmount;
+    mining.stats.totalValue += ore.price * miningEvent.bonusAmount;
+    amount += miningEvent.bonusAmount;
+
+    if (oreId === 'diamond') {
+      mining.stats.diamondsFound += miningEvent.bonusAmount;
+    }
+
+    if (oreId === 'ancient_crystal') {
+      mining.stats.ancientCrystalsFound += miningEvent.bonusAmount;
+    }
+  }
+
   global.saveDatabase?.();
 
   const emoji =
@@ -1161,6 +1233,10 @@ async function digCommand(sock, msg, user, isAuto = false, forceNewBubble = fals
 
   const totalOre =
     mining.inventory[oreId];
+
+  const eventSection = miningEvent
+    ? `\n\n${miningEvent.text}\n`
+    : '';
 
   const resultText = `
 ╭─ ⛏️ *MINING SUCCESS* ⛏️ ─╮
@@ -1180,7 +1256,7 @@ async function digCommand(sock, msg, user, isAuto = false, forceNewBubble = fals
 │ 📦 Ore ini: *${totalOre}x*
 │
 ╰────────────────────────╯
-
+${eventSection}
 💡 Jual hasil mining:
 *.mining sell*`;
 
