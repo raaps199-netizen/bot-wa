@@ -12,6 +12,7 @@ const handleDungeonCommand = require('../commands/dungeon');
 
 // ⛏️ Import Mining
 const handleMiningCommand = require('../commands/mining');
+const handleRngCommand = require('../commands/rng');
 
 // ==========================================================
 // 🧪 IMPORT INTERACTIVE MESSAGE
@@ -700,6 +701,11 @@ async function handleMessage(sock, msg) {
       // ==========================================
       // ⛏️ MINING
       // ==========================================
+      case 'rng':
+      case 'aura':
+        await handleRngCommand(sock, msg, args);
+        break;
+
       case 'mining':
       case 'mine':
       case 'tambang':
@@ -1877,7 +1883,7 @@ async function handleMessage(sock, msg) {
 `┏━I *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* I
 ┃
 ┣⌬ ${prefixUsed}dungeon / ${prefixUsed}jelajah (Zork Text Adventure RPG)
-┣⌬ ${prefixUsed}mining (Mining Adventure)
+┣⌬ ${prefixUsed}mining (Mining Adventure)\n┣⌬ ${prefixUsed}rng (100 Aura RNG)
 ┣⌬ ${prefixUsed}bj
 ┣⌬ ${prefixUsed}mancing
 ┣⌬ ${prefixUsed}lnj (Lanjut Mancing)
