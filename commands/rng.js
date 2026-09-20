@@ -122,9 +122,8 @@ async function autoRoll(sock, msg, senderId, target, max){
   activeAuto.set(senderId, session);
 
   try {
-    // Create exactly ONE bot message for the whole Auto Roll session.
     session.key = await sendEdited(sock, jid, null, '🎲 *AUTO ROLL DIMULAI...*\n\n🎰 Menyiapkan roll...');
-    
+
     while(session.running && (!max || session.count < max)){
       const last = await gachaRoll(sock, msg, senderId, true, session.key);
       if(!last) break;
@@ -164,10 +163,8 @@ async function handleRngCommand(sock,msg,args){
   const user=global.db && global.db.users && global.db.users[senderId];
   if(!user) return;
   const state=getState(user);
-  const sub=String(args[0]||'web').toLowerCase();
-  const rngUrl='https://raaps199-netizen.github.io/bot-wa/rng/';
-  if(sub==='web' || sub==='roll' || sub==='r') return sock.sendMessage(jid,{text:'🎲 *AURA RNG*\n\nBuka RNG versi web buat animasi full effect:\n\n🔗 '+rngUrl+'\n\n✨ Semua animasi berjalan langsung di browser.'},{quoted:msg});
-  if(sub==='help') return sock.sendMessage(jid,{text:'╭━━〔 🎲 *AURA RNG* 〕━━╮\n┃ .rng\n┃ .rng inv\n┃ .rng profile\n┃ .rng list\n┃ .rng equip <aura>\n┃ .rng auto <target> [max]\n┃ .rng stop\n╰━━━━━━━━━━━━━━━━━━╯'},{quoted:msg});
+  const sub=String(args[0]||'help').toLowerCase();
+  if(sub==='help') return sock.sendMessage(jid,{text:'╭━━〔 🎲 *AURA RNG* 〕━━╮\n┃ .rng roll\n┃ .rng inv\n┃ .rng profile\n┃ .rng list\n┃ .rng equip <aura>\n┃ .rng auto <target> [max]\n┃ .rng stop\n╰━━━━━━━━━━━━━━━━━━╯'},{quoted:msg});
   if(sub==='stop'){ const session=activeAuto.get(senderId); if(!session) return sock.sendMessage(jid,{text:'⚠️ Gak ada Auto Roll aktif.'},{quoted:msg}); session.running=false; if(session.key) await sendEdited(sock,jid,session.key,'⏹️ *AUTO ROLL DIHENTIKAN.*\n\nRoll sesi: *'+session.count.toLocaleString('id-ID')+'*'); return; }
   if(sub==='roll' || sub==='r'){ return gachaRoll(sock,msg,senderId,false); }
   if(sub==='auto'){ const target=args[1]; const max=Math.max(0,Number(args[2])||0); if(!target) return sock.sendMessage(jid,{text:'⚠️ Contoh: *.rng auto Mythic* atau *.rng auto 10000 500*'},{quoted:msg}); return autoRoll(sock,msg,senderId,target,max); }
