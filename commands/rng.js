@@ -35,9 +35,10 @@ const AURA_DATA = AURA_NAMES.map(function(name, i) {
 });
 
 function getState(user) {
-  if (!user.rng) user.rng = { rolls:0, luck:1, bestOneIn:2, equipped:null, collection:{}, history:[] };
+  if (!user.rng) user.rng = { rolls:0, luck:1, bestOneIn:2, equipped:null, collection:{}, history:[], rollMessageKey:null };
   user.rng.collection = user.rng.collection || {};
   user.rng.history = user.rng.history || [];
+  if (!Object.prototype.hasOwnProperty.call(user.rng, 'rollMessageKey')) user.rng.rollMessageKey = null;
   user.rng.luck = Number(user.rng.luck) || 1;
   return user.rng;
 }
@@ -67,8 +68,14 @@ async function save(){ if(typeof global.saveDatabase === 'function') await globa
 
 async function sendEdited(sock, jid, key, text) {
   if (key) {
-    await sock.sendMessage(jid, { text, edit: key });
-    return key;
+    try {
+      await sock.sendMessage(jid, { text, edit: key });
+      return key;
+    } catch (err) {
+      // Kalau pesan pertama sudah dihapus/tidak valid, buat satu pesan pengganti.
+      const sent = await sock.sendMessage(jid, { text });
+      return sent.key;
+    }
   }
   const sent = await sock.sendMessage(jid, { text });
   return sent.key;
@@ -87,7 +94,8 @@ async function gachaRoll(sock, msg, senderId, auto = false, existingKey = null) 
     '🎰 *ROLLING...*\n\n🔮 ❓ 🔮 ❓ 🔮'
   ];
 
-  let editKey = existingKey;
+  // Semua .rng roll memakai satu pesan pertama yang dibuat bot.
+  let editKey = existingKey || state.rollMessageKey || null;
   for (const frame of frames) {
     editKey = await sendEdited(sock, jid, editKey, frame);
     await new Promise(function(resolve){ setTimeout(resolve, 450); });
@@ -110,7 +118,9 @@ async function gachaRoll(sock, msg, senderId, auto = false, existingKey = null) 
   result += '🍀 Luck: *' + state.luck + 'x*';
   if (aura.oneIn >= 10000) result += '\n╚════════════════════════╝';
 
-  await sendEdited(sock, jid, editKey, result);
+  editKey = await sendEdited(sock, jid, editKey, result);
+  state.rollMessageKey = editKey;
+  await save();
   return { aura:aura, state:state, key:editKey, text:result };
 }
 
