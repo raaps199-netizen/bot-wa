@@ -43,9 +43,36 @@ function acakArray(array) {
 
 async function handleJadwalCommand(sock, msg, command) {
   const remoteJid = msg.key.remoteJid;
-  
-  // Clean command dari titik
-  const key = command.toLowerCase().trim().replace('.', '');
+
+  const aliasHari = {
+    senin: 'jsn',
+    jsn: 'jsn',
+    selasa: 'jsl',
+    jsl: 'jsl',
+    rabu: 'jrb',
+    jrb: 'jrb',
+    kamis: 'jkm',
+    jkm: 'jkm',
+    jumat: 'jjt',
+    jjt: 'jjt'
+  };
+
+  let rawKey = String(command || '').toLowerCase().trim().replace(/^\./, '');
+
+  // .jadwal tanpa argumen = jadwal hari ini
+  if (rawKey === 'jadwal') {
+    const todayMap = {
+      1: 'jsn',
+      2: 'jsl',
+      3: 'jrb',
+      4: 'jkm',
+      5: 'jjt'
+    };
+
+    rawKey = todayMap[new Date().getDay()] || 'jsn';
+  }
+
+  const key = aliasHari[rawKey] || rawKey;
   
   const dataMapel = jadwalPelajaran[key];
   const anggotaPiket = daftarPiket[key] || [];
