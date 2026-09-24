@@ -4,11 +4,15 @@ const VIOLATION_API_URL = process.env.BIONEST_VIOLATION_API || 'https://bionesto
 const BOT_API_SECRET = process.env.BOT_API_SECRET;
 const POLL_INTERVAL = 5000;
 
-function getNotifyJid() {
-  const raw = String(process.env.VIOLATION_NOTIFY_JID || config.ownerNumbers?.[0] || '').trim();
-  if (!raw) return null;
-  if (raw.includes('@')) return raw;
-  return raw.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+function getNotifyJids() {
+  const raw = String(process.env.VIOLATION_NOTIFY_JIDS || process.env.VIOLATION_NOTIFY_JID || config.ownerNumbers?.[0] || '').trim();
+  if (!raw) return [];
+  return raw.split(',').map(value => {
+    const jid = value.trim();
+    if (!jid) return null;
+    if (jid.includes('@')) return jid;
+    return jid.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+  }).filter(Boolean);
 }
 
 function formatViolation(record) {
@@ -40,8 +44,8 @@ async function fetchNewViolations(cursor) {
 }
 
 async function startViolationNotifier(sock) {
-  const jid = getNotifyJid();
-  if (!jid) { console.log('⚠️ Violation notifier: nomor tujuan belum dikonfigurasi.'); return; }
+  const jids = getNotifyJids();
+  if (!jids.length) { console.log('⚠️ Violation notifier: nomor tujuan belum dikonfigurasi.'); return; }
   if (!BOT_API_SECRET) { console.log('⚠️ Violation notifier: BOT_API_SECRET belum dikonfigurasi.'); return; }
   if (!global.db.bionestViolationNotifier) {
     global.db.bionestViolationNotifier = { cursor: null, initialised: false };
@@ -64,16 +68,18 @@ async function startViolationNotifier(sock) {
         if (latest?.created_at) state.cursor = latest.created_at;
         state.initialised = true;
         global.saveDatabase();
-        console.log('📡 Violation notifier aktif → ' + jid + '. Cursor awal: ' + (state.cursor || 'kosong'));
+        console.log('📡 Violation notifier aktif → ' + jids.join(', ') + '. Cursor awal: ' + (state.cursor || 'kosong'));
         return;
       }
       const sorted = violations.slice().sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
       for (const violation of sorted) {
         if (!runtime.sock) throw new Error('Socket WhatsApp belum tersedia.');
-        await runtime.sock.sendMessage(jid, { text: formatViolation(violation) });
+        for (const jid of jids) {
+          await runtime.sock.sendMessage(jid, { text: formatViolation(violation) });
+        }
         if (violation.created_at) { state.cursor = violation.created_at; global.saveDatabase(); }
       }
-      if (sorted.length) console.log('📨 ' + sorted.length + ' laporan pelanggaran dikirim ke ' + jid + '.');
+      if (sorted.length) console.log('📨 ' + sorted.length + ' laporan pelanggaran dikirim ke ' + jids.join(', ') + '.');
     } catch (error) {
       console.error('❌ VIOLATION NOTIFIER ERROR:', error.message);
     } finally { runtime.running = false; }
