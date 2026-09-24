@@ -59,7 +59,42 @@ async function handleCashCommand(sock, msg, args, category, isOwner) {
   const remoteJid = msg.key.remoteJid;
   const commandName = category === "kas" ? "kas" : "poe";
   if (!isOwner) return sock.sendMessage(remoteJid, { text: "❌ Command pembayaran hanya bisa dipakai owner/admin bot." }, { quoted: msg });
-  if (args.length < 2) return sock.sendMessage(remoteJid, { text: "⚠️ Format salah.\n\nContoh:\n*." + commandName + " Yusuf 20k*\n*." + commandName + " Yusuf 10000*\n*." + commandName + " Yusuf 10.000*" }, { quoted: msg });
+
+  if (category === "kas") {
+    if (args.length !== 2) {
+      return sock.sendMessage(remoteJid, { text: "⚠️ Format salah.\n\nContoh:\n*.kas Yusuf Oktober*\n*.kas almira September*" }, { quoted: msg });
+    }
+
+    const studentInput = args[0];
+    const monthInput = args[1];
+    const student = resolveStudent(studentInput);
+    const months = {
+      januari: "Januari", februari: "Februari", maret: "Maret", april: "April",
+      mei: "Mei", juni: "Juni", juli: "Juli", agustus: "Agustus",
+      september: "September", oktober: "Oktober", november: "November", desember: "Desember"
+    };
+    const month = months[normalize(monthInput)];
+
+    if (!student) {
+      return sock.sendMessage(remoteJid, { text: "❌ Nama siswa tidak ditemukan atau terlalu ambigu: *" + studentInput + "*" }, { quoted: msg });
+    }
+    if (!month) {
+      return sock.sendMessage(remoteJid, { text: "❌ Bulan tidak valid.\n\nContoh: *Agustus*, *September*, atau *Oktober*." }, { quoted: msg });
+    }
+
+    try {
+      await addCashTransaction({ student, category: "kas", amount: 10000, month });
+      return sock.sendMessage(remoteJid, { text: "✅ *Kas tercatat!*\n\n👤 Siswa: *" + student + "*\n💰 Kas: *Rp10.000*\n📅 Bulan: *" + month + "*\n\n_Data sudah dikirim ke Bionest._" }, { quoted: msg });
+    } catch (error) {
+      console.error("❌ CASH API ERROR:", error);
+      return sock.sendMessage(remoteJid, { text: "❌ Gagal mencatat kas ke Bionest.\nDetail: " + error.message }, { quoted: msg });
+    }
+  }
+
+  if (args.length < 2) {
+    return sock.sendMessage(remoteJid, { text: "⚠️ Format salah.\n\nContoh:\n*.poe Yusuf 20k*\n*.poe Yusuf 10000*\n*.poe Yusuf 10.000*" }, { quoted: msg });
+  }
+
   const amountInput = args[args.length - 1];
   const studentInput = args.slice(0, -1).join(" ");
   const student = resolveStudent(studentInput);
@@ -67,16 +102,15 @@ async function handleCashCommand(sock, msg, args, category, isOwner) {
   if (!student) return sock.sendMessage(remoteJid, { text: "❌ Nama siswa tidak ditemukan atau terlalu ambigu: *" + studentInput + "*\n\nGunakan username, nama depan yang unik, atau nama lengkap." }, { quoted: msg });
   if (amount <= 0) return sock.sendMessage(remoteJid, { text: "❌ Nominal tidak valid: *" + amountInput + "*\n\nContoh nominal: *20k*, *10.000*, atau *20000*." }, { quoted: msg });
   const month = new Intl.DateTimeFormat("id-ID", { month: "long", timeZone: "Asia/Jakarta" }).format(new Date());
+
   try {
-    await addCashTransaction({ student, category, amount, month });
-    const label = category === "kas" ? "Kas" : "Poe Ibu";
-    return sock.sendMessage(remoteJid, { text: "✅ *Pembayaran tercatat!*\n\n👤 Siswa: *" + student + "*\n💰 " + label + ": *" + formatRupiah(amount) + "*\n📅 Bulan: *" + month + "*\n\n_Data sudah dikirim ke Bionest._" }, { quoted: msg });
+    await addCashTransaction({ student, category: "poe", amount, month });
+    return sock.sendMessage(remoteJid, { text: "✅ *Pembayaran tercatat!*\n\n👤 Siswa: *" + student + "*\n💰 Poe Ibu: *" + formatRupiah(amount) + "*\n📅 Bulan: *" + month + "*\n\n_Data sudah dikirim ke Bionest._" }, { quoted: msg });
   } catch (error) {
     console.error("❌ CASH API ERROR:", error);
     return sock.sendMessage(remoteJid, { text: "❌ Gagal mencatat pembayaran ke Bionest.\nDetail: " + error.message }, { quoted: msg });
   }
 }
-
 async function kasCommand(sock, msg, args, isOwner) { return handleCashCommand(sock, msg, args, "kas", isOwner); }
 async function poeCommand(sock, msg, args, isOwner) { return handleCashCommand(sock, msg, args, "poe", isOwner); }
 
