@@ -46,10 +46,16 @@ async function startViolationNotifier(sock) {
   if (!global.db.bionestViolationNotifier) {
     global.db.bionestViolationNotifier = { cursor: null, initialised: false };
   }
-  let running = false;
+  if (!global.__bionestViolationNotifier) {
+    global.__bionestViolationNotifier = { running: false, sock: null, started: false };
+  }
+  global.__bionestViolationNotifier.sock = sock;
+  if (global.__bionestViolationNotifier.started) return;
+  global.__bionestViolationNotifier.started = true;
   const poll = async () => {
-    if (running) return;
-    running = true;
+    const runtime = global.__bionestViolationNotifier;
+    if (runtime.running) return;
+    runtime.running = true;
     try {
       const state = global.db.bionestViolationNotifier;
       const violations = await fetchNewViolations(state.cursor);
@@ -63,13 +69,14 @@ async function startViolationNotifier(sock) {
       }
       const sorted = violations.slice().sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
       for (const violation of sorted) {
-        await sock.sendMessage(jid, { text: formatViolation(violation) });
+        if (!runtime.sock) throw new Error('Socket WhatsApp belum tersedia.');
+        await runtime.sock.sendMessage(jid, { text: formatViolation(violation) });
         if (violation.created_at) { state.cursor = violation.created_at; global.saveDatabase(); }
       }
       if (sorted.length) console.log('📨 ' + sorted.length + ' laporan pelanggaran dikirim ke ' + jid + '.');
     } catch (error) {
       console.error('❌ VIOLATION NOTIFIER ERROR:', error.message);
-    } finally { running = false; }
+    } finally { runtime.running = false; }
   };
   await poll();
   setInterval(poll, POLL_INTERVAL);
