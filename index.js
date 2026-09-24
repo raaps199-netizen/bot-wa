@@ -10,6 +10,7 @@ const {
 const pino = require('pino');
 const qrcode = require('qrcode-terminal');
 const handleMessage = require('./handlers/messageHandler');
+const { startViolationNotifier } = require('./utils/violationNotifier');
 
 // ==========================================================
 // DATABASE
@@ -173,6 +174,10 @@ async function startBot() {
         console.log(
           '✅ Bot berhasil terhubung ke WhatsApp!'
         );
+
+        startViolationNotifier(sock).catch((err) => {
+          console.error('❌ Gagal menjalankan violation notifier:', err);
+        });
       }
     }
   );
