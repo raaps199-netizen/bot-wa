@@ -5,6 +5,7 @@ const handleGameAnswer = require('./gameHandler');
 const { getUserData, getTotalScore, addPoints, deductPoints } = require('../utils/helper');
 const { handleBankCommand } = require('../commands/bank');
 const { kasCommand, poeCommand } = require('../commands/cash');
+const { accessCommand, isCashAdmin } = require('../commands/access');
 const { handleInventoryCommand } = require('../commands/inventory');
 const { getSenderId } = require('../utils/jid-utils');
 const { handleRebirthCommand } = require('../commands/rebirth');
@@ -1273,14 +1274,22 @@ async function handleMessage(sock, msg) {
         break;
 
       // ==========================================
+      // 👑 ACCESS ADMIN KAS & POE
+      // ==========================================
+      case 'acces':
+      case 'access':
+        await accessCommand(sock, msg, args);
+        break;
+
+      // ==========================================
       // 💰 KAS & POE IBU
       // ==========================================
       case 'kas':
-        await kasCommand(sock, msg, args, isOwner);
+        await kasCommand(sock, msg, args, isCashAdmin(senderId));
         break;
 
       case 'poe':
-        await poeCommand(sock, msg, args, isOwner);
+        await poeCommand(sock, msg, args, isCashAdmin(senderId));
         break;
 
       // ==========================================
