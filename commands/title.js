@@ -40,79 +40,11 @@ const TITLES_CONFIG = {
       { min: 100, name: 'The God of Reme' }
     ]
   },
-  qq: {
-    label: '🎴 KASINO (QiuQiu)',
-    unit: 'Win',
-    list: [
-      { min: 0,   name: 'QQ Initiate' },
-      { min: 10,  name: 'QQ Adept' },
-      { min: 20,  name: 'QQ Virtuoso' },
-      { min: 50,  name: 'The Luck Hand' },
-      { min: 100, name: 'The God of QQ' }
-    ]
-  },
-  trivia: {
-    label: '🧠 KUIS (Trivia)',
-    unit: 'Soal',
-    list: [
-      { min: 0,   name: 'The Initiate' },
-      { min: 10,  name: 'The Quizer' },
-      { min: 30,  name: 'The Scholar' },
-      { min: 50,  name: 'The Learned' },
-      { min: 100, name: 'The Trivia King' }
-    ]
-  },
-  math: {
-    label: '📐 KUIS (Matematika)',
-    unit: 'Soal',
-    list: [
-      { min: 0,   name: 'The Initiate' },
-      { min: 10,  name: 'The Counter' },
-      { min: 30,  name: 'The Mathematician' },
-      { min: 50,  name: 'The Human Calculator' },
-      { min: 100, name: 'The Einstein' }
-    ]
-  },
-  mancing: {
-    label: '🎣 MANCING (Fishing)',
-    unit: 'Tangkapan',
-    list: [
-      { min: 0,     name: 'Rookie Angler' },
-      { min: 10,    name: 'Patient Fisher' },
-      { min: 50,    name: 'River Master' },
-      { min: 100,   name: 'Ocean Conqueror' },
-      { min: 300,   name: 'Poseidon\'s Heir' },
-      { min: 500,   name: 'The God of Seas' },
-      { min: 1000,  name: 'Leviathan Tamer' },
-      { min: 2500,  name: 'Abyssal Hunter' },
-      { min: 5000,  name: 'Ruler of the Tides' },
-      { min: 7500,  name: 'Neptune\'s Avatar' },
-      { min: 10000, name: 'The Ultimate Angler' }
-    ]
-  },
-  boss: {
-    label: '🐙 WORLD BOSS (Raid)',
-    unit: 'Kill',
-    list: [
-      { min: 0,  name: 'Boss Novice' },
-      { min: 1,  name: 'Kraken Slayer' },
-      { min: 3,  name: 'Monster Bane' },
-      { min: 5,  name: 'Titan Destroyer' },
-      { min: 10, name: 'Legendary Conqueror' }
-    ]
-  },
-  rebirth: {
-    label: '✨ REBIRTH (Prestige)',
-    unit: 'Tier',
-    list: [
-      { min: 0,  name: 'Novice' },
-      { min: 1,  name: 'Reborn I' },
-      { min: 2,  name: 'Reborn II' },
-      { min: 3,  name: 'Reborn III' },
-      { min: 5,  name: 'Transcendent' },
-      { min: 10, name: 'God of Rebirth' }
-    ]
-  }
+
+
+
+
+
 };
 
 // Helper untuk membersihkan kurung siku ganda & merapikan teks
@@ -163,11 +95,6 @@ module.exports = async function titleCommand(sock, msg, args) {
     const stats = {
       poin: user.maxPoin,
       reme: user.remeWin || 0,
-      qq: user.qqWin || 0,
-      trivia: user.triviaCount || 0,
-      math: user.mathCount || 0,
-      mancing: user.totalFish || 0,
-      boss: user.bossKills || 0,
       rebirth: user.rebirthLevel || 0
     };
 
@@ -286,7 +213,7 @@ module.exports = async function titleCommand(sock, msg, args) {
     caption += `🔍 *Lihat List Gelar:* Ketik *.title <kategori>*\n`;
     caption += `👉 *Pasang Gelar:* Ketik *.title pakai <kategori> <nomor>*\n`;
     caption += `❌ *Lepas Gelar:* Ketik *.title lepas*\n`;
-    caption += `📌 Contoh: *.title rebirth* lalu *.title pakai rebirth 2*`;
+    caption += `📌 Contoh: *.title reme* lalu *.title pakai reme 2*`;
 
     await sock.sendMessage(remoteJid, {
       text: caption,
