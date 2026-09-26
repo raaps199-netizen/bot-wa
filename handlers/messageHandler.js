@@ -258,10 +258,13 @@ async function handleMessage(sock, msg) {
     // viewOnce/ephemeral/message wrapper. Cari secara rekursif
     // supaya tombol tetap terbaca di semua bentuk envelope.
     function findNestedMessageValue(value, wantedKey, depth = 0) {
+      if (!value || typeof value !== 'object' || depth > 50) return null;
 
+      if (Object.prototype.hasOwnProperty.call(value, wantedKey)) {
         return value[wantedKey];
       }
 
+      for (const child of Object.values(value)) {
         const found = findNestedMessageValue(
           child,
           wantedKey,
@@ -299,6 +302,7 @@ async function handleMessage(sock, msg) {
       );
 
     console.log('🔎 MESSAGE STRUCTURE:', JSON.stringify({
+      keys: Object.keys(messageContent || {}),
       hasInteractive: !!interactiveResponse,
       hasLegacyButton: !!legacyButtonResponse,
       hasList: !!listResponse,
@@ -521,6 +525,9 @@ async function handleMessage(sock, msg) {
         return;
       }
 
+      if (gameType === 'qq') {
+        return;
+      }
     }
 
     // ===================================================
@@ -674,9 +681,8 @@ async function handleMessage(sock, msg) {
 
         break;
 
-
       // ==========================================
-      // 🎒 INVENTORY
+      // 🎮 DUNGEON
       // ==========================================
       case 'inv':
       case 'inventory':
@@ -688,17 +694,8 @@ async function handleMessage(sock, msg) {
         );
         break;
 
-
-      // ... case command lu yang lain tetap di bawah sini
-
-
-
-
-
-
-
       // ==========================================
-      // 📅 JADWAL & PIKET
+      // 🎣 FISHING
       // ==========================================
       case 'jadwal':
       case 'jsn':
@@ -879,37 +876,6 @@ async function handleMessage(sock, msg) {
       // ==========================================
       // 🌌 AURORA
       // ==========================================
-      case 'aurora': {
-        if (!isOwner) {
-          await sock.sendMessage(
-            remoteJid,
-            {
-              text:
-                `❌ Lu bukan owner, gak usah sok asik mau aktifin event Aurora wkwk!\n` +
-                `(ID terdeteksi: ${senderId})`
-            },
-            { quoted: msg }
-          );
-
-          break;
-        }
-
-        await auroraCommand(
-          sock,
-          msg,
-          args
-        );
-
-        break;
-      }
-
-      // ==========================================
-      // 🎁 CLAIM
-      // ==========================================
-
-      // ==========================================
-      // 💸 TRANSFER
-      // ==========================================
       case 'tf':
       case 'transfer':
         await tfCommand(
@@ -1072,9 +1038,8 @@ async function handleMessage(sock, msg) {
         break;
       }
 
-
       // ==========================================
-      // 🔄 RESET
+      // 🔥 REBIRTH
       // ==========================================
       case 'reset':
       case 'resetseason':
@@ -1162,12 +1127,8 @@ async function handleMessage(sock, msg) {
         );
         break;
 
-
-
-
-
       // ==========================================
-      // 🖼️ MEDIA
+      // 🎰 QQ
       // ==========================================
       case 's':
       case 'sticker':
@@ -1185,7 +1146,6 @@ async function handleMessage(sock, msg) {
           args
         );
         break;
-
 
       case 'brat':
         await bratCommand(
@@ -1283,7 +1243,6 @@ async function handleMessage(sock, msg) {
         );
         break;
 
-
       case 'quote':
       case 'q':
       case 'qc':
@@ -1306,8 +1265,6 @@ async function handleMessage(sock, msg) {
       // ==========================================
       // 🤖 AI & TOOLS
       // ==========================================
-
-
       case 'ss':
       case 'ssweb':
         await sswebCommand(
@@ -1325,14 +1282,6 @@ async function handleMessage(sock, msg) {
         );
         break;
 
-
-
-
-
-
-      // ==========================================
-      // 💰 ECONOMY
-      // ==========================================
       case 'score':
       case 'skor':
         await scoreCommand(
@@ -1354,17 +1303,6 @@ async function handleMessage(sock, msg) {
       // ==========================================
       // 🎮 GAMES
       // ==========================================
-
-
-
-
-
-
-
-
-      // ==========================================
-      // 📋 MENU GAME
-      // ==========================================
       case 'menu_game':
       case 'games': {
         const gameText =
@@ -1376,7 +1314,6 @@ async function handleMessage(sock, msg) {
 ┣⌬ ${prefixUsed}duel trivia @user <taruhan> [kategori] [diff]
 ┣⌬ ${prefixUsed}reme <taruhan> (Lawan Bot)
 ┣⌬ ${prefixUsed}reme @user <taruhan> (PvP)
-┣⌬ ${prefixUsed}qq @user <taruhan> (PvP)
 ┣⌬ ${prefixUsed}batal
 ┣⌬ ${prefixUsed}tf @user <nominal>
 ┣⌬ ${prefixUsed}score
@@ -1470,7 +1407,6 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}duel math/trivia @user <taruhan>
 ┃  • ${prefixUsed}reme <taruhan> (Lawan Bot)
 ┃  • ${prefixUsed}reme @user <taruhan> (PvP)
-┃  • ${prefixUsed}qq @user <taruhan> (PvP)
 ┃  • ${prefixUsed}rebirth (Prestige System)
 ┃  • ${prefixUsed}batal
 ┃  • ${prefixUsed}tf @user <nominal>
