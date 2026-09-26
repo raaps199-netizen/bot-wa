@@ -8,19 +8,12 @@ async function scoreCommand(sock, msg, args) {
 
   const user = getUserData(global.db, senderId);
   const totalScore = getTotalScore(user);
-  const mathCount = user.mathCount || 0;
-  const triviaCount = user.triviaCount || 0;
-  const mancingCount = user.totalFish || 0;
-
   const pushName = msg.pushName || 'User';
 
   const text = `📊 *STATUS SALDO & STATISTIK* 📊\n\n` +
     `👤 Nama: *${user.nickname || pushName}*\n` +
     `💰 Total Saldo: *${formatRupiah(totalScore)}*\n` +
-    `🧮 Math Selesai: *${mathCount} soal*\n` +
-    `🧠 Trivia Selesai: *${triviaCount} soal*\n` +
-    `🎣 Ikan Ditangkap: *${mancingCount} ekor*\n\n` +
-    `_Semua saldo game & aktivitas terpusat di Total Saldo!_`;
+    `_Saldo utama bot terpusat di Total Saldo!_`;
 
   await sock.sendMessage(remoteJid, { text }, { quoted: msg });
 }
