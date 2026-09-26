@@ -94,8 +94,7 @@ module.exports = async function titleCommand(sock, msg, args) {
 
     const stats = {
       poin: user.maxPoin,
-      reme: user.remeWin || 0,
-      rebirth: user.rebirthLevel || 0
+      reme: user.remeWin || 0
     };
 
     const subCommand = args[0] ? args[0].toLowerCase() : null;
@@ -108,8 +107,7 @@ module.exports = async function titleCommand(sock, msg, args) {
         return await sock.sendMessage(remoteJid, {
           text: `⚠️ *Format Salah, Bre!*\n\n` +
                 `📌 Cara Pakai: *.title pakai <kategori> <nomor_gelar>*\n` +
-                `💡 Contoh: *.title pakai rebirth 2*\n` +
-                `💡 Cek list & nomornya via: *.title rebirth*`
+                `💡 Cek list & nomornya via: *.title reme*`
         }, { quoted: msg });
       }
 
