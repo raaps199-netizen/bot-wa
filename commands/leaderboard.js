@@ -13,9 +13,6 @@ async function leaderboardCommand(sock, msg, args) {
       return {
         userId,
         score: data.score || 0,
-        mathCount: data.mathCount || 0,
-        triviaCount: data.triviaCount || 0,
-        totalFish: data.totalFish || 0, 
         nickname: data.nickname || userId.split('@')[0]
       };
     });
@@ -36,7 +33,7 @@ async function leaderboardCommand(sock, msg, args) {
       else medal = `${index + 1}. `;
 
       text += `${medal}@${user.userId.split('@')[0]}\n`;
-      text += `   💰 Saldo: *${formatRupiah(user.score)}* | 🧮 Math: *${user.mathCount}* | 🧠 Trivia: *${user.triviaCount}* | 🎣 Ikan: *${user.totalFish}*\n\n`;
+      text += `   💰 Saldo: *${formatRupiah(user.score)}*\n\n`;
     });
 
     text += `_Ketik .score untuk mengecek statistik pribadi kamu!_`;
