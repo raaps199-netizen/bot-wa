@@ -8,9 +8,7 @@ const { kasCommand, poeCommand } = require('../commands/cash');
 const { accessCommand, isCashAdmin } = require('../commands/access');
 const { handleInventoryCommand } = require('../commands/inventory');
 const { getSenderId } = require('../utils/jid-utils');
-const { handleRebirthCommand } = require('../commands/rebirth');
 const handleResetCommand = require('../commands/reset');
-const handleDungeonCommand = require('../commands/dungeon');
 
 // ⛏️ Import Mining
 const handleMiningCommand = require('../commands/mining');
@@ -34,54 +32,30 @@ const bratvidCommand = require('../commands/bratvid');
 const wmCommand = require('../commands/wm');
 const listCommand = require('../commands/list');
 const toimgCommand = require('../commands/toimg');
-const igCommand = require('../commands/ig');
 const groupCommand = require('../commands/group');
 const quoteCommand = require('../commands/quote');
 const rvoCommand = require('../commands/rvo');
 
 // Command Fitur Tambahan
-const aiCommand = require('../commands/ai');
-const hdCommand = require('../commands/hd');
 const sswebCommand = require('../commands/ssweb');
 const playCommand = require('../commands/play');
-const ytmp3Command = require('../commands/ytmp3');
-const cekkhodamCommand = require('../commands/cekkhodam');
-const truthCommand = require('../commands/truth');
-const dareCommand = require('../commands/dare');
-const cekbucinCommand = require('../commands/cekbucin');
-const tovidCommand = require('../commands/tovid');
 const onlineCommand = require('../commands/online');
 const ncodeCommand = require('../commands/ncode');
 
 // Command Games, Leaderboard, & Ekonomi Baru
-const blackjackCommand = require('../commands/blackjack');
-const mathCommand = require('../commands/math');
-const tebakbenderaCommand = require('../commands/tebakbendera');
-const tebakkataCommand = require('../commands/tebakkata');
-const tebakgambarCommand = require('../commands/tebakgambar');
-const triviaCommand = require('../commands/trivia');
-const { tetrisCommand, claimTetrisCommand } = require('../commands/tetris');
 const scoreCommand = require('../commands/score');
 const leaderboardCommand = require('../commands/leaderboard');
-const claimCommand = require('../commands/claim');
 const tfCommand = require('../commands/tf');
 const { duelCommand, handleDuelAnswer } = require('../commands/duel');
 const titleCommand = require('../commands/title');
 
 // 🎣 Import Command Fishing, Shop, & Event World Boss
-const { handleFishingCommand } = require('../commands/fishing');
-const { handleShopCommand, handleBeliCommand } = require('../commands/shop');
-const auroraCommand = require('../commands/aurora');
-const { handleEventCommand, handleAttackBossCommand } = require('../commands/event');
 
 // Command Reme & QQ Kasino
 const remeCommand = require('../commands/reme');
 const { terimaCommand, tolakCommand } = require('../commands/remeAcceptReject');
 const spinCommand = require('../commands/remeSpin');
 
-const qqCommand = require('../commands/qq');
-const { qqAcceptCommand, qqRejectCommand } = require('../commands/qqAcceptReject');
-const qqSpinCommand = require('../commands/qqSpin');
 
 // ==========================================
 // 🧪 TEST INTERACTIVE MESSAGE
@@ -284,13 +258,10 @@ async function handleMessage(sock, msg) {
     // viewOnce/ephemeral/message wrapper. Cari secara rekursif
     // supaya tombol tetap terbaca di semua bentuk envelope.
     function findNestedMessageValue(value, wantedKey, depth = 0) {
-      if (!value || typeof value !== 'object' || depth > 50) return null;
 
-      if (Object.prototype.hasOwnProperty.call(value, wantedKey)) {
         return value[wantedKey];
       }
 
-      for (const child of Object.values(value)) {
         const found = findNestedMessageValue(
           child,
           wantedKey,
@@ -328,7 +299,6 @@ async function handleMessage(sock, msg) {
       );
 
     console.log('🔎 MESSAGE STRUCTURE:', JSON.stringify({
-      keys: Object.keys(messageContent || {}),
       hasInteractive: !!interactiveResponse,
       hasLegacyButton: !!legacyButtonResponse,
       hasList: !!listResponse,
@@ -537,33 +507,6 @@ async function handleMessage(sock, msg) {
       senderId.includes(ownerLid);
 
     // ===================================================
-    // 🕳️ DUNGEON SESSION INTERCEPTOR (NATURAL INPUT)
-    // ===================================================
-    const user = global.db?.users?.[senderId];
-
-    if (
-      user &&
-      user.dungeon &&
-      user.dungeon.active
-    ) {
-      if (
-        !cleanText.startsWith(config.prefix) &&
-        !cleanText.startsWith('/')
-      ) {
-        const dungeonArgs =
-          cleanText.trim().split(/ +/);
-
-        await handleDungeonCommand(
-          sock,
-          msg,
-          dungeonArgs
-        );
-
-        return;
-      }
-    }
-
-    // ===================================================
     // 🎰 SPIN INTERCEPTOR
     // ===================================================
     if (
@@ -578,10 +521,6 @@ async function handleMessage(sock, msg) {
         return;
       }
 
-      if (gameType === 'qq') {
-        await qqSpinCommand(sock, msg);
-        return;
-      }
     }
 
     // ===================================================
@@ -735,18 +674,6 @@ async function handleMessage(sock, msg) {
 
         break;
 
-      // ==========================================
-      // 🎮 DUNGEON
-      // ==========================================
-      case 'zork':
-      case 'dungeon':
-      case 'jelajah':
-        await handleDungeonCommand(
-          sock,
-          msg,
-          args
-        );
-        break;
 
       // ==========================================
       // 🎒 INVENTORY
@@ -761,99 +688,14 @@ async function handleMessage(sock, msg) {
         );
         break;
 
-      // ==========================================
-      // 🎣 FISHING
-      // ==========================================
-      case 'fish':
-      case 'mancing':
-        await handleFishingCommand(
-          sock,
-          msg,
-          command,
-          args,
-          senderId
-        );
-        break;
 
       // ... case command lu yang lain tetap di bawah sini
-      case 'lnj':
-      case 'lanjut':
-        await handleFishingCommand(
-          sock,
-          msg,
-          'fish',
-          ['lnj', ...args],
-          senderId
-        );
-        break;
 
-      case 'start':
-      case 'stop':
-      case 'autofish':
-      case 'auto':
-        await handleFishingCommand(
-          sock,
-          msg,
-          command,
-          args,
-          senderId
-        );
-        break;
 
-      case 'favorit':
-      case 'fav':
-        await handleFishingCommand(
-          sock,
-          msg,
-          command,
-          args,
-          senderId
-        );
-        break;
 
-      // ==========================================
-      // 🛒 FISHING SHOP
-      // ==========================================
-      case 'shop':
-      case 'toko':
-        await handleShopCommand(
-          sock,
-          msg,
-          args,
-          senderId
-        );
-        break;
 
-      case 'beli':
-      case 'buy':
-        await handleBeliCommand(
-          sock,
-          msg,
-          args,
-          senderId
-        );
-        break;
 
-      // ==========================================
-      // 🐙 WORLD BOSS
-      // ==========================================
-      case 'event':
-        await handleEventCommand(
-          sock,
-          msg,
-          args,
-          senderId
-        );
-        break;
 
-      case 'serang':
-      case 'hit':
-        await handleAttackBossCommand(
-          sock,
-          msg,
-          senderId
-        );
-        break;
 
       // ==========================================
       // 📅 JADWAL & PIKET
@@ -1064,13 +906,6 @@ async function handleMessage(sock, msg) {
       // ==========================================
       // 🎁 CLAIM
       // ==========================================
-      case 'claim':
-      case 'daily':
-        await claimCommand(
-          sock,
-          msg
-        );
-        break;
 
       // ==========================================
       // 💸 TRANSFER
@@ -1237,17 +1072,6 @@ async function handleMessage(sock, msg) {
         break;
       }
 
-      // ==========================================
-      // 🔥 REBIRTH
-      // ==========================================
-      case 'rebirth':
-      case 'transendensi':
-        await handleRebirthCommand(
-          sock,
-          msg,
-          senderId
-        );
-        break;
 
       // ==========================================
       // 🔄 RESET
@@ -1338,37 +1162,9 @@ async function handleMessage(sock, msg) {
         );
         break;
 
-      // ==========================================
-      // 🎰 QQ
-      // ==========================================
-      case 'qq':
-        await qqCommand(
-          sock,
-          msg,
-          args
-        );
-        break;
 
-      case 'terimaqq':
-        await qqAcceptCommand(
-          sock,
-          msg
-        );
-        break;
 
-      case 'tolakqq':
-        await qqRejectCommand(
-          sock,
-          msg
-        );
-        break;
 
-      case 'spinqq':
-        await qqSpinCommand(
-          sock,
-          msg
-        );
-        break;
 
       // ==========================================
       // 🖼️ MEDIA
@@ -1390,14 +1186,6 @@ async function handleMessage(sock, msg) {
         );
         break;
 
-      case 'ig':
-      case 'instagram':
-        await igCommand(
-          sock,
-          msg,
-          args
-        );
-        break;
 
       case 'brat':
         await bratCommand(
@@ -1495,13 +1283,6 @@ async function handleMessage(sock, msg) {
         );
         break;
 
-      case 'tovid':
-      case 'tomp4':
-        await tovidCommand(
-          sock,
-          msg
-        );
-        break;
 
       case 'quote':
       case 'q':
@@ -1525,23 +1306,7 @@ async function handleMessage(sock, msg) {
       // ==========================================
       // 🤖 AI & TOOLS
       // ==========================================
-      case 'ai':
-      case 'tanya':
-        await aiCommand(
-          sock,
-          msg,
-          args
-        );
-        break;
 
-      case 'hd':
-      case 'remini':
-      case 'enhance':
-        await hdCommand(
-          sock,
-          msg
-        );
-        break;
 
       case 'ss':
       case 'ssweb':
@@ -1560,46 +1325,10 @@ async function handleMessage(sock, msg) {
         );
         break;
 
-      case 'ytmp3':
-      case 'yta':
-        await ytmp3Command(
-          sock,
-          msg,
-          args
-        );
-        break;
 
-      case 'cekkhodam':
-      case 'khodam':
-        await cekkhodamCommand(
-          sock,
-          msg,
-          args
-        );
-        break;
 
-      case 'truth':
-        await truthCommand(
-          sock,
-          msg
-        );
-        break;
 
-      case 'dare':
-        await dareCommand(
-          sock,
-          msg
-        );
-        break;
 
-      case 'cekbucin':
-      case 'bucin':
-        await cekbucinCommand(
-          sock,
-          msg,
-          args
-        );
-        break;
 
       // ==========================================
       // 💰 ECONOMY
@@ -1625,70 +1354,13 @@ async function handleMessage(sock, msg) {
       // ==========================================
       // 🎮 GAMES
       // ==========================================
-      case 'bj':
-      case 'blackjack':
-        await blackjackCommand(
-          sock,
-          msg,
-          args
-        );
-        break;
 
-      case 'math':
-      case 'matematika':
-        await mathCommand(
-          sock,
-          msg,
-          args
-        );
-        break;
 
-      case 'tebakbendera':
-        await tebakbenderaCommand(
-          sock,
-          msg
-        );
-        break;
 
-      case 'tebakkata':
-        await tebakkataCommand(
-          sock,
-          msg
-        );
-        break;
 
-      case 'tebakgambar':
-        await tebakgambarCommand(
-          sock,
-          msg
-        );
-        break;
 
-      case 'trivia':
-      case 'kuis':
-        await triviaCommand(
-          sock,
-          msg,
-          args
-        );
-        break;
 
-      case 'tetris':
-        await tetrisCommand(
-          sock,
-          msg,
-          args
-        );
-        break;
 
-      case 'claimtetris':
-      case 'klaimtetris':
-        await claimTetrisCommand(
-          sock,
-          msg,
-          args
-        );
-        break;
 
       // ==========================================
       // 📋 MENU GAME
@@ -1698,41 +1370,18 @@ async function handleMessage(sock, msg) {
         const gameText =
 `┏━I *ᴍᴇɴᴜ ɢᴀᴍᴇꜱ* I
 ┃
-┣⌬ ${prefixUsed}dungeon / ${prefixUsed}jelajah (Zork Text Adventure RPG)
 ┣⌬ ${prefixUsed}mining (Mining Adventure)\n┣⌬ ${prefixUsed}rng (100 Aura RNG)
-┣⌬ ${prefixUsed}bj
-┣⌬ ${prefixUsed}mancing
-┣⌬ ${prefixUsed}lnj (Lanjut Mancing)
-┣⌬ ${prefixUsed}fish [tas|sell|sellall|pakai|stats|help]
 ┣⌬ ${prefixUsed}inv / ${prefixUsed}tas (Cek Inventory)
-┣⌬ ${prefixUsed}shop (Beli Potion Mancing)
-┣⌬ ${prefixUsed}beli <item> <jumlah>
-┣⌬ ${prefixUsed}math [mudah|sedang|hard|max]
-┣⌬ ${prefixUsed}tebakbendera
-┣⌬ ${prefixUsed}tebakkata
-┣⌬ ${prefixUsed}tebakgambar
-┣⌬ ${prefixUsed}trivia <kategori> <level>
-┣⌬ ${prefixUsed}tetris
-┣⌬ ${prefixUsed}claimtetris <kode>
 ┣⌬ ${prefixUsed}duel math @user <taruhan> [diff]
 ┣⌬ ${prefixUsed}duel trivia @user <taruhan> [kategori] [diff]
 ┣⌬ ${prefixUsed}reme <taruhan> (Lawan Bot)
 ┣⌬ ${prefixUsed}reme @user <taruhan> (PvP)
-┣⌬ ${prefixUsed}qq <taruhan> (Lawan Bot)
 ┣⌬ ${prefixUsed}qq @user <taruhan> (PvP)
-┣⌬ ${prefixUsed}event kraken (World Boss)
-┣⌬ ${prefixUsed}serang (Serang Monster)
-┣⌬ ${prefixUsed}rebirth / ${prefixUsed}transendensi (Prestige System)
 ┣⌬ ${prefixUsed}batal
-┣⌬ ${prefixUsed}claim (Ambil Poin Harian)
 ┣⌬ ${prefixUsed}tf @user <nominal>
 ┣⌬ ${prefixUsed}score
 ┣⌬ ${prefixUsed}leaderboard
 ┣⌬ ${prefixUsed}nickname <nama>
-┣⌬ ${prefixUsed}cekkhodam <nama>
-┣⌬ ${prefixUsed}bucin <nama>
-┣⌬ ${prefixUsed}truth
-┣⌬ ${prefixUsed}dare
 ┗━━━━━━━◧`;
 
         await sock.sendMessage(
@@ -1760,14 +1409,9 @@ async function handleMessage(sock, msg) {
 ┣⌬ ${prefixUsed}s
 ┣⌬ ${prefixUsed}wm <pack|author>
 ┣⌬ ${prefixUsed}toimg
-┣⌬ ${prefixUsed}tovid
 ┣⌬ ${prefixUsed}tt <link>
-┣⌬ ${prefixUsed}ig <link>
 ┣⌬ ${prefixUsed}play <judul>
-┣⌬ ${prefixUsed}ytmp3 <link>
-┣⌬ ${prefixUsed}hd
 ┣⌬ ${prefixUsed}ssweb <url>
-┣⌬ ${prefixUsed}ai <teks>
 ┣⌬ ${prefixUsed}brat <teks>
 ┣⌬ ${prefixUsed}bratvid <teks>
 ┣⌬ ${prefixUsed}quote <teks>
@@ -1820,40 +1464,19 @@ async function handleMessage(sock, msg) {
 `┏━I *ꜱᴇᴍᴜᴀ ᴍᴇɴᴜ* I
 ┃
 ┣⌬ *ɢᴀᴍᴇꜱ*
-┃  • ${prefixUsed}dungeon / ${prefixUsed}jelajah (Zork Text Adventure RPG)
 ┃  • ${prefixUsed}mining (Mining Adventure)
-┃  • ${prefixUsed}bj
-┃  • ${prefixUsed}mancing
-┃  • ${prefixUsed}lnj (Lanjut Mancing)
-┃  • ${prefixUsed}fish [tas|sell|sellall|pakai|stats|help]
 ┃  • ${prefixUsed}inv / ${prefixUsed}tas
 ┃  • ${prefixUsed}shop
-┃  • ${prefixUsed}beli <item> <jumlah>
-┃  • ${prefixUsed}math [mudah|sedang|hard|max]
-┃  • ${prefixUsed}tebakbendera
-┃  • ${prefixUsed}tebakkata
-┃  • ${prefixUsed}tebakgambar
-┃  • ${prefixUsed}trivia <kategori> <level>
-┃  • ${prefixUsed}tetris
-┃  • ${prefixUsed}claimtetris <kode>
 ┃  • ${prefixUsed}duel math/trivia @user <taruhan>
 ┃  • ${prefixUsed}reme <taruhan> (Lawan Bot)
 ┃  • ${prefixUsed}reme @user <taruhan> (PvP)
-┃  • ${prefixUsed}qq <taruhan> (Lawan Bot)
 ┃  • ${prefixUsed}qq @user <taruhan> (PvP)
-┃  • ${prefixUsed}event kraken (World Boss)
-┃  • ${prefixUsed}serang (Serang Monster)
 ┃  • ${prefixUsed}rebirth (Prestige System)
 ┃  • ${prefixUsed}batal
-┃  • ${prefixUsed}claim (Ambil Poin Harian)
 ┃  • ${prefixUsed}tf @user <nominal>
 ┃  • ${prefixUsed}score
 ┃  • ${prefixUsed}leaderboard
 ┃  • ${prefixUsed}nickname <nama>
-┃  • ${prefixUsed}cekkhodam <nama>
-┃  • ${prefixUsed}bucin <nama>
-┃  • ${prefixUsed}truth
-┃  • ${prefixUsed}dare
 ┃
 ┣⌬ *ᴛᴏᴏʟꜱ & ᴊᴀᴅᴡᴀʟ*
 ┃  • ${prefixUsed}jadwal [hari]
@@ -1862,14 +1485,9 @@ async function handleMessage(sock, msg) {
 ┃  • ${prefixUsed}s
 ┃  • ${prefixUsed}wm <pack|author>
 ┃  • ${prefixUsed}toimg
-┃  • ${prefixUsed}tovid
 ┃  • ${prefixUsed}tt <link>
-┃  • ${prefixUsed}ig <link>
 ┃  • ${prefixUsed}play <judul>
-┃  • ${prefixUsed}ytmp3 <link>
-┃  • ${prefixUsed}hd
 ┃  • ${prefixUsed}ssweb <url>
-┃  • ${prefixUsed}ai <teks>
 ┃  • ${prefixUsed}brat <teks>
 ┃  • ${prefixUsed}bratvid <teks>
 ┃  • ${prefixUsed}quote <teks>
