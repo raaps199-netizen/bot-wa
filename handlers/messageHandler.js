@@ -1403,11 +1403,9 @@ async function handleMessage(sock, msg) {
 ┣⌬ *ɢᴀᴍᴇꜱ*
 ┃  • ${prefixUsed}mining (Mining Adventure)
 ┃  • ${prefixUsed}inv / ${prefixUsed}tas
-┃  • ${prefixUsed}shop
 ┃  • ${prefixUsed}duel math/trivia @user <taruhan>
 ┃  • ${prefixUsed}reme <taruhan> (Lawan Bot)
 ┃  • ${prefixUsed}reme @user <taruhan> (PvP)
-┃  • ${prefixUsed}rebirth (Prestige System)
 ┃  • ${prefixUsed}batal
 ┃  • ${prefixUsed}tf @user <nominal>
 ┃  • ${prefixUsed}score
