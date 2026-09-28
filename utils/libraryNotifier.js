@@ -60,6 +60,33 @@ function startLibraryNotifier(sock) {
   console.log('📚 Library notifier aktif.');
 }
 
+async function findAnnouncementGroup(sock) {
+  const configured = process.env.LIBRARY_ANNOUNCEMENT_GROUP;
+  if (configured && configured.endsWith('@g.us')) return configured;
+  try {
+    const groups = await sock.groupFetchAllParticipating();
+    const entries = Object.values(groups || {});
+    const exact = entries.find(g => String(g.subject || '').trim().toLowerCase() === 'pengumuman');
+    if (exact) return exact.id;
+    const partial = entries.find(g => String(g.subject || '').toLowerCase().includes('pengumuman'));
+    return partial?.id || null;
+  } catch (error) {
+    console.error('❌ Gagal mencari grup Pengumuman:', error.message || error);
+    return null;
+  }
+}
+
+async function sendLibraryAnnouncement(sock, item) {
+  const jid = await findAnnouncementGroup(sock);
+  if (!jid) {
+    console.warn('⚠️ Grup Pengumuman tidak ditemukan. Set LIBRARY_ANNOUNCEMENT_GROUP jika perlu.');
+    return false;
+  }
+  const type = item.type === 'article' ? 'Tulisan' : 'Dokumen';
+  const text = ['📚 *LIBRARY B1 — KOLEKSI BARU*', '', `📌 *${item.title}*`, `👤 Oleh: ${item.author || '-'}`, `📂 Kategori: ${item.category || '-'}`, `📖 Jenis: ${type}`, '', 'Sudah tersedia di Library XI.B1.'].join('\n');
+  await sock.sendMessage(jid, { text });
+  return true;
+}
 async function libraryModerationCommand(sock, msg, args) {
   const remoteJid = msg.key.remoteJid;
   const senderId = String(msg.key.participant || remoteJid || '');
@@ -71,7 +98,11 @@ async function libraryModerationCommand(sock, msg, args) {
     const result = await moderate(id, action === 'acc' ? 'approve' : 'reject');
     const item = result.item || {};
     if (global.db?.library?.notified) { delete global.db.library.notified[id]; if (typeof global.saveDatabase === 'function') global.saveDatabase(); }
-    if (action === 'acc') return sock.sendMessage(remoteJid, { text: ['✅ *LIBRARY DISETUJUI*', '', `📌 ${item.title || id}`, `👤 ${item.author || '-'}`, '', 'Sudah dipublikasikan ke Library.', '📢 Pengumuman baru juga sudah dibuat.'].join('\n') }, { quoted: msg });
+    if (action === 'acc') {
+      let announcementSent = false;
+      try { announcementSent = await sendLibraryAnnouncement(sock, item); } catch (e) { console.error('❌ Gagal kirim pengumuman Library:', e.message || e); }
+      return sock.sendMessage(remoteJid, { text: ['✅ *LIBRARY DISETUJUI*', '', `📌 ${item.title || id}`, `👤 ${item.author || '-'}`, '', 'Sudah dipublikasikan ke Library.', announcementSent ? '📢 Sudah diumumkan di grup Pengumuman.' : '⚠️ Gagal menemukan grup Pengumuman.'].join('\n') }, { quoted: msg });
+    }
     return sock.sendMessage(remoteJid, { text: ['🗑️ *LIBRARY DITOLAK*', '', `📌 ${item.title || id}`, `👤 ${item.author || '-'}`, '', 'Upload tidak dipublikasikan.'].join('\n') }, { quoted: msg });
   } catch (error) {
     const detail = error?.response?.data?.error || error.message || 'Unknown error';
