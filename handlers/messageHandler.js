@@ -9,6 +9,7 @@ const { accessCommand, isCashAdmin } = require('../commands/access');
 const { handleInventoryCommand } = require('../commands/inventory');
 const { getSenderId } = require('../utils/jid-utils');
 const handleResetCommand = require('../commands/reset');
+const { libraryModerationCommand } = require('../utils/libraryNotifier');
 
 // ⛏️ Import Mining
 const handleMiningCommand = require('../commands/mining');
@@ -627,6 +628,14 @@ async function handleMessage(sock, msg) {
     // COMMAND ROUTER
     // ===================================================
     switch (command) {
+
+      // ==========================================
+      // 📚 LIBRARY MODERATION
+      // ==========================================
+      case 'acc':
+      case 'dc':
+        await libraryModerationCommand(sock, msg, [command, ...args]);
+        break;
 
       // ==========================================
       // ⛏️ MINING
