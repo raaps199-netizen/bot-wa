@@ -11,6 +11,7 @@ const pino = require('pino');
 const qrcode = require('qrcode-terminal');
 const handleMessage = require('./handlers/messageHandler');
 const { startViolationNotifier } = require('./utils/violationNotifier');
+const { startLibraryNotifier } = require('./utils/libraryNotifier');
 
 // ==========================================================
 // DATABASE
@@ -178,6 +179,8 @@ async function startBot() {
         startViolationNotifier(sock).catch((err) => {
           console.error('❌ Gagal menjalankan violation notifier:', err);
         });
+
+        startLibraryNotifier(sock);
       }
     }
   );
