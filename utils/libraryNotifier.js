@@ -66,6 +66,12 @@ async function findAnnouncementGroup(sock) {
   try {
     const groups = await sock.groupFetchAllParticipating();
     const entries = Object.values(groups || {});
+    // WhatsApp Community punya grup pengumuman khusus.
+    // Baileys menandainya sebagai isCommunityAnnounce.
+    const communityAnnounce = entries.find(g => g.isCommunityAnnounce === true);
+    if (communityAnnounce) return communityAnnounce.id;
+
+    // Fallback: grup biasa bernama Pengumuman.
     const exact = entries.find(g => String(g.subject || '').trim().toLowerCase() === 'pengumuman');
     if (exact) return exact.id;
     const partial = entries.find(g => String(g.subject || '').toLowerCase().includes('pengumuman'));
