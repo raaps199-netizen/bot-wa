@@ -12,6 +12,7 @@ const qrcode = require('qrcode-terminal');
 const handleMessage = require('./handlers/messageHandler');
 const { startViolationNotifier } = require('./utils/violationNotifier');
 const { startLibraryNotifier } = require('./utils/libraryNotifier');
+const { startCollectionNotifier } = require('./utils/collectionNotifier');
 
 // ==========================================================
 // DATABASE
@@ -181,6 +182,7 @@ async function startBot() {
         });
 
         startLibraryNotifier(sock);
+        startCollectionNotifier(sock);
       }
     }
   );
