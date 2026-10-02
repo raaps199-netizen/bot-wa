@@ -35,8 +35,9 @@ function formatReport(report){
   const addGroup=(title,list)=>{
     if(!list.length)return;
     lines.push('',`*${title}*`);
-    for(const s of list) lines.push(`${String(s.absen).padStart(2,'0')}. ${s.full_name}${s.note?` — ${s.note}`:''}`);
+    for(const s of list) lines.push(`${s.full_name||'Nama tidak tersedia'}${s.note?` (${s.note})`:''}`);
   };
+  addGroup('✅ TERVERIFIKASI',verified);
   addGroup('📵 TIDAK BAWA HP',noPhone);
   addGroup('🚫 TIDAK MASUK',absent);
   addGroup('❓ TIDAK ADA KETERANGAN',noInfo);
