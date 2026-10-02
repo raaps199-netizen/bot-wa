@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 const API = process.env.COLLECTION_API_URL || 'https://bionestone.vercel.app/api/collection';
-const KEY = process.env.COLLECTION_BOT_KEY || '';
+const KEY = process.env.COLLECTION_BOT_KEY || process.env.LIBRARY_BOT_KEY || '';
 const OWNER_JID = '6289531307627@s.whatsapp.net';
 
 async function fetchReports(){
